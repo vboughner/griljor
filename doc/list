@@ -1,0 +1,28 @@
+							Van A. Boughner
+							May 1991
+
+
+				Griljor Jobs
+
+Each job is denoted by a single-word name.  Information about the job can be
+found in the sub-directory by that name here in ~vanb/Volvox/jobs.  Jobs
+that don't have directories don't need further explaination, jobs that need
+just a little explaination will have files for them rather that directories.
+
+
+Jobs already allocated:
+
+objectdoc: write a tutorial for someone wanting to modify the objects <TREVOR>
+color: edit X files in griljor programs to allow use with color <TREVOR>
+passdoc: write documenation for the editpass program <ERIC>
+monsters: come up with and implement ideas on monsters <MEL>
+
+
+Jobs not yet allocated:
+
+objects: make new bitmaps for objects
+players: make bitmaps for default players
+interpret: make changes to interpret.c
+playdoc: write a tutorial for someone learning to play griljor
+editdoc: write a tutorial for someone who wants to make a simple map
+search: start a search of ftp sites for anything similar to griljor

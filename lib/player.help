@@ -1,0 +1,50 @@
+
+            The War of Griljor     Copyright 1990
+   By Van A. Boughner, Mel Nicholson, Albert C. Baker III,
+and many others giving valuable contributions and suggestions
+
+Object: To kill and maim other players for the purpose of
+        getting all the "flags" for your team (whatever the
+        "flags" may be in the particular map you're in).
+
+What mouse buttons do for you with cursor in room window:
+  Left button: USES the object in left hand toward cursor
+  Middle button: USES the object in right hand  "      " 
+  Right button: starts you MOVING toward cursor location
+    unless you aren't moving and you click it on your present
+    position, then it TAKES the object from the floor there
+  Shift & Left button: TAKES object from floor into left hand
+  Shift & Middle button: TAKES from floor into right hand
+
+What mouse buttons do for you with cursor in inventory window:
+  Left button: SWAP inventory item with left hand contents
+  Middle button: "      "      "    "   right hand    "
+  Right button: DROP inventory item onto floor beneath you
+
+To send messages:
+  Move cursor into one of the three middle area windows for
+  message handling.  Type the first word in the name of the 
+  receiver, or type his number, then a space character, and
+  then the message.  Special receiver names:
+    all     Everyone in the game will see the message you type
+    room    Everyone in this room will see the message
+    say     Everyone in this room will see the message
+    gm      The message will be logged in a file for our
+            viewing and you might be able to get into a
+            conversation with the game's GM, Burt.
+
+Key presses:
+  p: see list of other PLAYERS in game/press again to remove
+  t: TAKE object on floor beneath you
+  D: DROP the object the cursor points to in your inventory
+  Z: DROP object in left  hand and replace it from inventory
+  X: DROP object in right hand and replace it from inventory
+  o: toggle the function that OUTLINES players with a box
+  #: DROP everything you have onto the floor
+  ?: toggle the presence of this HELP window
+  ^: RESET your statistics to starting point (level 1)
+  Q: QUIT the game, you have to wait several seconds
+  s: RANDOM movement key
+  qwe ad zxc: directional MOVEMENT keys
+
+    Thanks for playing Griljor, comments to labc-3fd@web

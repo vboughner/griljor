@@ -1,0 +1,19 @@
+Here are the maps you have to choose from:
+
+filename        description                       filename           description
+==============================================================================================
+battle.map      2 teams, several storied building superiority.map    2 teams, medium size map
+castle.map      2 teams, bows and arrows          spindizzy.map      2 teams, HUGE map
+flag.map        2 teams, swamp and forest         schwappo.map       2 teams, small map
+hometown.map    2 teams, lots of grenades         efficiency.map     2 teams, small map, bows  
+paradise2.map   1 team,  huge map                 grenadewars.map    1 team, grenades
+paradise3.map   2 teams, desert isle              grenadewars2.map   more of grenadewars
+sword.map       2 teams, only swords              grenadewars3.map   yet more of grenadewars
+twoperson.map   2 teams, only 4 rooms             berzerkely.map     1 team, Eric's famous map
+three.map       1 team, build your own map!       smashtv.map        1 team, TOTAL CARNAGE!
+twolevel.map    2 teams, strategic domination     mapland.map        2 teams, smallish map
+megarator.map   2 teams, long tunnels
+==============================================================================================
+
+You may, of course, elect one of your own maps which is not listed here, be sure to use a full pathname.
+If you have decided not to start a driver at all, then do not enter anything for a map name.

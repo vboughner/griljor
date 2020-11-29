@@ -1,0 +1,188 @@
+Provisional Griljor Documentation
+
+Griljor is a multiplayer game written by Van A. Boughner, Mel Nicholson,
+and Albert C. Baker III.  We started in October 1989 and it is a continuing
+project.
+
+
+			STARTING THE GAME
+
+To start a game senario execute the grildriver program in the background.
+The driver program is responsible for accepting new players and causes very
+little load on the machine where it is run.
+
+When you type 'grildriver' you start up a game with the default map.
+If you want to play on some other map, use the following syntax:
+	grildriver -m filename &
+Look in sub directories of the game directory for some other maps,
+currently 'contribmap' and 'map' directories contain some others.
+
+To enter the game run the "griljor" program.  This is the player's front end
+into the game, which is driven by internet data packets sent between players.
+
+Major Note: You might have to kill your window manager in order for griljor
+  	    to work right.  The symtoms of window manager interference are
+	    readily apparent:  clicking the mouse will be ineffectual.
+
+
+			PERSONALIZING YOUR CHARACTER
+
+You may make for yourself a 32x32 bitmap representing how you wish to look.
+You should also make a blacking mask that will erase space on the floor around
+and underneath you before your image is drawn.  To join the game using the
+bitmap and mask you have created, specify the filenames of the two bitmaps:
+	griljor -b bitmap_file -bm mask_file
+or if you do not wish to make a mask, a pretty good one will be made for you
+if you specify only a bitmap, like this:
+	griljor -b bitmap_file
+You may use a ~ character in specifying the path to the bitmap file.
+I suggest you make an alias out of this so that it is easy to use all the
+time.  It will difficult to tell who you are on the screen if you look just
+like everyone else.  Once you have used this bitmap with a certain character,
+you no longer need to specify the bitmap file when you play.  The bitmap
+and its mask are stored for you in our password file.
+
+			INVERSE VIDEO OPTION
+
+If you'd like the griljor window in black on white mode, add -r to the
+command line when you run griljor.
+
+
+			TIPS FOR BEGINNERS
+
+When you first log into the game, practice moving around.  If you start in
+the middle of a battle (as is often the case) FLEE!  You always start unarmed,
+and many of the other players may have weapons.
+
+Next try picking things up and moving them between your hands and inventory.
+(see MOUSE CONTROLS and KEY CONTROLS)  Once you have the idea, start trying
+to experiment with as many objects as you can get (remember to dodge, this is
+a dangerous world) and find out what they do (see USES OF OBJECTS)
+
+Beginners should feel free to experiement.  There is no lasting harm to
+your character's statistics for being pummelled in the beginning.
+
+
+			OBJECT OF THE GAME
+
+Team Games: In a team game, the main object is to get all the flags and bring
+them to your team base (the room you start in if you belong to a team).  The
+winners recieve a large bonus for being on the winning team, and the others
+recieve a smaller bonus for staying to the end of the game.  The player who
+drops the last flag receives another bonus if he belongs to the winning team
+or is neutral.  Winning for the oposing team recieves no bonus.  NOTE: the
+"flags" are often represented as money bags or other valueables.
+
+Free-for-all games: Kill, maim, hurt, damage, anihilate, and survive.
+
+			INDIVIDUAL STATUS
+
+Levels: As you rise in levels, you will gain hit points, magic points (not
+currently used), and will heal faster.  Your level starts at one for each
+game and increases for every 1000 experience points.  Experiance points are
+gained for killing people who do not belong to your team, and lost for being
+killed.  The experience gained or lost is greater if a low level player kills
+a high level player, and lesser whenever the opposite situation occurs.
+
+Rankings: Your ranking is an indication of how well you have played from
+game to game.  Your ranking will increase or decrease according to team game
+results and how well you do relative to other players.
+
+				DEATH
+
+When you are killed, all your possessions are dropped around you.  A few
+seconds later, you will be reborn.  Now would be a good time to find a new
+weapon or two . . .
+
+
+			   USES OF OBJECTS
+
+
+Preface: see MOUSE CONTROLS for info on how to "use" an object.
+
+Weapons: Weapons are for hurting and killing your opponents.  Place the
+mouse pointer to where you want the shot/swing/whatever to go when firing.
+
+Ammo: batteries, clips, et cetera may be used to reload a weapon (et al)
+Hold the weapon in one hand, the ammo in the other.  Use the ammo with
+the mouse, and the weapon (or other recharable object) will be reloaded
+iff this is the correct type of ammo.
+
+Healing: Certain objects (like food) will heal you when you use them.
+
+Keys: Stand next to a door and position the cursor on it, then use the key.
+
+Others: Try them and find out . . .
+
+
+			THE WINDOW LAYOUT
+
++---------------------------------------------+-----------------+---------+
+|                                             |                 |         |
+|                                             |    INVENTORY    | HANDS   |
+|                                             |                 |         |
+|                                             +-----------------+---------+
+|	WORLD DIPLAY WINDOW                   |  Short-term Messages      |
+|                                             +---------------------------+
+|                                             |  Long-term Messages       |
+|                                             |                           |
+|                                             +---------------------------+
+|                                             |  Mail Messages            |
+|                                             |                           |
++---------------------------------------------+---------------------------+
+
+			MOUSE CONTROLS
+
+What mouse buttons do for you with cursor in world display window:
+	Left button:	uses the object in left hand toward cursor position
+	Middle button:	uses the object in right hand  "      "       "
+	Right button:	starts you moving toward current cursor position,
+			unless you aren't moving and you click it on your
+			present position, it then results in an object
+			on floor beneath you being taken into inventory.
+	Shift & Left button:	takes object from floor into left hand
+	Shift & Middle button:	takes object from floor into right hand
+
+What mouse buttons do for you with cursor in inventory window:
+	Left button:	swap inventory item with left hand contents
+	Middle button:	 "       "      "    "   right hand    "
+	Right button:	drop inventory item onto floor beneath you
+
+What mouse buttons do for you in ANY message window:
+	All:		nothing.  You may type messages while cursor
+			is in any of the message windows.  First type the 
+                        number or first word in name, then a space, then 
+                        message.
+
+			Sending a message to 'all' will make everyone see
+			the message, sending a message to 'room' will make
+			only the people in the room see your message, sending
+			a message to 'gm' will invoke a somewhat entertaining
+			response.
+
+
+			 KEYBOARD CONTROLS
+
+Movement Keys: These keys allow you to move while reserving the mouse for
+	       other important tasks.
+
+			q  w  e
+                         \ | /
+                        a-   -d
+                         / | \
+                        z  x  c
+
+
+	p:		see list of other players in game
+	o:		outline players to make them more visible
+			  (allies are marked differently than opponents)
+	t:		take object on floor beneath you
+	q:		start a 4 second quitting sequence
+				(any input will abort it)
+	#:		drop everything you have onto the floor
+	^:		reset you statistics to level 1 (only a good idea
+			if you are nearing level 4 but don't wish to have
+			you ranking re-evaluated).
+	?:		toggle the display of the on-line help window
+
+There will be more documentation later, have fun.  Van and Mel.

@@ -1,0 +1,22 @@
+
+
+			   Griljor Meeting
+			Monday May 13th, 1991
+
+
+
+	  Bugs in Griljor that need to be fixed for Version 1.0
+
+
+	1. players entering a room should not see a flicker showing
+	   where a previous player entered.
+
+	2. Check over the magic items code and make teleporter objects
+	   work correctly. (see changes to magic in above list)
+
+	3. Click buttons and the movement buffer in editmap should
+	   preserve recorded objects the same way they do regular
+	   ones.
+
+	4. Remains of code for special objects once used in explosions
+	   should be removed.

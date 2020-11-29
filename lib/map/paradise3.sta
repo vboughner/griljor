@@ -1,0 +1,29 @@
+# This is the object placement startup file for the Player's Paradise 3 map.
+#
+# Each line in this file signifies one random placement action that will
+# occur at the beginning of the game before any player is allowed to join.
+# This allows for a certain amount of randomness to the map.  The
+# placement of objects takes place room by room or team by team.
+#
+# The first character on each line is a t for placing something in a certain
+# team's rooms, or an r for placing something on a certain room.
+#
+# Next in each lines comes the object number, and the quantity.
+# Finally, the last entry on each line is the team number (0-4, 0 is neutral),
+# or the room number (depending on whether r or t was used for first entry).
+#
+# Each line's entries must be separated by whitespace, like the following:
+# t/r  	objnum	quant   team#/room#
+#
+# 3 frap guns in the game, one for each team, and one on neutral ground:
+t	190	1	0
+t	190	1	1
+t	190	1	2
+# 30 magazines of machine gun bullets for each team
+t	183	30	0
+t	183	30	1
+t	183	30	2
+# 5 large grenades apiece
+t	202	5	0
+t	202	5	1
+t	202	5	2

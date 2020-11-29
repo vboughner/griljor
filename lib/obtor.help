@@ -1,0 +1,12 @@
+
+ Griljor Object Editor
+
+ BITMAP COMMANDS       FILE COMMANDS           OBJECT EDIT COMMANDS
+ [1] load bitmap file  [l] load new obj file   [t] transfer obj to other
+ [2] load mask file    [s] save this obj file  [w] wipe this definition
+ [*] make a mask       [c] copy to other file  [r] rotate object image
+ [b] edit obj bitmap   [)] clear window        [n] numbering of objects  
+ [m] edit obj mask     [e] erase past point    [i] info on object
+ [d] delete mask                               [>] write out info file
+ [&] change background [q] quit (with save)    [<] read in info file
+                       [!] quit (no save)      [.] toggle message window

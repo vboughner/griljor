@@ -1,0 +1,57 @@
+
+
+			   Griljor Meeting
+			Monday May 13th, 1991
+
+
+
+        Revisions to Griljor that need to be made for Version 1.0
+
+
+	1. flags need to be implemented differently, in fact, all
+	   objects that are 'important' need to be handled by the same
+	   server routines to see that none are lost or duplicated.
+	   It needs a lot of flexibility.  The driver is to handle
+	   requests by players to pickup or drop these objects.
+	   Destruction of these items needs to handled right as well.
+
+	2. A segment of code should be added to editmap that checks maps
+	   before saving them to look for anomalies and warn the user.
+	   Obtor could use that kind of feature as well.  Objects in the
+	   map that have bad id numbers can use a special bitmap to signify
+	   such a condition, allowing the user to use a different object
+	   set if neccessary.  The driver, on the other hand, will ignore
+	   all objects with incorrect numbers.
+
+	3. The code to pass hostnames and driver addresses around should
+	   be completed, according to the written plans made for this.
+	   The test of this will be a game played between two or three
+	   different machines which cannot share the local game listing
+	   file.
+
+	4. Object storage struct is to be changed.  Space for all 
+	   probable flags will be added now, even though not all will be
+	   immediately implemented.  These will all default to zero, but
+	   at least when version two comes out, the object files will
+	   be compatible with those from version one, or will be an easy
+	   extension.
+
+	5. X code needs to be fixed so griljor will work on color displays.
+	   Whether color definition will be allowed for objects depends on
+	   time constraints.  In no case will version 1 allow more than
+	   one color in any particular object.
+
+	6. Instead of fill ray.c implementation, we shall use a simple radius
+	   drawing routine to implment dark rooms and light.  If you can
+	   see another person, then you will also see ALL the squares they
+	   happen to light up.  Default room lighting will be global, but
+	   lit, daylit, and dark will all be supported.
+
+	7. More things will be handed over to the maker of the map:
+	   rate of player healing, rate of level advancement, hit points
+	   per level, magic points per level, and anything else that can
+	   be easily thrown in with these.
+
+	8. Protocol of communication between the driver and players, and
+	   between players must be made more standard, so that people on
+	   different kinds of machines can play against each other.

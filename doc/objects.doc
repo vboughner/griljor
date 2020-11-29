@@ -1,0 +1,86 @@
+recorded
+
+Most objects are easily defined with standard properties.  A knife is a
+knife.  Some objects, however, need particular specific information for
+each instance of the given type of object.  Two guns, for example, could
+be of the same type, but each may be loaded with a different number of
+bullets.  A door, as another example, will need to be differentiated from
+other doors by the key that opens it.  The 'recorded' flag, when set to
+TRUE will cause an addition data record to be kept for each instance of
+the given type of object.  The data record contains seven integer
+variables that may be used for real-time accessible storage of specific
+parameters of the instance of the type of object.  These variables are
+named: detail, x, y, zinger, extra1, extra2, and extra3.  Some of the other
+flags (detailed below) require that an object be 'recorded' in order to
+store some of the dynamic information that goes with the flag.
+
+mask
+
+When this flag is set, it signifies that the object is in the class of
+items not in the passive environment.  Most objects without masks are
+mere floor decorations and the like.  Only one bitmap is stored for
+non-masked objects and it is drawn first on squares, completely covering
+them.  Objects that are 'masked' have two bitmaps stored with them.  One,
+the mask, that blacks out part of the floor in the space to be drawn, and
+another, the actual image, that is drawn into the blank space created by
+the mask.
+
+transparent
+
+An object marked as 'transparent' is one that players can see through.  A
+player's vision over a particular square on the board is blocked if any
+object on that square is not marked 'transparent'.  Walls, trees, and
+other large, opaque objects are usually the only ones not marked as 
+'transparent'.
+
+
+permeable
+
+An object marked as 'permeable' is one that allows missiles to be fired
+through its square.  Like transparency above, missiles may only be fired
+over squares containing no objects that are not marked as 'permeable'.
+Normally, all objects except walls are marked as 'permeable'.
+
+move
+
+The 'move' variable is to contain a value ranging from zero to nine.
+This variable concerns the speed at which players may move over an
+object.  A player moving though a square will encounter the speed of the
+object numbered lowest of all objects in a square.  If one of those
+objects has a 'move' value of zero, like a wall for example, the player
+will be unable to move into the square.  If all objects in the square
+have a value of one or above, movement will be possible, with five being
+average speed and nine being maximal speed.  Increasing the speed value
+to greater than nine will be no different than nine itself.
+
+takeable
+
+The 'takeable' flag when set, signifies that an object may be picked up
+from the floor by any player on the same square and placed into his
+inventory.  A large assortment of objects are takeable: guns, food,
+potions, ammunition, grenades, etc.
+
+weight
+
+The 'weight' variable stores the encumbrance value of an object in
+pounds.  It is used in conjunction with the 'takeable' flag.  If an
+object is not marked as 'takeable', the 'weight' variable is meaningless.
+Normally objects will be marked with a weight close to that of normal,
+the average player being able to carry around 150 pounds, depending on
+his level.  Weight may be set to zero for very light objects such as keys.
+
+important
+
+Objects marked as 'important' must also be marked as 'takeable' for it to
+have any meaning.  The aquisition of 'important' objects from rooms by
+players is closely monitored by the driver.  Likewise, when players drop
+'important' objects, the driver supervises the return of the object to
+the map.  Certain objects, like the flags in Capture the Flag, are needed
+by one or both teams to win the game, so the driver makes sure that no
+duplicate copies of objects are created due to network lag times.  In the
+same way, the driver see that the flags remain in the game if player
+client processes die, or some other unforseen network problem occurs.
+
+flag
+
+Objects marked as flags are needed by one or both sides to win the game.

@@ -1,0 +1,72 @@
+LIB = -lX11 -lm
+CC = rgcc
+CFLAGS = -O
+
+EDITOBJ_NAME = 	run
+EDITOBJ_OBJS = 	editobj.o \
+		objects.o \
+		error.o \
+		lib.o \
+		obtorX11.o \
+		map.o \
+		obtor_dud.o \
+		X11ReadBitmapFile.o \
+		windowsX11.o \
+		inputX11.o \
+		dialog.o \
+                bitmap.o \
+                obtmask.o \
+                globals.o \
+                loadbit.o \
+                cutwin.o \
+                arrow.o \
+                massinfo.o \
+                infodiag.o \
+                pixmapedit.o \
+                drawgrab.o \
+                trywin.o \
+                moveobj.o \
+                winspace.o \
+                wininfo.o \
+                dragobj.o \
+		outputX11.o
+
+try:  ${EDITOBJ_OBJS}
+	${CC} ${CFLAGS} ${EDITOBJ_OBJS} -o ${EDITOBJ_NAME} ${LIB}
+	@ chmod 755 ${EDITOBJ_NAME}
+	run
+
+${EDITOBJ_NAME}:  ${EDITOBJ_OBJS}
+	${CC} ${CFLAGS} ${EDITOBJ_OBJS} -o ${EDITOBJ_NAME} ${LIB}
+	@ chmod 755 ${EDITOBJ_NAME}
+
+remote:
+	USEREMOTE=yes
+	export USEREMOTE
+	make -k ${EDITOBJ_NAME}
+
+all:
+	rm -f ${EDITOBJ_OBJS}
+	@rm -f nohup.out
+	make -k ${EDITOBJ_NAME}
+
+remake: 
+	rm -f ${EDITOBJ_OBJS}
+	@rm -f nohup.out
+	nohup 'make -k ${EDITOBJ_NAME}' &
+	make tags
+
+strip:  ${EDITOBJ_OBJS}
+	${CC} ${CFLAGS} -s ${EDITOBJ_OBJS} -o ${EDITOBJ_NAME} ${LIB}
+	@ chmod 755 ${EDITOBJ_NAME}
+
+export:
+	mv -f run ../games/obtor
+
+tags:
+	etags *.c *.h
+
+
+
+
+

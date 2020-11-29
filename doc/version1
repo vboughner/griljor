@@ -1,0 +1,181 @@
+Things to do for version 1.0  (list revised May 2, 1991)
+========================================================
+
+Features to add to griljor:
+	1. reset stats should have "are you sure?" feature
+	2. debugging mode should be a command line option and not
+	   a compiling option.
+	3. pathname of the library and names of the library directories
+	   should be optionally environment variables, so that griljor
+	   can be run in a different environment than it was compiled in.
+	4. Check the magics code and allow objects to drain magic power
+	   points.  This will limit use of powerful objects, and
+	   provide for magic points to be used for something, as spells
+	   are not going to be implemented in version 1.
+	5. Magic powers in objects should be handled slightly differently.
+	   Make objects more easily definable as magical (more flags!),
+	   and require a certain amount of magic power for use.
+	6. let editmap select times of day and darkness.
+	7. allow maps to have an attached help file that people can
+	   look at during the game, a theme file.
+	8. Add an instructions feature that allows people to scan the
+	   full documentation from the the game select screen.
+	9. Write full user and designer (map and object) documentation.
+	10.Packets and other transmissions should contain major and minor
+	   version numbers so that different, incompatible versions of griljor
+	   can avoid each other.  If major version number doesn't match, there
+	   should not be interaction between players.  If minor version numbers
+	   don't match, then just a warning message should be given.
+	11.There should be a command line option people can use to make
+	   a game local, and a compiler option that would make all games local .
+	   Games private to local machines would be used for slow nets,
+	   testing unfinished maps, testing changes to griljor etc.
+
+Bugs to fix in griljor:
+	1. players entering a room should not see a flicker showing
+	   where a previous player entered.  This one needs to checked
+	   out to see whether anything needs to be done for it.
+	3. Check over the magic items code and make teleporter objects
+	   work correctly. (see changes to magic in above list)
+	4. Click buttons and the movement buffer in editmap should
+	   preserve recorded objects the same way they do regular
+	   ones.
+	5  Remains of code for special objects once used in explosions
+	   should be removed.
+	6. Fix the bug that sometimes keeps people from healing.
+	7. Fix the bug that keeps people who's missile kills someone 
+	   after their own death from coming back to life.  The victim
+	   always gains a level in the process (the killer who never
+	   comes back to life is the one affected).
+	   
+
+Major revisions or bug fixes concerning multiple pieces of griljor code:
+	1. flags need to be implemented differently, in fact, all
+	   objects that are 'important' need to be handled by the same
+	   server routines to see that none are lost or duplicated.
+	   It needs a lot of flexibility.  The driver is to handle
+	   requests by players to pickup or drop these objects.
+	   Destruction of these items needs to handled right as well.
+	2. A segment of code should be added to editmap that checks maps
+	   before saving them to look for anomalies and warn the user.
+	   Obtor could use that kind of feature as well.  Objects in the
+	   map that have bad id numbers can use a special bitmap to signify
+	   such a condition, allowing the user to use a different object
+	   set if neccessary.  The driver, on the other hand, will ignore
+	   all objects with incorrect numbers.
+	3. The code to pass hostnames and driver addresses around should
+	   be completed, according to the written plans made for this.
+	   The test of this will be a game played between two or three
+	   different machines which cannot share the local game listing
+	   file.
+	4. Object storage struct is to be changed.  Space for all 
+	   probable flags will be added now, even though not all will be
+	   immediately implemented.  These will all default to zero, but
+	   at least when version two comes out, the object files will
+	   be compatible with those from version one, or will be an easy
+	   extension.
+	5. X code needs to be fixed so griljor will work on color displays.
+	   Whether color definition will be allowed for objects depends on
+	   time constraints.  In no case will version 1 allow more than
+	   one color in any particular object.
+	6. Instead of fill ray.c implementation, we shall use a simple radius
+	   drawing routine to implment dark rooms and light.  If you can
+	   see another person, then you will also see ALL the squares they
+	   happen to light up.  Default room lighting will be global, but
+	   lit, daylit, and dark will all be supported.
+	7. More things will be handed over to the maker of the map:
+	   rate of player healing, rate of level advancement, hit points
+	   per level, magic points per level, and anything else that can
+	   be easily thrown in with these.
+	8. Protocol of communication between the driver and players, and
+	   between players must be made more standard, so that people on
+	   different kinds of machines can play against each other.
+	   
+
+Bullet-proofing checks that need to be made in the code:
+	1. Look for all possible ways dynamic variables could be
+	   involved in segmentation errors.
+	2. Look for strings that might be allowed to overwrite the end
+	   of their allocated space.
+
+
+Programs to be delivered in griljor package:
+	setup: Makefile, IMake file, README
+	main programs: griljor, grildriver, editmap, editpass, obtor
+	utilities: textbit, rotate, mkmask, testburt
+	The makefile should be cleaned up.
+
+Documents to be completed:
+	1. documentation on each of the programs listed above.
+	3. docs on map making strategies.
+	3. docs on object making strategies.
+	4. some examples of object types that work together.
+	5. docs on how to use environment variable options.
+	6. README about compiling and setting it all up.
+	7. docs on possible portability problems.
+
+
+Things to be saved until version 2 or greater:
+	1. map storage method is to be changed.  Squares will be depth 4,
+	   and the differences between recorded and non-recorded objects
+	   will be minimized.  Editmap will be changed to allow all four
+	   slots to be edited conveniently.  The first slot will be reserved
+	   for the floor character.  Drawing routines will look for other
+	   things without masks in other slots and they will be drawn instead
+	   of the floor (the floor will still be there, however).
+	   More than one recorded object will be allowed per square, and the
+	   find_empty_slot() routine will not need to differentiate between
+	   the two types.  All routines that reference recorded objects will
+	   need to be changed or at least checked.  Error conditions
+	   concerning demand for the presence for the recorded object record
+	   will be quietly met with created blank records (filled with the
+	   object's default values.)  In other words, a lot of research
+	   will need to go into this change to insure that everything
+	   that needs to be changed is done.  No other fixes should go on
+	   simultaneous to this.
+	2. A program to convert maps from the old format to the new will
+	   have to be comissioned.  The change will also implement storage
+	   of object numbers as shorts rather than chars, to allow for
+	   a larger number of objects to be used in each map.
+	3. When short sized (2-byte) object numbers are employed, editmap
+	   will have to be changed to accomidate the extra objects over
+	   the current 256 limit.
+	4. Objects may be spells, with a separate inventory page for a player's
+	   list of spells (possibly allowing a player to practice them :-)
+	   Map editor then simply defines which objects are useable as player
+	   spells.  Player program will offer these spells to player for
+	   use at times when he has sufficient level and magic power.
+	5. ray.c will be made to work.
+	6. docs on implementation.
+	7. The communication architecture may be changed for version 2.
+	   If the free and open front-end ideas used now don't work out
+	   very well, we'll make griljor more like the server-client model.
+
+
+Distribution:
+	1. Griljor will be made available on soda via ftp.
+	2. News will be posted telling people about it, but it will
+	   only be claimed to be a beta-test version.
+	3. People will be allowed to copy and distribute it free of charge,
+	   but we will withold the right to distribute it after modifying it.
+	4. Cheating will be declared trivial and not encouraged.
+	5. It will be made to work on Suns running BSD 4.3 and having
+	   monochrome or color displays.
+
+
+
+Things that have already been done toward version 1:
+
+	5. Burt should log more information about those that talk with
+	   him (like login name and/or person name). <DONE>
+	6. let editmap pick room lightness.  <DONE>
+	7. let editmap select whether neutrals exist.  <DONE>
+	10.allow for comments in the time restriction file so that it
+	   can contain an explanation of what the data is for and how
+	   the differnet times are arranged. <DONE>
+	2. The driver is not saving the correct date to the password
+	   file when a player's record is changed.  This is neccessary
+	   so that the passfile editing program can deleted old and moldy
+	   records. <DONE>
+	5. Fix explosions to be an object you specify, not a
+	   special missile.  <DONE>

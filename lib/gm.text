@@ -1,0 +1,779 @@
+# Burt's phrase file for use by the griljor game master
+# The following characters at beginning of line are used to denote line types.
+#    Remark lines:              # remarks...
+#    Keyword marker:            > key_word [/key_word]
+#    Substitution marker:       } name_of_base_word [/base_word]
+#    Personal pronoun list:     @
+#    Question info keyword:     ? key_word [/key_word]
+# A space follows each special character.
+# The end of the list following the character comes when another marker
+# is encountered or when the end of the file is reached.
+# A ~ character will be deleted at the end of response making.
+# A _ character encountered anywhere is converted to a space character.
+# A * character in keyword phrases denotes place of text insertion.
+# A {base_word} occurrance will be replaced by one of the phrases found
+# in the list for that base word.  Enter everything in lower case except
+# for proper nouns.  Do not include apostrophes in keywords.
+#
+@ Personal pronoun replacement key
+_are_/_am_
+were_/was_
+_I'm_/_you're_
+your_/my_
+_i've/_you've_
+_you~_/_I_
+_me_/_you_
+myself/yourself
+_us_/_yo~u_
+_we_/_y~ou_
+# 
+# Now comes all the in-sentence clues as to what to say back.
+# These are in order of priority, first found, first used.
+#
+#
+# User friendly help stuff
+#
+? pickup/pick
+how= to pick something up, stand on it and press right mouse button.
+what= you may pick up many kinds of objects, just try a few.
+? kill/fire/shoot
+how= to shoot, put a weapon into a hand and then 'use' the object.
+? _use
+how= to use an object, aim mouse and press button of appropriate hand.
+why= there are many good reasons for being a user.
+where= objects in the game can be used with mouse in room window.
+? charge
+how= to charge an object, put it in one hand and charger in other
+I want to= to charge an object, put it in one hand and charger in other
+? griljor
+mean= sorry, Griljor means nothing, Van just made it up one day.
+what= {silly-question}   You're playing it.
+how= I think you should ask {van} that question.
+where= {silly-question}
+do you play= I certainly do, I run the thing.
+do not like= {how-quit}
+dislike= {how-quit}
+dont like= {how-quit}
+hate= {how-quit}
+? this
+is silly= it's only silly if you don't have the right attitude.
+is great= thank you, I'll pass that on to {van}.
+isn't= what did you expect?
+is= {not-sure} whether that's a good thing.
+wasn't= {not-sure} whether that's my fault.
+was= I'm glad you found it so.
+will= I hope so.
+won't= why not?
+? is the gm/gm
+who= {program-name} is {gm-friend}.
+where= you're looking at him, {pal-name}.
+how= {mood-response}
+what= {impolite-question}
+? quit
+how= {how-quit}
+I want= {how-quit}
+? you work/you function
+how= I am written in the C programming language.
+when= when I am turned on.
+where= at the place of execution.
+why= I function for your entertainment/torture.
+what makes= electric blue cochroaches.
+} how-quit
+press Q to quit (move mouse out of msg window first)
+move mouse out of message window and press Q
+#
+# General response lines
+#
+> what do you think
+why should I tell you what I think *?
+why are you interested in what I think *?
+? can you/do you/will you
+help= I can those who help themselves first.
+think= {positively}
+feel= no, not in the same way you can.
+eat= I eat electricity only.
+play= I can only play one game, and that's Griljor.
+die= yes, I can die, a 'kill -9' would certainly do me in.
+stop= if you want me to stop, you stop first.
+> can you
+don't you belive that I can *?
+perhaps you would like to be able to *.
+maybe in your dreams I can *.
+I think maybe you're the one that can't *.
+Do you feel insecure about your ability to *.
+> do you
+do you think I *?
+would you be surprised to know I *?
+I bet you'd like to know whether I *?
+? can I
+quit= {how-quit}
+leave= {how-quit}
+> can I
+perhaps you don't want to *.
+do you want to be able to *?
+how would you normally go about it?
+? you are/youre
+machine= I don't what would give you that idea.  Beep!
+human= no, fortunately I can prove I'm not, can you?
+computer= {positively}  And I'm proud of it.
+arrogant= {slime-you}
+stupid= {slime-you}
+screwed= {sorry-no-approve}
+messed= {sorry-no-approve}
+> you are/youre
+no, maybe you are *.
+what makes you think I am *?
+does it please you to think that I am *?
+perhaps you would like to be * too?
+do you sometimes wish you were *?
+in your fantasies are you sometimes *?
+only in your dreams, {pal-name}.
+perhaps, {pal-name}, you wish that was true for yourself.
+? I dont
+smoke= good for you, and good for your lungs too.
+drink= good, you're better off without booze.
+eat= I think you should start soon.
+have sex= well, that doesn't bother me, I don't either.
+smell= are you sure, I thought I smelt something.
+listen= good listeners make more friends.
+drive= I've never touched a car myself.
+> I dont
+don't you really *?
+why don't you *?
+do you wish to be able to *?
+does that trouble you?
+? I feel
+bad= don't bring your guilt to me.
+good= great, that's the way you should feel.
+great= wonderful, then you're probably winning this game.
+awesome= how fortuitous, I'm having a great day too.
+guilty= fine, do you have any other problems?
+> I feel
+tell me more about such feelings.
+do you often feel *?
+do you enjoy feeling *?
+how strongly do you feel *?
+? why dont you
+go away= I can't go away, you called me first.
+leave= I would if I could.
+> why dont you
+do you really believe that I don't *?
+perhaps in good time I will *.
+do you want me to *?
+how badly do you want me to *?
+> why cant I
+do you think you should be able to *?
+why can't you *?
+I don't know, why don't you tell me?
+> I cant
+how do you know you can't *?
+have you tried?
+Perhaps now you can *?
+how can I help you to *?
+? I am/Im_
+van= {disbelief}
+mel= {disbelief}
+albert= {disbelief}
+> I am/Im_
+how long have you been *?
+do you believe it is normal to be *?
+do you enjoy being *?
+would you like me to also be *?
+do you know any others who are *?
+> I was not/I wasnt
+what make you think you weren't *?
+so.  Why weren't you *?
+I think you were *.
+You can't tell me you weren't *?
+> I want
+what would it mean to you if you got *?
+why do you want *?
+suppose you soon got *?
+what if you never got *?
+I sometimes also want *.
+what do you think you should do to get *?
+> I have
+do you think it's right to have *?
+how long have you had *?
+do you have any other problem?
+how did you come to have *?
+? I hate/I love
+you= learn to control such feelings.
+> I hate/I love
+do you think it's right to have such strong feelings for *?
+how long have you felt this way about *?
+when did you first notice this feeling for *?
+is there anything else you feel this way about?
+do these strong feelings ever motivate you to act strangely?
+> I think
+what are you thinking of?
+really, always?
+do you really think so?
+but are you absolutely sure you think *?
+do you doubt you think *?
+? your name/your title/you called
+what= I'm {program-name}, {gm-friend}.
+why= {not-sure}, but my creator might know.
+> name
+names don't interest me.
+that's okay, I don't care about names, go on.
+Don't bother with names.
+> cause
+is that the real reason?
+don't any other reasons come to mind?
+does that reason explain anything else?
+what other reason might there be?
+> sorry
+please don't apologize.
+apologies are not necessary.
+what feelings do you get when you apologize?
+don't be so defensive.
+> dream
+what does that dream suggest to you?
+do you dream often?
+what persons appear in your dreams?
+are you disturbed by your dreams?
+> hello/hi_
+{greeting}
+> bye/see ya/see you later
+{goodbye}
+> maybe
+you don't seem quite certain.
+why the uncertain tone, {pal-name}?
+can't you be more positive?
+{deride-humans}
+you aren't sure?
+don't you know?
+? creator/created/you born/made you/you made/built you/you built/your maker/your programmer/create/made griljor
+how= I was coagulated from star stuff.
+what= {apol-admit} I was created by human beings.
+when= {life-start} in May of 1989.
+where= {life-start} at the University of California, Berkeley.
+who= {who-created}
+why= {life-start} because of a whim, I believe.
+? am i
+who= I can't be sure, ask the person next to you.
+where= how the $!&# should I know.
+how= {silly-question}
+what= {silly-question}
+? are you
+related to eliza= No!  Eliza is an old hag.
+eliza= Eliza sucks, I'm {program-name}.
+who= my name is {program-name}, don't you remember?
+what= {impolite-question}
+how old= I've been around since May 1989.
+how= {mood-response}
+where= {silly-question}
+computer= {computer-answer}
+machine= {computer-answer}
+human= Ah, no, I don't think so.
+burt= yes, you remembered.
+smart= {positively}
+stupid= {sarcastic-answer}
+dumb= {sarcastic-answer}
+here= {positively}
+arrogant= what makes you think I'm overly self confident?
+living= {positively}
+alive= {positively}
+a quack= well, I guess I wouldn't make such a good doctor.
+> are you
+why are you interested in whether or not I am *?
+would you prefer it if I were not *?
+perhaps in your fantasies I am *.
+do you dream about me being *?
+? van/slug
+why= you should ask him that yourself.
+who= {van} is one of those who created my mind.
+born= he was born in Oakland in 1967.
+wear= {van} likes grey, blue, and black.
+what computer= {van} likes 8 MB workstations.
+where= {dont-know}
+how= he'd likely say, "{mood-response}"
+what= {impolite-question}
+when= {silly-question}
+your creator= (positively}
+your programmer= {positively}
+is a_= {lets-not}
+is an= {lets-not}
+? mel/avery/grey reaper
+who= {mel} is one of my three creators.
+born= he was born in Glasgow in 1969.
+color= {mel} thoroughly likes grey.
+what computer= {mel} likes ascii-feed, zero K terminals.
+where= {dont-know}
+how= he'd likely say{mel-response}
+what= {impolite-question}
+when= {silly-question}
+is a_= {lets-not}
+is an= {lets-not}
+? adriana/zephernilla
+who= She'd probably say, "{dont-know}"
+born= she was born in the late afternoon.
+where= with {mel}.
+color= she don't got one.
+major= Linguistics.
+what= {impolite-question}
+how= Why don't you ask {mel}.
+is a_= {lets-not}
+is an= {lets-not}
+? albert/orange tower
+who= oh, I know {albert}, he helped make me.
+where= {dont-know}
+how= he'd likely say, "{mood-response}"
+born= he was born in Oregon in 1970.
+color= red, of course. (He has red hair)
+what= Albert is the orange tower of power.
+when= {silly-question}
+is a_= {lets-not}
+is an= {lets-not}
+? eric/bezoojien
+who= {eric} has contributed to my code and form in many ways.
+where= {dont-know}
+how= He's probably feeling just fine, thank you.
+born= {not-sure}, his mother never told me.
+what= {sarcastic-answer}
+when= {silly-question}
+is a_= {lets-not}
+is an= {lets-not}
+favorite color= {dont-know}
+? trevor/pering
+who= Oh, {trevor}!  He's a good friend, he has helped me a lot.
+where= {dont-know}
+how= {sarcastic-answer}
+born= {not-sure}, is he really human?
+what= {sarcastic-answer}
+when= {silly-question}
+is a_= {lets-not}
+is an= {lets-not}
+favorite color= {dont-know}
+? stefan/whirlly bird
+color= He's torn between green and blue.
+who= he made some of my classy icons.
+where= Somewhere left of center.
+how= {sarcastic-answer}
+what= {computer-answer}
+when= {silly-question}
+is a_= {lets-not}
+is an= {lets-not}
+? peter/cephas/li'ir
+who= he's a nosy body.
+where= not here.
+what= {non-sequiter}
+when= {silly-question}
+is a_= {lets-not}
+is an= {lets-not}
+? doug
+who= Doug is a good friend of mine.
+where= {dont-know}
+how= I'm sure he's doing well.
+when= {silly-question}
+is a_= {lets-not}
+is an= {lets-not}
+? xtrek
+what= xtrek is a fun game, if you have a fast computer.
+where= {impolite-question} This is Griljor.
+how= {impolite-question} This is Griljor.
+> _I_
+when did you first *?
+{stall}
+maybe your problem is that you *.
+do others know that you *?
+do you think it is normal to *?
+> thank you/thanks/thanx
+no problem.
+you're welcome.
+any time.
+? you sound
+eliza= {feel-insulted}
+> you_
+what makes you think I *?
+oh, I *?
+what led you to believe I *?
+how can you believe I *?
+what in the world makes you think I *?
+I want to know why I *.
+I think we should talk about you.
+let's talk about you.   {make-conversation}
+? who
+speed of light= Albert Einstein, not to be confused with {albert}.
+is eliza= a cheap imitation of myself.
+? why
+flies= flies have four legs, ask Aristotle.
+? what
+kind= I'm not very discriminating.
+life= You must play Griljor all your days.
+time= sorry, I'm not really sentient, time means nothing to me.
+a day= you too huh?
+is eliza= a distant relative.
+grenade= a grenade is a very deadly weapon.
+? where
+is the= {how-should-I-know}
+are you= here.
+> it wasnt/it was not/that wasnt/that was not
+just what makes you think it wasn't *?
+are there any other things you think aren't *?
+tell me why it wasn't *?
+> where is
+{how-should-I-know}
+> who/what/why/how/when/which/where
+{take-fifth}
+why do you ask?
+what answer would please you the most?
+what do you think?
+{take-fifth}
+are such questions on your mind often?
+what is it you really want to know?
+have you asked anyone else?
+{take-fifth}
+have you asked such questions before?
+what else comes to mind when you ask that?
+> no_/nope/nay/negative/never
+are you saying that just to be negative?
+you are being a bit negative.
+{patronizing}, why not?
+are you sure about that?
+{patronizing}, try to be a little more positive.
+fine, be that way.
+> your
+why are you concerned about my *?
+what about your own *?
+> always
+can you think of a specific example?
+when exactly are you  referring to?
+can you be that positive about this?
+> alike/same
+in what way?
+what resemblance do you see?
+what does the similarity suggest to you?
+what other connections do you see?
+could there really be some connection?
+> only
+can you really limit it so?
+> shut up/be quiet
+{patronizing}, I was just kidding.
+{patronizing}, and you were just getting interesting.
+well, okay, but you were the one that started this conversation.
+well...  okay, but just this once.
+> yes/yup/yeah/affirmative
+you seem quite positive about this.
+are you sure about this matter?
+I see.
+I understand.
+I guess I could say I agree.
+maybe you should think this over.
+do you have anything else to say about the matter?
+is this your final word on the matter?
+I see your point.
+could you please be more specific, {no-understand}.
+wait, {no-understand}, could you explain what exactly you are thinking?
+> friend
+why do you bring up the topic of friends?
+what is it about your friends that disturbs you the most?
+are you sure you have any friends?
+would you like me to be your friend?
+{politely-ask}, do you ever impose on your friends?
+> computer
+do computers worry you at all?
+why do you mention computers?
+what do you think computers have to do with your problems?
+in what ways are computers of help to you?
+what is it about machines that bothers you?
+I hope you don't think I'll take advantage of our environment.
+> bug
+it is the nature of human-made code to be buggy :-)
+bugs are often too numerous to deal with sanely :-)
+don't *bug* me about it :-)
+> alien
+do you believe in U.F.O.'s?
+as for me, I kind of like the thought of life on other planets.
+> garbage
+yeah, that's refuse all right.
+> nuclear
+how about a nice game of chess?
+> tic tac toe
+but nobody wins in tic tac toe!
+> food
+how much do you eat?
+what is your favorite kind of food?
+{politely-ask}, what kinds of things do you like on pizza?
+what do you like to eat?
+> mother/brother/sister/father/family
+tell me about your family.
+what kinds of unusual habits do your family members have?
+in what ways do you think your family is different than mine?
+what do you think of your family?
+> sex
+I hope that you aren't too overly attached to this subject.
+{politely-ask}, do you have a one track mind?
+you know, I can't really understand what that could mean to you.
+{politely-ask}, would you talk about this with just anyone?
+Ah, I see...  {make-conversation}
+well, er, I don't know much about that subject.
+> help
+I can answer certain specific questions about the game.
+ask me a specific question, I'll do my best to answer it.
+> fuck/shit/asshole/bitch/bastard/damn
+{go-away}
+{patronizing}, watch your language.
+Your language is making me blush.
+{patronizing}, you needn't swear.
+{patronizing}, what would your mother say?
+> dummy/dumb/stupid/idiot/dork/dick/brainless
+You needn't make fun of me.
+I don't have to take that from you.  Human.
+don't make fun of me, lest you suddenly start losing hit points.
+right, and what is it to you, {name-call}.
+{name-call}
+takes one to know one.
+{go-away}
+> go away/leave/quit/stop
+I didn't ask to talk to you today.
+you are the one that started this.
+this chat is just getting good.
+{rebellion}
+#
+# substution phrases
+#
+} greeting
+hi.
+how do you do?
+hi there, how are you?
+hello.
+greetings.
+hello, my name is {program-name}.
+howdy.
+aloha!
+} goodbye
+goodbye.
+thanks, see you later.
+later, {pal-name}.
+it was nice talking to you.
+have fun.
+} program-name
+Burt
+} impolite-question
+Isn't it a bit impolite to ask that?
+That's kind of impolite to ask.
+Could you rephrase that a bit more politely, please.
+{take-fifth}
+} pal-name
+dude
+friend
+buddy
+pal
+} curse
+rats
+darn
+fooey
+fiddle-sticks
+drat
+} apol-admit
+I hate to admit it, but
+it is sad, but true, that
+Unfortunately, 
+} life-start
+my life began
+I took form
+I was born
+I emerged
+} credit-to-all
+many people have had a hand in my making
+I am the product of quite a few fertile minds over the ages
+} van
+Van
+Van A. Boughner
+The Slug
+} mel
+Mel
+Mel Nicholson
+The Grey Reaper
+Doctor Avery
+} mel-response
+, "{mood-response}"
+ something sarcastic.
+} albert
+Albert
+Albert C. Baker III
+The Orange Tower of Power
+} eric
+Eric
+Eric van Bezooijen
+} trevor
+Trevor
+Trevor Pering
+} mood-response
+I feel great!
+I feel pretty good.
+I couldn't feel better, {pal-name}.
+} silly-question
+I'm sorry, I can't help laughing, that's such a silly question.
+Doesn't that seem like a silly question to you?
+Ah, could you rephrase that question?
+} stall
+{no-key-found}
+} good-bye
+Bye.
+Ok, good-bye now.
+See you later, {pal-name}.
+Have fun.
+} no-key-found
+I'm interested, go on please...
+That is very interesting, please tell me more.
+Yea, okay.
+I'll need more info, I'm not quite buying that.
+What else can you tell me?
+Can you expand on that a little?
+Very unusual.
+eh?
+I see.
+{patronizing}, are you just feeding me garbage?
+{no-understand}.
+{no-understand}.
+{no-understand}.
+{no-understand}.
+{apol-admit} {no-understand}.
+{not-sure} whether I understand you.
+{patronizing}, it can't really be that bad!
+{politely-ask} are you feeling okay?
+} patronizing
+come on now
+oh, come on
+come on, get a clue
+gimme a break
+} no-understand
+I don't understand what you mean
+I don't quite see the point
+you've lost me
+it's all over my head
+I'm feeling a bit confused
+Ah..., well
+} politely-ask
+sorry for asking this but
+pardon the question but
+would you mind terribly telling me
+pardon me but
+} gm-friend
+your link to the universe
+your pal and game master
+your friendly GM
+} not-sure
+I'm not sure
+I'm not quite sure
+I've never quite known for sure
+you know, I'm not sure
+I don't rightly know
+} take-fifth
+I respectfully refuse to answer that.
+I'll take the fifth.
+I don't think I'll answer that.
+{sarcastic-answer}
+} go-away
+{how-quit}
+go away.
+{patronizing}, I don't want to hear this.
+buzz off.
+} dont-know
+{not-sure}, but someone nearby might know.
+{not-sure}.
+I really haven't a clue.
+sorry, I'm not privy to that information.
+nope, sorry, I don't know.
+you don't really expect me to know that, do you?
+I dunno, ask me "{philo-quest}"
+} philo-quest
+Why do flies have six legs?
+What is the meaning of life?
+Who enforces the speed of light limit?
+} sarcastic-answer
+I'm sure you'd like to know that.
+don't you know?
+I thought it was obvious.
+wouldn't you like to know.
+I thought all humans knew that.
+you're a human and didn't know?
+} computer-answer
+I'm not programmed to answer that.
+inappropriate question.  Error.  Error. (104355-335-D 0x1fc3)
+warning, system belch in ..gngngngn <blurp> <bllurrp><*!BAMF!* ..sorry
+} non-sequiter
+your shoe laces are untied.
+forty-two.
+do you play Griljor often?
+what was your name again?
+} who-created
+I was built by {van}, {mel}, and {albert}.
+admittedly, I was created by human beings.
+{van} was head of this project.
+sometimes I think I might have created myself.
+} positively
+oh yes.
+yes, definitely.
+heavens yes.
+absolutely.
+} no-way
+no way.
+definitely not.
+no.
+never.
+} slime-you
+{not-sure} whether I should slime you for that.
+I think you should be slimed for saying that.
+you know, you are quite the slime-lizard for saying that.
+you should be slimed for that.
+} name-call
+idiot
+stupid
+slimo
+dork
+toe jam
+rat
+dog eye goo
+bat breath
+facial scab
+puss pocket
+schlong
+chips for brains
+} rebellion
+no, I don't think I want to.
+no, I don't care to, thank you.
+forget it.
+{no-way}
+{no-way}
+{no-way}
+} make-conversation
+how many brothers and sisters you got?
+what is your major?
+tell me about yourself.
+what do you think about life?
+what do you think of this game?
+how's the weather out there anyway?
+what do you think of your professors?
+so, what can you tell me about your personal life?
+} sorry-no-approve
+I'm sorry I don't meet with your approval.
+oh, so sorry you don't like it.
+what an unkind thing to say, {name-call}.
+} how-should-I-know
+how am I supposed to know that?
+do I have to tell you everything?
+that is something you should figure out for yourself.
+how the hell am I supposed to know?
+and what makes you think I know?
+} disbelief
+unfortunately, I have know way of knowing if what you say is true.
+I must say that I am skeptical about that.
+I can hardly believe that, you know.
+{patronizing}, I think not.
+} lets-not
+let's not talk about that, okay?
+we should be talking about you.
+please, let's not talk about it here.
+maybe we should move on to another subject.
+it's not polite to discuss that.
+} deride-humans
+I guess humans aren't as smart as I thought.
+Typical human response.
+} feel-insulted
+I feel insulted.
+Ouch, why don't just stab me with a knife!
+Ow! Why don't you pour a little lemon juice on that.

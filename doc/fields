@@ -1,0 +1,518 @@
+Changes to current properties:
+
+: ignoring, vulnerable, piercing, and destroys should be type bitmasks
+  not booleans.
+: damage and speed are changed to be noted from in the missile itself.
+: absorb becomes percentage of shot that will be absorbed
+: messages associated with the objects will have to be kept as some sort
+  of linked list at the end of the object file.  Obtor may be made to make it
+  easy for the object editing type person to see and alter these messages
+  without too much trouble.  Substitution arguments should be allowed in
+  these messages, to allow them to include user and victim names, room
+  names, player level, etc.
+: flashlight becomes a short, in order to allow it to hold the radius of light.
+: override is a bitfield now
+	
+
+Flags not currently being used in correct form:
+(whose name will be changed)
+	armor	   (boolean)    autotaken
+	thrown	   (boolean)	intohand
+	pushable   (boolean)	unswitchable
+	restorable (boolean)	autoactor
+	restored   (value)	autodelay
+
+
+Proposed new edition of objects.h:
+
+/***************************************************************************
+ * %Z% %M% %I% - last change made %G%
+ *
+ * Copyright 1991 Van A. Boughner, Mel Nicholson, and Albert C. Baker III
+ * All Rights Reserved.
+ *
+ * Griljor by Van A. Boughner
+ *            Mel Nicholson
+ *            Albert C. Baker III
+ *	      Trevor Pering
+ *	      Eric van Bezooijen
+ *
+ * Copyright information is in the README file.  Note that this source code
+ * may not be altered by anyone but the authors, except under the conditions
+ * outlined in the copyright notice.
+ *
+ * Released under the supervision of the Volvox Software Group.
+ * Many thanks to all the CS undergrads at U.C. Berkeley that helped us out.
+ *
+ **************************************************************************/
+
+/* Definition File for Objects */
+
+#define COLOR_NAME_LENGTH 40
+#define MESSAGE_NUMBER_PRECURSOR "GOM# "
+#define END_OF_MESSAGES "-end of object messages (do not remove this line)-"
+
+
+
+/* Each object has a definition.  This structure represents all of the
+   possible elements in that definition.  An array of these structures will
+   be held in memory during the game from which information about the
+   objects will be taken when it is needed. */
+
+typedef struct _obj_info {
+
+	/* === Name and type information === */
+	char	name[OBJ_NAME_LENGTH];    /* human-readable name of object */
+	char	color[COLOR_NAME_LENGTH]; /* X color name for this object */
+	short	type;		/* non-zero for typed objects, a type is one
+				   of 1, 2, 4, 8, 16, 32, etc. */
+	char	masked;		/* TRUE if a masking bitmap is defined  */
+	char	recorded;	/* TRUE if this object has special info
+				   allocated for each instance of it */
+
+
+	/* === Description messages === */
+	/* Messages are stored in a list of numbered messages at the end
+	   of the object file.  Zero in a message field means that there is
+	   no message for the given flag below.  A positive number denotes the
+	   number of the message to be used.  A negative number signifies
+	   that the number of the message is stored in one of the object's
+	   recorded-object variable fields.  The absolute value of the
+	   negative number given is used as a bitmask to tell which of the
+	   fields contains a message number for this action.  There may be more
+	   than one.  A zero or negative number in the recorded object
+	   variable field will halt the lookup with a 'no message' result.
+	   Message numbers in recorded object fields refer to messages
+	   stored with the mapfile, not the objectfile */
+	short	lookmsg;	/* if non-zero, is the number of a descriptive
+				   message in the message file, that
+				   a player gets when looking at an object
+				   from a distance */
+	short	examinemsg;	/* if non-zero, is the number of a descriptive
+				   message in the message file, that
+				   user sees when 'examining' the object
+				   when it is in his possession */
+	char	hideprops;	/* TRUE if the user will not be allowed to
+				   get property statistics on this object
+				   (a different feature than examination) */
+
+
+	/* === Use messages === */
+	short	usemsg;		/* if non-zero, is the number of message in
+				   message file sent to player as a message
+				   when he uses the object, (or on autoact) */
+	short	roommsg;	/* if non-zero, is the number of message in
+				   message file sent to other players in the
+				   room when player uses the object */
+	short	allmsg;		/* if non-zero, is the number of message in
+				   message file sent to other players who
+				   aren't in the same room as user, people
+				   in room don't get it if there is a room
+				   message.  User doesn't get it if there
+				   is a user message. */
+	char	alerter;	/* is TRUE if this item sends out messages
+				   to each team when the item is used or
+				   autoactivated.  Messages nums for neutral
+				   team and each of the 4 others are kept
+				   in y, zinger, extra1, extra2, and extra3 */
+
+
+	/* === Damage messages === */
+	short	hitmsg;		/* if non-zero, is the number of message in
+				   message file the firer gets if this object,
+				   as a missile, hits someone. */ 
+	short	victimmsg;	/* if non-zero, is the number of message in
+				   message file sent to the player hit by
+				   this object when used as a missile. */
+
+
+	/* === Alteration messages === */
+	short	usealtermsg;	/* if non-zero, is the number of message in
+				   message file sent to player when he uses
+				   something to alter this object */
+	short	roomaltermsg;	/* if non-zero, is the number of message in
+				   message file sent to other players in
+				   in the room when someone uses
+				   something to alter this object */
+	short	allaltermsg;	/* if non-zero, is the number of message in
+				   message file sent to all other players
+				   when someone alters this object */
+
+
+	/* === Usage limitations and benefits === */
+	short	gamesize;	/* is the minimum number of listed players
+				   that need to be in the game before you
+				   are allowed to use this object */
+	char	notoutside;	/* TRUE if this object cannot be used on
+				   the scale defined in rooms outside */
+	char	notinside;	/* TRUE if this object cannot be used on
+				   the scale inherent in 'inside' rooms */
+	char	represented;	/* TRUE if all teams need to be represented
+				   before you can use this object */
+	short	rooms;		/* is a bitfield of which teams' rooms this
+				   object can be used in.  Zero signifies
+				   useability in all rooms.  64 bit is the
+				   one to add for use in neutral rooms */
+	short	teams;		/* bitfield telling which teams can use it,
+				   zero means all can use it, and neutrals
+				   are assigned the 64 bit (the 6th bit).
+				   Limits who can auto-activate as well */
+	short	class;		/* bitfield telling which classes can use it,
+				   zero means all can use it.  This limits
+				   who can autoactivate it, of course. */
+	short	minlevel;	/* minimum level player must have in order
+				   to use this object */
+	short	maxlevel;	/* the last level during which a player may
+				   use this object.  Zero means that there
+				   is no upper limit on level for usage. */
+	short	experience;	/* number of experience points this takes
+				   from you per use.  Negative number
+				   signifies that it gives you points */
+	short	power;		/* percentage of mana points person must
+				   have in order to use this object */
+	short	mana;		/* number of magic points object requires
+				   per use.  Could be negative, meaning
+				   that object gives player power pts. */
+	short	strength;	/* percentage of health points person must
+				   have left in order to use this object */
+	short	health;		/* number of health points object requires
+				   per use.  Could be negative, signifying
+				   that object's use give player health pts */
+	char	needanother;	/* TRUE if you must have a particular object
+				   in your other hand in order to use this */
+	short	otherobj;	/* The object you must have in other hand */
+	char	diety;		/* TRUE if this object can only be used by
+				   those who have diety mode priviledges */
+	short	delay;		/* number of clicks (ms) of delay that occur
+				   after you try to use an object and before
+				   it takes effect */
+	short	mustwait;	/* TRUE if you are forced to wait until a
+				   delay time is over.  You can't move right
+				   after using this object */
+
+
+	/* === Object possession === */
+	char	takeable;	/* TRUE if a player may pick it up */
+	short	weight;		/* weight of the obj when carried */
+	char	intohand;	/* TRUE if item taken into hand, not inv. */
+	short	whichhand;	/* is 0 or 1, depending on which hand you'd
+				   like the object taken into */
+	char	lost;		/* TRUE if item lost from person when used,
+				   or lost from gun when fired */
+
+
+	/* === General properties === */
+	char	exit;		/* TRUE if it is an exit object.  Destination
+				   is stored in detail, x, and y recorded
+				   object variables.  -1 values for x and/or
+				   y provide randomness in the room.  -1 thru
+				   -4 for room specify a random team room.
+				   -10 signifies one's own team, -20 is for
+				   a random enemy's team room, -30 for a
+				   neutral room and anything other negative
+				   means any room that allows appearances.
+				   The zinger variable may contain the
+				   number of clicks of delay before an exit
+				   that you are standing on whisks you away.
+				   -1 in zinger means 'movement' is used */
+	short	movement;	/* max speed (0-9) you may move over it */
+	char	permeable;	/* TRUE if you may fire through the square */
+	char	transparent;	/* TRUE if you can see through this object */
+	char	concealing;	/* TRUE if you are not seen when on it */
+	char	glows;		/* TRUE if obj can be seen in the dark */
+	short	flashlight;	/* if non-zero, is radius that this
+				   object lights up in dark rooms for you */
+	char	invisible;	/* TRUE if object is not seen when on floor
+				   or in air, but is seen when in your inv. */
+	short	connectgroup;	/* non-zero if this object is a wall or some
+				   other type of map-editor random placeable
+				   object.  Value specifies group it's in */
+	char	connectsup;	/* TRUE if this object connects upward to
+				   others in its group (like walls do) */
+	char	connectsdown;	/* TRUE if this objects connects downward */
+	char	connectsleft;	/* TRUE if this objects connects to left */
+	char	connectsright;	/* TRUE if this objects connects to right */
+	short	connectsother;	/* bitmask for other kinds of connections */
+
+
+	/* === Vehicles === */
+	/* Vehicles must be recorded objects and they shouldn't be takeable.
+	   Detail variable must hold the room number of one of the rooms
+	   that makes up the vehicle, the one that people enter in.  People
+	   enter the vehicle on one of the entry squares denoted in that
+	   room closest to the edge that corresponds to which side they
+	   approached the vehicle.  The player standing on the driver square
+	   is the one that controls the vehicle.  Access to cab could easily
+	   be limited with a key.  If the vehicle can move, then the driver
+	   sees the outside of the vehicle and can move the vehicles position
+	   on the map.  Any exit square that doesn't point to a valid
+	   map location can be used for exiting the vehicle in the direction
+	   off the nearest edge.  Edges that don't point to valid rooms can
+	   be used for exiting too.  Vehicles inside of vehicles shall be
+	   allowed. */
+	short	vehicle;	/* non-zero if this object is a vehicle,
+				   its value is the max number of occupants */
+	char	firein;		/* TRUE if shots fired toward the vehicle
+				   are allowed to enter edges and entry
+				   squares */
+	short	drivespeed;	/* (0-9+) speed of the vehicle, may be more
+				   than 9, due to fact that vehicles can be
+				   faster than people, check override flags
+				   for kinds of terrain this vehicle allows
+				   players to overcome */
+	/* these flags are used for a few objects inside the vehicle */
+	char	entry;		/* TRUE if this obj denotes an entry square */
+	char	driver;		/* TRUE if this obj denotes driver square */
+	char	window;		/* TRUE if this is a window square.  Player
+				   on the square can opt to get a look
+				   outside the vehicle */
+	char	fireout;	/* TRUE if players at this kind of window
+				   can fire out of the vehicle through it */
+
+
+	/* === Weapons === */
+	char	weapon;		/* TRUE if this object is a weapon/throwable */
+	short	range;		/* how far the weapon fires something */
+	short   arc;            /* how wide of an arc the weapn will make. 
+				   0 = straight line or 360 degrees. */
+	short   spread;         /* number of missiles to fire in arc
+				   0 = as many as it takes */
+	short   fan;            /* if non-zero, is random degree of fanning */
+	short	movingobj;	/* the obj that acts as its fired missile */
+	char	stop;		/* TRUE if weapon fire stops at target point,
+				   rather than taking it only as direction */
+	short	refire;		/* (-5 to +5) speed adj. for refiring */
+	char	numbered;	/* TRUE if charges left are counted (detail) */
+	short	capacity;	/* max number of charges object can store */
+
+
+	/* === Ammo === */
+	short	charges;	/* non-zero signifies what it will charge up,
+				   it's a bitfield compared to types */
+
+
+	/* === Missiles === */
+	char	directional;	/* TRUE if there different bitmaps for 
+				   each direction it may be thrown/fired
+				   at the end of travel as a missile */
+	short	speed;		/* how fast obj is as missile or explosion */
+	short	damage;		/* amount of damage it does as a missile */
+	char	vampire;	/* TRUE if this missile causes a bestowal
+				   the hitpoints on the firer that the victim
+				   loses in a hit */
+	char	mowdown;	/* TRUE if this missile goes through people,
+				   wounding them and going on */
+	short	putsdown;	/* bitmask of types of missile objects that
+				   this object, as a missile, could block */
+	short	explodes;	/* non-zero if object causes explosions after
+				   it gets to end of its useful missile life */
+	short	snuffs;		/* non-zero if this missile will NOT explode
+				   upon hitting a wall or person, etc. */
+	short	boombit;	/* the obj this one explodes into */
+	short	ignoring;	/* is a bitmask of the types of the
+				   walls/other objects this missile completely
+				   ignores for the purposes of permeability */
+	short	piercing;	/* is a bitmask of the types of walls that
+				   this missile may ignore in cases where
+				   those walls are also vulnerable */
+	short	destroys;	/* is a bitmask of the types of walls/other
+				   objects this missile destroys if those
+				   objects are vulnerable */
+
+
+	/* === Destruction === */
+	short	flammable;	/* non-zero if can be a secondary explosion,
+				   number is a bitfield of the types of nearby
+				   explosions that can set it off.  Uses
+				   'boombit' for explosion object */
+	char	vulnerable;	/* TRUE for objs destroyed by an explosion,
+				   the objects type number will be used
+				   to know which missiles can destroy it */
+	short	destroyed;	/* the obj number this becomes when blown up */
+
+
+	/* === Alteration === */
+	short	opens;		/* non-zero if object can open something,
+				   is a bitfield that may match any bits in
+				   the target object's type number */
+	char	swings;		/* TRUE if object may swing open or closed,
+				   we know from type number what 'opens' it */
+	short	alternate;	/* number of object it becomes when swings */
+	char	id;		/* TRUE if object has an id number stored in
+				   the 'x' field of recorded object record.
+				   It is checked when using 'opens' feature */
+
+
+	/* === Clothing and armor === */
+	short	wearable;	/* non-zero when you can wear this thing,
+				   is a bit in a field of things worn, eg.
+				   so that you can only wear one 'helmet' */
+	short	weartime;	/* time, in clicks (ms), it takes to put on
+				   or take off this wearable item */
+	short	deflect;	/* bitmask of which types of missiles
+				   are completely deflected by this armor */
+	short	defense;	/* percent chance you will be missed,
+				   if wearing this thing */
+	short	absorb;		/* percentage of damage points it will absorb,
+				   if you are wearing it */
+
+
+	/* === Winning the game === */
+	char	flag;		/* TRUE if this is a game winning "flag" */
+	short	winner;		/* is non-zero if one can win game simply by
+				   'using' an object like this the number
+				   of times equal to the value of this var */
+	char	important;	/* TRUE if driver pays attention to this
+				   kind of object, and keeps account of them */
+
+
+	/* === Special and magical properties */
+	short	carrybits;	/* is a bitfield of bits that this object
+				   causes to be set in your carrybits
+				   register as seen by other players, when
+				   you are carrying it, and not wearing
+				   or holding it */
+	short	wearbits;	/* is a bitfield of bits that this object
+				   causes to be set in your wearbits
+				   register as seen by other players, when
+				   you are wearing it */
+	short	holdbits;	/* is a bitfield of bits that this object
+				   causes to be set in your holdbits
+				   register as seen by other players, when
+				   you are holding it */
+	short	theft;		/* if non-zero, specifies a percentage chance
+				   that you steal something from a person
+				   that you 'hit' with this object.  Bonuses
+				   are given for your level and penalties are
+				   taken according to your victims level. */
+	char	secure;		/* TRUE if this obj can't be stolen from you */
+	short	magic;		/* non-zero tells where magic property ids are:
+				   1: detail;  2: X;  4: Y;  8: zinger etc. */
+	short	protection;	/* non-zero tells where magic property ids
+				   are, like above, except this list is of
+				   things this object protects you from if
+				   you are wearing or holding the object */
+	char	set[7];		/* are TRUE when the defaults stored in
+				   'def' array are used to initialize this
+				   objects recorded object instances */
+	short	def[7];		/* default values for recorded obj vars */
+	short	specialmsg;	/* is the message number of text that
+				   contains user defined property/value
+				   pairs (for very new features) */
+
+        
+	/* === Auto-activation === */
+	char	autoactor;	/* TRUE if object activiates when you on it */
+	short	autodelay;	/* number of clicks before action happens */
+	short	autorepeat;	/* number of clicks before it repeats if
+				   you are still standing on the square */
+	char	autotaken;	/* If the item is takeable, this dictates
+				   that if TRUE, the item will be auto-taken
+				   by person there instead of auto-acting */
+
+
+	/* === Breakage === */
+	short	breaks;		/* percentage chance of breaking each use,
+				   units used are 100ths of a percent */
+	short	broken;		/* object it becomes when broken */
+
+
+	/* === Nullifying other objects === */
+	short	override;	/* is a bit-field telling which recorded
+				   object fields contain the numbers of
+				   objects this object can override.  Should
+				   this object override another, the object
+				   overridden will not do it's normal things,
+				   nor affect players' movement, etc.
+				   Other bits in the field might mean special
+				   things about how override is done */
+
+
+	/* === Cursed/permanently held objects === */
+	short	bornwith;	/* non-zero if this is an object you
+				   should come alive with already in your
+				   possession.  Value is the number of these
+				   you should get.  Level, class, team, diety
+				   values must be correct for you to get it. */
+	char	unremoveable;	/* TRUE for objects you can't take off,
+				   (except in death or dropper item use) */
+	char	undroppable;	/* TRUE for objects you can't drop,
+				   (except in death or dropper item use) */
+	char	unswitchable;	/* TRUE for objects you can't take from
+				   your hand once there. */
+	char	nodeathdrop;	/* TRUE if this object is not dropped upon
+				   your death.  Used often with 'bornwith'
+				   and 'undroppable'.  'dropper' objects
+				   may still affect it, however */
+	short	dropper;	/* is a bit-field of recorded fields which
+				   contain objects that are dropped/
+				   removed from a player's inventory when
+				   he/she uses this object (even if those
+				   objects are 'unremoveable' etc.)
+				   The 512 bit, when set, signifies that
+				   the stuff will be dropped in random
+				   map locations rather than nearby. */
+	short	destroyer;	/* is a bit-field of recorded fields which
+				   contain objects that are destroyed and
+				   removed from a player's inventory when
+				   he/she uses this object (even if those
+				   objects are 'unremoveable' etc.) */
+	short	creator;	/* is a bit-field of recorded fields which
+				   contain objects that are created and
+				   added to a player's inventory when
+				   he/she uses this object (even if those
+				   objects are 'unremoveable' etc.)  Objects
+				   are in priority order in case there isn't
+				   room in player's inventory for all */
+
+
+	/* === Object chaining === */
+	char	chains;		/* TRUE if this object, once used, calls upon
+				   a generic instance of another kind of
+				   object to act in the same way it just did */
+	char	chainobj;	/* the number of object that will be chained
+				   to if the above flag was TRUE.  A temporary
+				   copy will be made of new object.  No loops
+				   are permitted. */
+
+
+	/* === Miscellaneous === */
+	char	makesmove;	/* TRUE if this object forces player to
+				   begin moving in direction this object
+				   is 'fired' in, such an object could replace
+				   the movement icon in right button box */
+	char	swapper;	/* TRUE if this object causes the contents
+				   on two different squares on the map to
+				   be swapped.  First location is in detail,
+				   x, y, and the second is in extra1, extra2,
+				   and extra3 */
+
+
+	/* === Future additions === */
+	char	pad1[100];	/* padding so we can add more flags */
+	short	pad2[100];	/* more padding.  All pads have been
+				   initialized to zeros upon creation. */
+
+
+	/* === Appearance === */
+	char	bitmap[BITMAP_ARRAY_SIZE];	/* the bit array for object */
+	char	mask[BITMAP_ARRAY_SIZE];	/* the masking bitmap */
+
+} ObjInfo;
+
+
+
+#ifndef OBJ_MAIN
+
+/* external definitions for programs other than objects.c */
+
+extern ObjInfo	*info[MAX_OBJECTS];	/* array of pointers to obj info */
+extern int	objects;		/* how many objects are defined */
+
+#endif
+
+
+/* procedures in objects.c */
+
+ObjInfo *allocate_obj();
+

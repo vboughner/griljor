@@ -1,0 +1,22 @@
+explodes
+movement
+lost  play.c
+thrown
+
+
+
+sword:
+  damage
+  speed
+  range=1
+  movingobj = sword
+
+damage = self.
+speed = self.
+range = owner.
+boombit => endobj
+lost => explodes
+thrown = lost
+
+
+

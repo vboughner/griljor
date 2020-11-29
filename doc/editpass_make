@@ -1,0 +1,25 @@
+#
+#	
+#
+
+CC = gcc
+CFLAGS = -g 
+LDFLAGS= 
+SRCS = errorx.c xx.c processorx.c menux.c attributesx.c importx.c scrollx.c \
+       sliderx.c bitmapx.c timex.c\
+       editpass.c error.c lib.c password.c \
+       X11ReadBitmapFile.c X11WriteBitmapFile.c 
+
+OBJS = errorx.o xx.o processorx.o menux.o attributesx.o importx.o scrollx.o \
+       sliderx.o bitmapx.o timex.o\
+       editpass.o error.o lib.o password.o \
+       X11ReadBitmapFile.o X11WriteBitmapFile.o
+
+LIBS =  -lX11 -lm
+PROGRAM= xeditpass
+
+
+$(PROGRAM): $(OBJS)
+	$(CC) $(CFLAGS) -o $(PROGRAM) $(OBJS) $(LIBS)
+rm:
+	rm *.o

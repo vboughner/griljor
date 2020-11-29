@@ -1,0 +1,32 @@
+# This is the random object placement file for the shooter map.
+#
+# Each line in this file signifies one random placement action that may
+# occur during the game at the whim of the driver.
+# This provides a certain amount of randomness to the game.  The
+# placement of objects takes place room by room or team by team.
+#
+# The first character on each line is a t for placing something in a certain
+# team's rooms, or an r for placing something on a certain room.
+#
+# Next in each lines comes the object number, and the quantity.
+# Finally, the last entry on each line is the team number (0-4, 0 is neutral),
+# or the room number (depending on whether r or t was used for first entry).
+#
+# Each line's entries must be separated by whitespace, like the following:
+# t/r  	objnum	quant   team#/room#
+#
+# One of the first entries in the file should be a line beginning with
+# 's' and telling how many seconds between random placements you want.
+# example:  's 30'	(random placement every 30 seconds)
+# This number of seconds is divided by how many 'real' players are in
+# the game, so that more people will cause more items to appear to keep
+# things somewhat balanced.
+#
+s 60
+# food outdoors
+r	62	1	0
+# grenades in the maze
+r	201	1	2
+# machine gun ammo in the team rooms
+t	183	2	1
+t	183	2	2

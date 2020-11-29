@@ -1,0 +1,39 @@
+Processes of change when adding things to gameperson records:
+
+1. Change structure in person.h to include new variable.
+   When you compile new version, you must compile both griljor and grildriver
+   The two will not work with each other if you only recompile one of them.
+
+2. Add initializations of these variables to initialize_game_person()
+
+3. Add variable to print_game_person() if you want to see it when you list
+   gameperson values.
+
+4. Add variable to MiniPerson structure and MY_INFO packet structure
+   in socket.h
+
+5. In person.c add of stats driver should keep in his gameperson array:
+   if the variable you have added is one that the driver should keep on
+   record about you, change miniperson_to_gameperson() to get the var
+   out of DriverPack and into his gameperson list.
+
+6. In person.c add your variable to prepare_driver_packet() if it is one
+   that you should tell him about in the beginning, the place you'll actually
+   add it is probably load_person_into_driver_pack()
+   Even if it something he dictates to you later, you should probably put
+   in a default value here.
+
+7. Once the driver has talked to a new player, the player loads the info
+   about himself and sorts it in move_pack_to_persons() in socket.c
+   Add your variable to the sorting if it's info player needs.
+
+8. Add a tranfer of your variable to/from packets in prepare_my_info()
+   and notice_added_info() in socket.c
+
+9. if it is a variable to be saved in password file you'll need to change
+   notify_of_stats() and notice_save_stats() in socket.c
+
+10.if the variable was put into the PlayerInfo structure (probably wasn't)
+   then you'll need to make an addition to load_player_into_person() in
+   play.c and the same sort of addition to load_monsters_into_persons()
+   in language.c

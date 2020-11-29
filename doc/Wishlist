@@ -1,0 +1,38 @@
+Stuff to save for Version 2
+==================================
+MEL: Monsters: monster_main.c monster.c language.h language.c
+
+VAN: command packet sending
+VAN: change item storage to allow depth of 4 objects, eliminate the
+     difference on squares for recorded objects, and make object number
+     storage a short (2 bytes).  Recorded objects would still have a list,
+     but we wouldn't have to search it all the time when drawing.
+VAN: DELEGATE: make a program to translate old maps to new format.
+
+
+Things to include in Version 1
+===================================
+
+TREVOR: how do you get rid of a mask for an object once you've given it one?
+TREVOR: docs for obtor
+
+VAN: make (are you sure?) for reset stats
+VAN: no initial flicker of other players when entering room
+VAN: check flag stability with more than two teams
+VAN: change debugging to a command line option
+VAN: Fix click buffer and cut buffer in editmap to handle recorded objects
+VAN: DELEGATE: write complete documentation for playing griljor
+VAN: allow maps to have a help file, giving the object of the game.
+VAN: DELEGATE: write docs for editmap
+VAN: make game joining and leaving more robust
+VAN: give replace_request() ability to delete requests made useless
+by opposing calls. (queued.c)
+VAN: add things into driver and editmap to delete or ignore objects
+that have invalid numbers (too large) in the map.  Also objects that were
+recorded or not, but have changed, should be handled right in editmap.
+Driver should create default records.
+VAN: look through room drawing code for inconsistencies
+VAN: make griljor do less busy waiting in the front page stage.
+VAN: make missiles use the draw queue.  Make queue more intelligent.
+VAN: put damage missile do in the packet rather than letting victim
+     look up the object's damage

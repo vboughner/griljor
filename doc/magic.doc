@@ -1,0 +1,5 @@
+Magic in object definitions
+
+     By using the 'magic' flag in obtor, you can specify which variables in
+the recorded object's set of variables will be used for storing magical
+property numbers.

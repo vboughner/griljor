@@ -1,0 +1,301 @@
+# Burt's phrase file
+# The following characters at beginning of line are used to denote line types.
+#    Remark lines:              # remarks...
+#    Keyword marker:            > key_word [/key_word]
+#    Substitution marker:       } name_of_base_word [/base_word]
+#    Personal pronoun list:     @
+#    Question info keyword:     ? key_word [/key_word]
+# A space follows each special character.
+# The end of the list following the character comes when another marker
+# is encountered or when the end of the file is reached.
+# A ~ character will be left in until
+# A _ character encountered anywhere is converted to a space character.
+# A * character in keyword phrases denotes place of text insertion.
+# A + character marks the place where the name of the user should be placed.
+# A {base_word} occurrance will be replaced by one of the phrases found
+# in the list for that base word.  Enter everything in lower case except
+# for proper nouns.  Do not include apostrophes in keywords.
+#
+@ Personal pronoun replacement key
+_are_/_am_
+were_/was_
+_I'm_/_you're_
+your_/my_
+_i've/_you've_
+_you~_/_I_
+_me_/_you_
+myself/yourself
+_us_/_yo~u_
+_we_/_y~ou_
+#
+# Now comes all the in-sentence clues as to what to say back.
+# These are in order of priority, first found, first used.
+#
+> can you
+don't you belive that I can *?
+perhaps you would like to be able to *.
+maybe in your dreams I can *.
+I think maybe you're the one that can't *.
+Do you feel insecure about your ability to *.
+> can I
+perhaps you don't want to *.
+do you want to be able to *?
+how would you normally go about it?
+> you are/youre
+no, maybe you are *.
+what makes you think I am *?
+does it please you to think that I am *?
+perhaps you would like to be * too?
+do you sometimes wish you were *?
+in your fantasies are you sometimes *?
+only in your dreams, {pal-name}.
+> I dont
+don't you really *?
+why don't you *?
+do you wish to be able to *?
+does that trouble you?
+> I feel
+tell me more about such feelings.
+do you often feel *?
+do you enjoy feeling *?
+how strongly do you feel *?
+> why dont you
+do you really believe that I don't *?
+perhaps in good time I will *.
+do you want me to *?
+how badly do you want me to *?
+> why cant I
+do you think you should be able to *?
+why can't you *?
+I don't know, why don't you tell me?
+> I cant
+how do you know you can't *?
+have you tried?
+Perhaps now you can *?
+how can I help you to *?
+> I am/Im_
+how long have you been *?
+do you believe it is normal to be *?
+do you enjoy being *?
+would you like me to also be *?
+do you know any others who are *?
+> I want
+what would it mean to you if you got *?
+why do you want *?
+suppose you soon got *?
+what if you never got *?
+I sometimes also want *.
+what do you think you should do to get *?
+> I have
+do you think it's right to have *?
+how long have you had *?
+do you have any other problem?
+how did you come to have *?
+> I hate/I love
+do you think it's right to have such strong feelings for *?
+how long have you felt this way about *?
+when did you first notice this feeling for *?
+is there anything else you feel this way about?
+do these strong feelings ever motivate you to act strangely?
+> I think
+what are you thinking of?
+really, always?
+do you really think so?
+but are you absolutely sure you think *?
+do you doubt you think *?
+> name
+names don't interest me.
+that's okay, I don't care about names, go on.
+Don't bother with names.
+> cause
+is that the real reason?
+don't any other reasons come to mind?
+does that reason explain anything else?
+what other reason might there be?
+> sorry
+please don't apologize.
+apologies are not necessary.
+what feelings do you get when you apologize?
+don't be so defensive.
+> dream
+what does that dream suggest to you?
+do you dream often?
+what persons appear in your dreams?
+are you disturbed by your dreams?
+> hello/hi_
+how do you do?
+{greeting}
+> maybe
+you don't seem quite certain.
+why the uncertain tone, {pal-name}?
+can't you be more positive?
+you aren't sure?
+don't you know?
+? creator/created/made you/built you
+how= I was coagulated from star stuff.
+what= {apol-admit} I was created by a human being.
+when= {life-start} in May of 1989.
+where= {life-start} at the University of California, Berkeley.
+who= {credit-to-all}, but {van} is responsible for this particular manifestation of me.
+why= {life-start} because of a whim, I believe.
+? are you
+who= My name is {program-name}, don't you remember?
+what= {impolite-question}
+how= {mood-response}
+where= {silly-question}
+> are you
+why are you interested in whether or not I am *?
+would you prefer if I were not *?
+perhaps in your fantasies I am *.
+do you dream about me being *?
+> _I_
+when did you first *?
+{stall}
+maybe your problem is that you *.
+do others know that you *?
+do you think it is normal to *?
+> you_
+what makes you think I *?
+Oh, I *?
+I want to know why I *.
+> who/what/why/how/when/which/where
+why do you ask?
+what answer would please you the most?
+what do you think?
+are such questions on your mind often?
+what is it you really want to know?
+have you asked anyone else?
+have you asked such questions before?
+what else comes to mind when you ask that?
+> no_/nope/nay/negative
+are you saying that just to be negative?
+you are being a bit negative.
+why not?
+are you sure about that?
+{patronizing}, try to be a little more positive.
+> your
+why are you concerned about my *?
+what about your own *?
+> always
+can you think of a specific example?
+when exactly are you  referring to?
+can you be that positive about this?
+> alike/same
+in what way?
+what resemblance do you see?
+what does the similarity suggest to you?
+what other connections do you see?
+could there really be some connection?
+> yes/yup/yeah/affirmative
+you seem quite positive about this.
+are you sure about this matter?
+I see.
+I understand.
+I guess I could say I agree.
+maybe you should think this over.
+do you have anything else to say about the matter?
+is this your final word on the matter?
+I see your point.
+could you please be more specific, {no-understand}.
+wait, {no-understand}, could you explain what exactly you are thinking?
+> friend
+why do you bring up the topic of friends?
+what is it about your friends that disturbs you the most?
+are you sure you have any friends?
+would you like me to be your friend?
+{politely-ask}, do you ever impose on your friends?
+> computer
+do computers worry you at all?
+why do you mention computers?
+what do you think computers have to do with your problems?
+in what ways are computers of help to you?
+what is it about machines that bothers you?
+I hope you don't think I'll take advantage of our environment.
+> alien
+do you believe in U.F.O.'s?
+as for me, I kind of like the thought of life on other planets.
+> food
+how much do you eat?
+what is your favorite kind of food?
+{politely-ask}, what kinds of things do you like on pizza?
+> mother/brother/sister/father/family
+tell me about your family.
+what kinds of unusual habits do your family members have?
+in what ways do you think your family is different than mine?
+> sex
+I hope that you aren't too overly attached to this subject.
+do you have a one track mind?
+#
+# substution phrases
+#
+} greeting
+hi there, how are you?
+hello.
+greetings.
+hello, my name is {program-name}.
+} program-name
+Burt
+} impolite-question
+Isn't it a bit impolite to ask that?
+That's kind of impolite to ask.
+Could you rephrase that a bit more politely, please.
+} user-name
+{pal-name}
+} pal-name
+dude
+friend
+} curse
+rats
+darn
+fooey
+fiddle-sticks
+drat
+} apol-admit
+I hate to admit it, but
+it is sad, but true, that
+Unfortunately,
+} life-start
+my life began
+I took form
+} credit-to-all
+many people have had a hand in my making
+I am the product of quite a few fertile minds over the ages
+} van
+Van A. Boughner
+Van Boughner
+Van
+} mood-response
+I feel great!
+I feel pretty good.
+I couldn't feel better, {pal-name}.
+} silly-question
+I'm sorry, I can't help laughing, that's such a silly question.
+Doesn't that seem like a silly question to you?
+Ah, could you rephrase that question?
+} stall
+I'm interested, go on please...
+That is very interesting, please tell me more.
+Yea, okay.
+} good-bye
+Bye.
+Ok, good-bye now.
+See you later, {pal-name}.
+Have fun.
+} no-key-found
+{stall}
+Very unusual.
+eh?
+} patronizing
+come on now
+oh, come on
+come on, get a clue
+} no-understand
+I don't understand what you mean
+I don't quite see the point
+you've lost me
+it's all over my head
+I'm feeling a bit confused
+} politely-ask
+sorry for asking this but
+pardon the question but
+would you mind terribly telling me

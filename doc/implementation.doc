@@ -1,0 +1,306 @@
+/***************************************************************************
+ * The War of Griljor
+ *
+ * By  Van A. Boughner
+ *     Mel Nicholson
+ * And Albert C. Baker III
+ *
+ * Students of the University of California at Berkeley
+ * Copyright 1990  Van A. Boughner
+ **************************************************************************/
+
+/* General comments about griljor communication protocols */
+
+These comments give an overview of the ways in which the driver and player
+programs use IPC (InterProcess Communication) to relay information.
+
+Griljor is a non-centralized system, meaning that the driver does NOT act
+as a mediator and judicator between the different player processes.
+In fact, a game in process could continue even if the driver died.
+The driver is mainly reponsible for recording statistics about players,
+and servicing new players who wish to join the game.  The work to keep the
+game going is divided among the players, each taking care of himself and
+keeping the others informed about his doings and whereabouts.  This avoids
+a potential bottleneck around the driver/server.
+
+Here are the steps taken to start up a game:
+
+1. Someone runs the driver program on any machine on the local network.
+
+2. The driver does the following to set up:
+	a) reads the map file
+	b) read the object definition file
+	c) opens an internet socket where he can listen for connections from
+	   potential new players.
+	d) opens another internet socket, that he gets an address for, that
+	   can be used by players in the game as his mailbox.
+	e) makes a few other decisions and does some more misc set up.
+	f) put's the internet address of the socket he is listening on
+	   in a file accessable to players (the list-of-open-games file).
+	f) waits for connections to come in on that socket.
+
+3. When a player starts up he:
+	a) looks in the list-of-open-games file and tries to connect to
+	   to one of the drivers listed there (player chooses)
+	b) when a stream connection is established with the driver he
+	   sends his name and password.
+	c) the driver checks the name and password and returns either
+	   "you're in", or "forget it".
+	d) if the message was "forget it" the connection is broken.
+	e) if the message was "you're in" then we go on with the rest...
+	f) the driver sends the map over the stream connection
+	   (the current map... during the game players send the driver a
+	   copy of all changes to the map, so the driver knows what it
+	   looks like at the time the new player enters)
+	g) the driver sends the object definitions over the stream connection
+	h) the driver sends a copy of the player's persona (if it was saved
+	   by a driver last time he played in the player-stats-file), other-
+	   wise the player just gets a brand new, blank character.
+	i) the driver sends the new player a list of all the other players
+	   in the game and their datagram socket internet addresses.
+	j) the new player uses those addresses to announce himself and his
+	   arrival to all the old players, who in turn send him back more
+	   information about themselves.
+	k) now the new player is fully integrated in the game and we move
+	   on to in-game mode.
+
+4. During the game, players send each other packets of information.
+   At the end of this file you'll see a listing of many of the possible
+   packets players send to each other during the game.
+   Here are some of the things players tell each other:
+	a) room number where player is located
+	b) square in room player is on (this is only sent to other players
+	   who are also in the room to avoid excess net traffic since players
+	   move from square to square quite often.)
+	c) appearance (either normal, invisible, "quit" bitmap, tombstone...)
+	d) missile paths and types
+	e) player messages (text between the humans)
+	f) damage messages (for benefit of the humans as well)
+	g) experience point bonuses (ie. you killed me, here have this
+	   many experience points)
+	h) quitting notices ("I've left the game, remove me from your
+	   player list")
+	i) map changes ("I dropped the super-mega weapon on the floor
+	   over here")
+	j) command requests ("Pretend I just made you teleport to another
+	   room, okay?")
+	k) game over message ("I just got the last flag, hah! Game over.")
+   These are the things they must tell the driver:
+	a) "Save my stats, I just got promoted!"
+	b) map changes
+	c) quitting notices
+	d) game over message
+   And what does the driver tell them in return: 
+	a) he'll answer text message sent to the "gm", he's got an Eliza-like
+	   sentence parser built into him.  Other than that he isn't really
+	   neccessary to the operation of the game during the heat of battle.
+	   This keeps his list of things to do nice and short (and no
+	   bottleneck).
+	b) But there is also a disadvantage here.  Since the driver exerts
+	   no control on the game, the player processes have all the power
+	   and control.  There is too much room for abuse by corrupted
+	   player programs.  A suitable way around this large security has
+	   not been found yet.
+
+
+
+/* ====================== D A T A G R A M  sockets =======================
+
+   One of the most important things in this game is the communication between
+   player processes.  Each player process controls one or more persons that
+   will need to know just exactly what is going on.  Here is a synopsis on
+   each kind of datagram packet in use: Who sends it, When they send it,
+   Who receives it, and What they do with it.
+
+   -----------------------------------------------------------------------
+   Packet type:	MY_INFO
+
+   Sender:	new person
+
+   When sent:	upon joining the game
+
+   Reciever:	old players
+
+   What occurs:	old players set up a gameperson element in their array if
+   		there isn't one for this new person already.  If this is a
+		person they didn't already know about and the person is its
+		own parent then old player sends MY_LOCATION
+   -----------------------------------------------------------------------
+   Packet type:	MY_BITMAP
+
+   Sender:	new person
+
+   When sent:	upon joining the game
+
+   Reciever:	old players
+
+   What occurs:	same as MY_INFO except different inforamtion is contained
+   		in this packet, namely the bitmap to use for this person
+   -----------------------------------------------------------------------
+   Packet type:	MY_MASK
+
+   Sender:	new person
+
+   When sent:	upon joining the game
+
+   Reciever:	old players
+
+   What occurs:	same as MY_INFO and MY_BITMAP
+   -----------------------------------------------------------------------
+   Packet type:	MY_LOCATION
+
+   Sender:	new persons, regular persons
+
+   When sent:	to all players when person changes rooms, or just to players
+   		in the same room when changing xy position in the room
+
+   Reciever:	all players or just players in same room
+
+   What occurs:	player updates information on this particular person.  If
+   		this person is not in game person array then ignore this
+		packet and send a REPEAT_INFO packet (see note at bottom)
+   -----------------------------------------------------------------------
+   Packet type:	GAME_OVER
+
+   Sender:	any person
+
+   When sent:	once completing last game ending requirement
+
+   Reciever:	all players and driver
+
+   What occurs:	players and driver start a countdown to game end during
+		which no input is taken (this allows missiles and such
+		to finish up)
+   -----------------------------------------------------------------------
+   Packet type:	WEAPON_FIRED
+
+   Sender:	any person
+
+   When sent:	when firing/using any weapon
+
+   Reciever:	all players in the room where it was fired
+
+   What occurs:	receiving players place missile in missile list and update
+   		it as its position and speed information direct
+   -----------------------------------------------------------------------
+   Packet type:	DAMAGE_REPORT
+
+   Sender:	any person
+
+   When sent:	when hit and damaged by a weapon of any kind
+
+   Reciever:	the person who fired/used the weapon
+
+   What occurs:	receiver places the message about damage found in the packet
+   		one the screen in the error/damage report window
+   -----------------------------------------------------------------------
+   Packet type:	MESSAGE
+
+   Sender:	any person
+
+   When sent:	when he desires to let others know what he thinks
+
+   Reciever:	the one(s) specified by sender
+
+   What occurs:	receivers place it on screen if they have one or just put
+   		it on the packet queue for their person(s) to handle
+   -----------------------------------------------------------------------
+   Packet type:	ADD_EXPERIENCE
+
+   Sender:	any person
+
+   When sent:	when dying or when badly wounded
+
+   Reciever:	the person who should receive experience points
+
+   What occurs:	receiver adds to his experience point total and checks for
+   		rank change.  Negative adds are also possible as penalties
+		for certain actions.
+   -----------------------------------------------------------------------
+   Packet type:	LEAVING_GAME
+
+   Sender:	any person
+
+   When sent:	when leaving the game for good
+
+   Reciever:	all players and the driver
+
+   What occurs:	players and driver remove this person from their person
+   		array and never send him another message again
+   -----------------------------------------------------------------------
+   Packet type:	CHANGE_MAP
+
+   Sender:	any person
+
+   When sent:	when changing game map in some way, by taking objects off
+   		of the floor, dropping objects, destroying walls, etc.
+
+   Reciever:	all players and driver
+
+   What occurs:	players and driver update their copy of the current map
+   		to reflect the reported changes
+   -----------------------------------------------------------------------
+   Packet type:	EXECUTE_COMMAND
+
+   Sender:	any person (with proper authority)
+
+   When sent:	when there is a need to direct the actions of another
+   		person in the game, ie. monsters with tractor beam-like
+		powers or that can teleport other persons, etc.
+
+   Reciever:	the person specified
+
+   What occurs:	person obeys the given commands as if they had been entered
+   		by his player.  If the mandatory flag is set there is no
+		choice but to obey.
+   -----------------------------------------------------------------------
+   Packet type:	REPEAT_INFO
+
+   Sender:	any player
+
+   When sent:	when he gets part of a new person's information but not all,
+   		or when he starts receiving regular packets from a new person
+		he never got info on
+
+   Reciever:	new person
+
+   What occurs:	new person sends MY_INFO, MY_BITMAP, and MY_MASK over again
+   		to the person that requested it
+   -----------------------------------------------------------------------
+   Packet type:	SAVE_STATS
+
+   Sender:	any person
+
+   When sent:	when person wants his stats saved in password file
+
+   Reciever:	driver
+
+   What occurs:	driver examines packet for valid person id number, then
+		modifies the person password file entry according to new data
+   -----------------------------------------------------------------------
+   Packet type:	YOU_KILLED_ME
+
+   Sender:	any person who just died
+
+   When sent:   upon being killed by someone
+
+   Reciever:    the killer
+
+   What occurs: the killer adds one to his kill total when he receives
+ 		this packet
+   -----------------------------------------------------------------------
+
+   Note: Anytime a packet is received from an unknown person and it is not
+	a MY_INFO, MY_BITMAP, MY_MASK, or LEAVING_GAME, ignore it and send
+	the new person a REPEAT_INFO packet.
+
+   -----------------------------------------------------------------------
+
+   For more information on how to use InterProcessCommunication, read
+   the "InterProcess Communication Primer" that you'll find in the 
+   "Networking on the Sun Workstation" volume of the Sun UNIX manuals.
+   You can find these manuals in the Bechtel Engineering Library on the
+   U.C. Berkeley campus (on the wall behind the microfiche storage
+   machines).
+
+   -----------------------------------------------------------------------

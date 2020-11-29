@@ -1,0 +1,191 @@
+Notes from a day of porting Griljor to Apollo machines (Jan 16th, 1990)
+By Van A. Boughner
+==================================================
+Makefile had to be changed to use cc instead of gcc
+due to some problems with standard include files like string.h
+===================================================
+cc -g -c gamelist.c
+gamelist.c: 18: Can't find include file malloc.h
+
+Cause:  malloc.h probably not a standard include, didn't think I needed
+	it anyway.
+Action:	removed all references to malloc.h from all *.c and *.h
+
+griljor% grep malloc.h *.c *.h
+event.c:#include <malloc.h>
+gamelist.c:#include <malloc.h>
+hit.c:#include <malloc.h>
+map.c:#include <malloc.h>
+objects.c:#include <malloc.h>
+person.c:#include <malloc.h>
+
+as well as: burt/person.c
+===================================================
+cc -g -c lib.c
+lib.c: 19: Can't find include file unistd.h
+
+Cause:	unistd.h not found on apollo, was needed for file locking which
+	we're no longer using on the sun anyway.
+
+Action:	removed all references to unistd.h
+
+lib.c:
+/* #include <unistd.h> */ /* would be neccessary on Sun for file locking */
+===================================================
+cc -g -c lib.c
+
+ (0207)     return_code = lockf(        ((fp)->_file), F_TLOCK, 0);
+
+******** Line 207 of "lib.c": [Error #023]  "F_TLOCK" has not been declared.
+*** Exit 1
+
+Cause:	F_TLOCK was part of unistd.h
+
+Action: moving all the old file locking utilites in lib.c to a file called
+	oldlocks.c which won't be compiled into the program
+===================================================
+./windowsX11.h: 27: TRUE redefined
+./windowsX11.h: 28: FALSE redefined
+
+Cause:	no big deal
+Action:	deal with it later
+==================================================
+outputX11.c: 730: max: argument mismatch
+outputX11.c: 731: max: argument mismatch
+outputX11.c: 739: max: argument mismatch
+outputX11.c: 739: max: argument mismatch
+outputX11.c: 741: max: argument mismatch
+
+Cause:	in function maxstrlen(), "max" was used as a variable name when
+	it had already been defined as a macro.
+
+Action: "max" variable name was replaced by "high"
+===================================================
+cc -g -c outputX11.c
+ (0536) ( ((int) ((newrec) = (typeof((newrec))) malloc(sizeof(*(newrec))))) ?
+                  (newrec) : (((typeof(newrec)) Gerror("No memory avaliable for
+                   help window"))  );
+
+******** Line 536 of "outputX11.c": [Warning #078]  Incompatible pointer and int
+eger
+         operands [newrec, typeof] to the "=" operator.
+
+******** Line 595 of "outputX11.c": [Warning #078]  Incompatible pointer and int
+eger
+         operands [newcheck, typeof] to the "=" operator.
+******** Line 595 of "outputX11.c": [Error #116]  Improper expression; "malloc"
+found.
+******** Line 595 of "outputX11.c": [Error #004]  Bad syntax ")".
+
+
+Cause:	unusual format of INIT macro in def.h
+
+Action:	These instances of the use of INIT were change to use the "demand"
+	macro instead.  The syntax of INIT is questionable, and there
+	are now no more uses of it.  It may be deleted in the future.
+	The uses of INIT in outputX11.c were surrounded by comments,
+	by the way.
+===================================================
+Successful compilers to this point:
+griljor% make griljor
+cc -g -c help.c
+cc -g -c error.c
+cc -g -c interpret.c
+cc -g -c gamelist.c
+cc -g -c map.c
+cc -g -c objects.c
+cc -g -c lib.c
+cc -g -c socket.c
+cc -g -c person.c
+cc -g -c gametime.c
+cc -g -c ident.c
+cc -g -c flag.c
+cc -g -c appear.c
+cc -g -c special.c
+cc -g -c player_main.c
+cc -g -c menusX11.c
+cc -g -c movement.c
+cc -g -c inventory.c
+cc -g -c handle.c
+cc -g -c missile.c
+cc -g -c play.c
+cc -g -c sight.c
+cc -g -c hit.c
+cc -g -c magic.c
+cc -g -c level.c
+cc -g -c multifire.c
+====================================================
+cc -g -c arc.c
+
+ (0041)   dx = ((double)x+(double)radius*cos( ((double)curdir / 180.0 * M_PI)));
+
+******** Line 41 of "arc.c": [Error #023]  "M_PI" has not been declared.
+
+ (0042)   dy = ((double)y+(double)radius*sin( ((double)curdir / 180.0 * M_PI)));
+
+******** Line 42 of "arc.c": [Error #023]  "M_PI" has not been declared.
+
+ (0050)     dx = ((double)x+(double)radius*cos( ((double)curdir / 180.0 * M_PI))
+);
+
+******** Line 50 of "arc.c": [Error #023]  "M_PI" has not been declared.
+
+ (0051)     dy = ((double)y+(double)radius*sin( ((double)curdir / 180.0 * M_PI))
+);
+
+Cause:	PI is not defined in Apollo's math.h
+
+Action:	The following lines were added to arc.c
+
+#ifndef M_PI
+#define M_PI    3.14159265358979323846
+#endif
+======================================================
+griljor compiled successfully
+======================================================
+when making grildriver, burt/Makefile had to be changed too.
+gcc was changed to cc
+======================================================
+cd burt; make burt; cd ..
+cc -g -c person.c
+
+ (0137)   s = malloc(i);
+
+******** Line 137 of "person.c": [Warning #078]  Incompatible pointer and intege
+r
+         operands [s, malloc] to the "=" operator.
+
+Cause: this line:  s = malloc(i);
+
+Action: changed to  s = (char *) malloc(i);
+======================================================
+grildriver compiled successfully
+======================================================
+editmap compiled successfully
+======================================================
+makeobj compiled successfully
+======================================================
+Griljor couldn't make the big fonts
+
+Cause:	12x24 and 9x15 fonts were not available here
+
+Action:	selected different fonts.  Looks like each locale will have
+	to arrange selection of their own fonts.  Might be messy.
+	BTW, fonts are selected by changing config.h
+
+Later:	Looks like we'll have to figure out how the fonts are described
+	so we can ask for the one closest to our needs and make griljor
+	more consistent around the globe.  BTW, one may xlsfonts to
+	find out what fonts are available here.
+
+Later:  We should also have a way to get SOMETHING when all else fails
+	for a font.
+======================================================
+Runtime problem:  Diety command "E" caused a seg fault.
+Where is the signal handler?
+Why the fault?
+
+For some reason makelocation(x, y, NULL) is returning
+initialized structures with 0x08 instead of NULL for next pointer.
+Needs to be researched.
+======================================================

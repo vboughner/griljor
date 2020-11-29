@@ -1,0 +1,214 @@
+From labc-2ic@WEB.berkeley.edu Fri May 24 00:28:35 1991
+Received: from weaver.Berkeley.EDU by soda.berkeley.edu (5.61/CHAOS3)
+	id AA04800; Fri, 24 May 91 00:28:31 -0700
+Received: from e260-2f.berkeley.edu by weaver.berkeley.edu (4.1/1.33(web))
+	id AA09921; Fri, 24 May 91 00:30:18 PDT
+Date: Fri, 24 May 91 00:30:17 PDT
+From: labc-2ic@WEB.berkeley.edu (Eric van Bezooijen)
+Message-Id: <9105240730.AA09921@weaver.berkeley.edu>
+To: labc-3id@WEB.berkeley.edu
+Status: R
+
+GRILJOR X EDITPASS CHARACTER EDITOR DOCUMENTATION
+------- - -------- --------- ------ -------------
+
+	Xeditpass is the slick X-interface for editpass, the Griljor
+character editor.  It allows you to change any field of any character
+which has played Griljor.  It is intended that only the caretaker of
+Griljor have access to this program, as it gives one unlimited power
+of other people's characters.
+
+REQUIREMENTS
+------------
+
+To run Xeditpass, you must have the following in the same directory :
+
+errorx.c
+xx.c 
+processorx.c 
+menux.c 
+attributesx.c 
+importx.c 
+scrollx.c  
+sliderx.c 
+bitmapx.c 
+timex.c 
+editpass.c 
+error.c 
+lib.c 
+password.c  
+X11ReadBitmapFile.c 
+X11WriteBitmapFile.c
+The Makefile for Xeditpass
+A players file
+icon.bit
+title.bit
+disc_icon.bit
+grey.bit
+pict.bit
+slider.bit
+
+USING THE PROGRAM
+----- --- -------
+
+]]BACKGROUND
+  ----------
+
+	When people play griljor, they create characters which Griljor
+saves in the players file.  All the character's qualities, including a
+bitmap if they made one, are saved in the players file.  Xeditpass allows
+you to change them.  Don't forget that Xeditpass MUST have a players file
+from Griljor to function.  Without it, you won't be able to do anything.
+
+]]GETTING STARTED
+  ------- -------
+
+	When the X-window pops up, you will see the following, from
+top to bottom :  the griljor character editor processor status meter,
+with a radio button next to it,  the message window, below it the bitmap 
+editing area (which will be occupied with a title bitmap at startup), 
+the scrolling area in which all the players are listed with the scroll bar 
+at the right, the player attributes and menu window, the text entering 
+window, and the lower menu.
+
+		Name 				Function
+		----				--------
+
+Griljor Character Editor Processor Status Meter Shows how fast X is running.
+						It can be turned off with
+						the radio button next to it.
+						Turning this off will 
+						significantly speed X up.
+
+		Message Window			Shows messages generated
+						by Xeditpass.
+
+		Bitmap Window			If characters have saved
+						bitmaps, they can be
+						shown here.
+
+		Scrolling Window		Allows a user to scroll 
+						through the list of names.
+
+Player Attributes Window and Menu Window	Shows the attributes of
+						selected players, and
+						has buttons to use the
+						functions of Xeditpass.
+
+		Text Window			Users enter text here.
+
+		Second Menu Window		More functions.
+
+
+]]HOW EDIT A CHARACTER
+  --- ---- - ---------
+
+	To edit a character, click on it in the scrolling window.  The
+player's attributes will be listed in the player attributes window.  To
+change a field, (for instance their number of kills), click on the field,
+and enter the new number/text in the text window.  Pressing return
+in the text window without entering anything will not change the field.
+
+
+]]SCROLLING WINDOW
+  --------- ------
+
+	The scrolling window shows you the list of players to be edited.
+In non-genocide mode, the first column shows the player name, the second
+the number of hit-points, the third their login name, and the last their
+machine that they last logged in from.  The last two columns list whether
+characters in the scrolling window have God-mode on, or if they have a 
+bitmap.  A little cross signifies gods, and a little horsie signifies
+people with bitmaps.  In genocide mode, the amount of hit-points will not
+be shown, and instead the character's date will be shown.
+
+]]COMMANDS
+  --------
+
+Quit : Exits the program.
+Add Character : Adds a new character, with empty attribute fields to the list.
+Delete Character : Destroys a character.
+Bitmap File Name : Specifies a file to load a player bitmap from.
+Mask File Name : Specifies a file to load a player mask from.
+Toggle Bitmaps : Toggles whether or not a player's bitmap & mask are shown in 
+                 the bitmap window.
+Toggle Grid : Toggles whether or not a grid is used to display the bitmap and
+              mask.
+Memory >> Bitmap : See section bitmaps.
+Memory >> Mask : See section bitmaps.
+Memory << Bitmap : See section bitmaps.
+Memory << Mask : See section bitmaps.
+Edit Bitmap : See section bitmaps.
+Edit Mask : See section bitmaps.
+Toggle Genocide : Toggles the genocide mode.  In genocide mode, each character
+you select will be eliminated from the list of characters.  This is useful
+for eliminating large numbers of old charcaters.
+Load Bitmap File : See section bitmaps.
+Load Mask File : See section bitmaps.
+No, Yes : Clicked to answer no/yes questions.
+Save Bitmap File : See section bitmaps.
+Save Mask File : See section bitmaps.
+
+]]BITMAPS
+  -------
+
+	In X-editpass, you have full power over bitmaps.  Bitmaps may
+be loaded, changed, copied, and saved.  You are given a "memory" storage
+place, where one bitmap and one mask may be stored, to be saved or copied
+to a player.  
+
+]]]]BITMAP COMMANDS
+    ------ --------
+
+Bitmap File Name : Specifies the file load from or save bitmaps to.
+Mask File Name : Specifies the file load from or save masks to.
+Memory >> Bitmap : Copies the contents of memory into the current
+                    selected player bitmap.
+Memory >> Mask : Copies the contents of memory into a the current
+		    selected player mask.
+Memory << Bitmap : Copies the selected player bitmap into the contents 
+                   of memory.
+Memory << Bitmap : Copies the selected player mask into the contents 
+                   of memory.
+Edit Bitmap : Calls the X-windows BITMAP program, and allows you to change
+              the bitmap.
+Edit Mask : Calls the X-windows BITMAP program, and allows you to change
+              the mask.
+Load Bitmap File : Loads the bitmap file into memory.
+Load Mask File : Loads the mask file into memory.
+Save Bitmap File : Saves the bitmap memory to the bitmap file.
+Save Mask File : Saves the mask memory to the bitmap file.
+
+Example : Say I wanted to save the bitmap and mask into the files
+"bitmap" and "mask".  I would select <bitmap file name> and enter
+"bitmap",and then select <mask file name>, and enter "mask".  I
+would select <memory << Bitmap> and <memory << Mask> to transfer
+the currently selected player's bitmap and mask into memory, and
+then <save bitmap file> and then <save mask file> to save the current
+player's bitmap and mask into a file.  If the <toggle bitmaps> has
+been selected to show bitmaps, then the bitmap and mask filenames
+will be displayed in between the bitmap and the mask.
+
+HOW TO QUIT
+--- -- ----
+
+	To quit, press the quit button.  You will be asked if you
+are certain.  No returns to the program, and pressing Yes results
+the computer if asking if you want to save your changes.  Saying
+No to this will not leave the players file just as you left it, while
+saying Yes will overwrite and change the players file to reflect 
+your changes.  Note that the only way to save your changes is to quit.
+
+BUGS
+----
+
+	Currenty, bitmaps are saved in their inverted form, and when
+you edit them they are also inverted.  This is really easy to fix, but
+I have been too lazy.  
+
+	The way that Griljor saved the dates of characters is not correct 
+(it doesn't work), so I did not use it.  I used my own method, which
+is incompatible with Griljor's.  As a result, the only accurate dates on
+characters are the dates of characters created using <add character> in
+Xeditpass.
+

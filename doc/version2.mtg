@@ -1,0 +1,50 @@
+
+
+			   Griljor Meeting
+			Monday May 13th, 1991
+
+
+
+	     Things to be saved for the second version of Griljor
+
+
+	1. map storage method is to be changed.  Squares will be depth 4,
+	   and the differences between recorded and non-recorded objects
+	   will be minimized.  Editmap will be changed to allow all four
+	   slots to be edited conveniently.  The first slot will be reserved
+	   for the floor character.  Drawing routines will look for other
+	   things without masks in other slots and they will be drawn instead
+	   of the floor (the floor will still be there, however).
+	   More than one recorded object will be allowed per square, and the
+	   find_empty_slot() routine will not need to differentiate between
+	   the two types.  All routines that reference recorded objects will
+	   need to be changed or at least checked.  Error conditions
+	   concerning demand for the presence for the recorded object record
+	   will be quietly met with created blank records (filled with the
+	   object's default values.)  In other words, a lot of research
+	   will need to go into this change to insure that everything
+	   that needs to be changed is done.  No other fixes should go on
+	   simultaneous to this.
+
+	2. A program to convert maps from the old format to the new will
+	   have to be comissioned.  The change will also implement storage
+	   of object numbers as shorts rather than chars, to allow for
+	   a larger number of objects to be used in each map.
+
+	3. When short sized (2-byte) object numbers are employed, editmap
+	   will have to be changed to accomidate the extra objects over
+	   the current 256 limit.
+
+	4. Objects may be spells, with a separate inventory page for a player's
+	   list of spells (possibly allowing a player to practice them :-)
+	   Map editor then simply defines which objects are useable as player
+	   spells.  Player program will offer these spells to player for
+	   use at times when he has sufficient level and magic power.
+
+	5. ray.c will be made to work.
+
+	6. docs on implementation.
+
+	7. The communication architecture may be changed for version 2.
+	   If the free and open front-end ideas used now doesn't work out
+	   very well, we'll make griljor more like the server-client model.

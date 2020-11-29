@@ -1,0 +1,47 @@
+
+
+			   Griljor Meeting
+			Monday May 13th, 1991
+
+
+
+			  Robustness Checks
+
+	1. Look for all possible ways dynamic variables could be
+	   involved in segmentation errors.
+
+	2. Look for strings that might be allowed to overwrite the end
+	   of their allocated space.
+
+
+
+
+
+			     Distribution
+
+	Makefile, IMake file, README, griljor source files,
+	grildriver, editmap, editpass, obtor, textbit, rotate,
+	mkmask, and testburt.
+
+	1. Griljor will be made available on soda via ftp.
+	2. News will be posted telling people about it, but it will
+	   only be claimed to be a beta-test/first version.
+	3. People will be allowed to copy and distribute it free of charge,
+	   but we will withold the right to distribute it after modifying it.
+	4. Cheating will be declared trivial and not encouraged.
+	5. It will be made to work on Suns running BSD 4.3 and having
+	   monochrome or COLOR displays.
+
+
+
+
+
+			     Documentation
+
+	1. documentation on each of the programs listed above.
+	3. docs on map making strategies.
+	3. docs on object making strategies.
+	4. some examples of object types that work together.
+	5. docs on how to use environment variable options.
+	6. README about compiling and setting it all up.
+	7. docs on possible portability problems.

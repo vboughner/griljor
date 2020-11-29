@@ -1,0 +1,59 @@
+# This is the random object placement file
+#
+# Each line in this file signifies one random placement action that may
+# occur during the game at the whim of the driver.
+# This provides a certain amount of randomness to the game.  The
+# placement of objects takes place room by room or team by team.
+#
+# The first character on each line is a t for placing something in a certain
+# team's rooms, or an r for placing something on a certain room.
+#
+# Next in each lines comes the object number, and the quantity.
+# Finally, the last entry on each line is the team number (0-4, 0 is neutral),
+# or the room number (depending on whether r or t was used for first entry).
+#
+# Each line's entries must be separated by whitespace, like the following:
+# t/r  	objnum	quant   team#/room#
+#
+# One of the first entries in the file should be a line beginning with
+# 's' and telling how many seconds between random placements you want.
+# example:  's 30'	(random placement every 30 seconds)
+# This number of seconds is divided by how many 'real' players are in
+# the game, so that more people will cause more items to appear to keep
+# things somewhat balanced.
+#
+s 480
+#
+# rocket packs for bazooka (very rare)
+t	189	1	0
+#
+# repair kit for walls
+t	224	1	0
+t	224	1	1
+t	224	1	2
+# quiver of arrows (more common)
+t	107	1	0
+t	107	1	1
+t	107	1	2
+t	107	1	0
+t	107	1	1
+t	107	1	2
+t	107	1	0
+t	107	1	1
+t	107	1	2
+t	107	1	0
+t	107	1	1
+t	107	1	2
+# food
+t	62	1	0
+t	62	1	1
+t	62	1	2
+t	62	1	0
+t	62	1	1
+t	62	1	2
+t	62	1	0
+t	62	1	1
+t	62	1	2
+t	62	1	0
+t	62	1	1
+t	62	1	2

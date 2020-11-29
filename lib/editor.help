@@ -1,0 +1,17 @@
+ Griljor Map Editor
+
+ MISC COMMANDS         CUT BUFFER CMDS         ROOM LINKING CMDS
+ [f] floor designation [.] mark upper left     [1/2] start a link
+ [i] information       [b] save area to buffer [1] finish one-way link
+ [c] clear square      [c] clear area          [2] finish two-way link
+ [w] wipe square clean [w] wipe area clean     [a] abort linking
+ [+] switch room num   [click] fill area       [k] kill/destroy links
+ [-] switch room num   [p] paste buffer to map [t] teleport to room #
+ [r] replace object    [)] wipe entire room    [g] goto nearby room
+ [u] user file names   [v] vars in recded obj  [m] make nearby room
+ [n] new item placing  [d] detail variable     [&] change # of teams
+ [s] save map          [x] x variable set      [o] toggle room owners
+ [q] save and quit     [y] y variable set      [l] lighting in room
+ [!] quit (no save)    [z] zinger variable     [e] extra variables
+
+ [*] edit map info     [#] edit room info      [%] edit recorded obj

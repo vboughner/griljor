@@ -1,0 +1,12 @@
+2) Objects need to explode with the boombit as object, and not with 
+    the boombit objects moving object.
+3) The hurt-owner system needs to be fixed.
+
+missile.c changed so that it calculates the move-onto priority differently
+missile.c changed so that it explosions are NOT marked as special.  
+    (hardcoded TRUE changed to hardcoded FALSE)
+missile.c changed so that the radius of an explosion is one less than 
+	the explodes field.
+missile.c changed so that hurt-owner is always set to true
+
+

@@ -1,0 +1,34 @@
+
+
+
+/* ================= M E S S A G E  R E T R I E V A L ==================== */
+
+
+char *retrieve_message(top, num)
+/* returns a pointer to a newly allocated string containing the message by the
+   given number in the given string set.  Returns NULL if there is no message
+   by that number in the string list.  Separate lines will be separated by
+   new-lines in the returned string.  Caller must free the returned string. */
+VLine *top;
+int num;
+{
+  char key[100], *result = NULL;
+
+  if (top) {
+    VLine *ptr, *first, *last;
+    sprintf(key, "%s%d", MESSAGE_NUMBER_PRECURSOR, num);
+    ptr = seek_line_by_nth_token(top, key, 0, SEPARATOR);
+    last = NULL;
+    ptr = first = next_line(ptr);
+    while (ptr) {
+      if (strncmp(MESSAGE_NUMBER_PRECURSOR, line_text(ptr),
+		  strlen(MESSAGE_NUMBER_PRECURSOR)) &&
+	  strcmp(END_OF_MESSAGES, line_text(ptr))) {
+	last = ptr;
+	ptr = next_line(ptr);
+      }
+      else ptr = NULL;
+  }
+
+  return result;
+}

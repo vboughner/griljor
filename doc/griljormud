@@ -1,0 +1,82 @@
+Features neccessary for GriljorMud
+(this stuff is definitely not for the first release)
+
+     Maps would have to be saveable.  The map could be saved in the same way
+as a regular map, except the following things would have to be saved as
+well: name of file players are stored in, time of day, whether the players
+are renting space at the inn (and what they have stored there), and the
+locations and identities of the various NPC's in the game.  Normally the
+game would just continue running, saving occasionally except when no one is
+playing.  When the system does down, it could be restarted from the save
+file.
+
+     Players might be stored in the regular file as usual, just add more
+space for information in that file.  That way you could have more than one
+mud, and they could transfer the player from one to another.  We might not
+allow them totally free switching or simultaneous use, however.  Perhaps we
+could allow password files to be variable length, to accomodate information
+from one or more maps.  Each map would be able to put its own stuff in, with
+the player having entries for as many of the local maps as he has had his
+player in and done something worth saving.  Actually, considering UNIX file
+structure and ease of making subdirectories with lots of files, why couldn't
+we have a file for every player, all in the same directory, treating the
+subdirectory as the file and the various files as the records :-)
+
+     Monsters would have to be doable.  We could use the same ideas as
+before, running one process for each type of monster.  Each process would
+handle all the instances of that monster type.  The use of the phrase
+monster and NPC are interchangeable in this doc file.
+
+     We would have to look into the possibility of changing things while the
+mud is running so that we don't have to kick everyone out to make changes to
+the map.  Perhaps the driver could have ways of notifying players of changes
+to rooms, or deletion and addition of rooms.
+
+     We might need to wait until griljor is more server oriented.  Letting
+the players use the current front end is too risky.  People will cheat.
+The server should just feed info, and that way the players won't have more
+access to info than they should.  We wouldn't want players changing the map
+or anything like that!
+
+     The window on the right needs to be made into a direct server message
+window.  Things typed there should go directly to 'gm'.  Burt can be given
+responses with command codes in them.  The response line is searched for
+these codes, and they are then used to do things with the player's input.
+eg. Burt repsonse could be "&search *&You search *".  He could then easily
+be a parser for the server.  The server would send things to the right
+subprecesses or handle them himself (ie. door opening, gates, traps, monster
+related things, etc.)
+
+     The message window as it now exists could be totally abolished in favor
+of this new text window.  The entire window would be like a scrolling text
+window of a mud.  You could send messages to others in the room easiest by
+using 'say', and you could use 'shout' to send to everyone.  Messages could
+be sent to specific players or the gm with 'tell player' or 'tell gm' or
+even 'tell god'.  Appropriate abbreviations would be available.  A scroll
+bar would be necessary (with a nice large saveback :-), and a few simple
+things like aliasing and history commands would make it a lot nicer.
+Aliases for use in this window could be put in the .griljor file along with
+other things we decide to put there.
+
+     A follow leader and group thing would have to be introduced, plus a way
+to look for things, and search/examine things.  Following could be automatic
+so that you could type messages to other players and such while your leader
+was taking you places.  It would be a following routine that had some slight
+randomness in it, but basically stuck to the path the leader took.  You
+could direct your own movements at any time and still 'follow' the leader
+(for the purpose of experience points).
+
+     We would need classes.  Players would need to choose to be a certain
+class and they would get certain benefits from it.  Objects could be set to
+be only useable by certain classes.  It could be a bitmask just like the
+teams thing is going to be.  Each map could decide on the number and names
+of the classes in it, and each player's saved info would include a level he
+was in his class in each map (he could be different class in each map.)
+
+     Perhaps instead of having textual notes about what other players are
+doing with their hands, we could have a little display that shows what
+object each player has in their hands.  I think it might also be time to all
+players to use all three hands and put the little movement emblem in any of
+the three.  The display of others' hands would should those of the people
+that are currently visible to you automatically (or I suppose you could turn
+it off if you wanted to save X drawing time.)

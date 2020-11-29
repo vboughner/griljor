@@ -1,0 +1,164 @@
+
+			Griljor Map Editor
+
+
+Purpose and Overview
+
+	Griljor, is a highly flexible game environment.  The map editing
+program allows the creation of a large number of different senarios.  The
+map editor gives the designer control of the number of rooms in the map,
+their contents, and the manner in which they are connected.  He may also
+specify which library of objects is to be used with the map, thus
+controlling the choice of objects and their properties.  The actual creation
+and altering of the object definition libraries is left to another program,
+the object editor.  Nevertheless, the map designer is also permitted to
+select various options which control the way the map is played.  All these
+things will be covered in their relevant sections in this text.
+
+
+Responsibilities of a Map Maker
+
+	The look and feel of Griljor is largely up to the object and map
+designers.  The task of making a balanced, fun-to-play play map is not an
+easy one.  Few maps will work well without any revision.  Be prepared to
+take the time necessary to develop a map that will be both fair and fun.
+
+
+Rooms and Map Subdivision
+
+	A Griljor map is made up of any number of rooms.  The only
+limitation is disk space and playability.  Maps that are too large are
+difficult to play on.  Disk space isn't too much of a problem, however, each
+room requires only 1K of storage space.  Each room is a completely
+independent unit.  You are not required to make the room fit into any
+reasonable view of reality if you don't wish to.  Indeed, you may connect
+the four sides of the room to the corresponding opposite sides of any other
+rooms on the map that you choose.  Inside each room, you can use exit
+objects to simulate entrances to buildings, caves, elevators, pits, or
+anything you like.  The size of each room is 20x20 squares, for a total of
+400 individual locations inside the room.  Each square may contain several
+objects stacked on top of each other and is just large enough to contain
+a player's character in the game.  Player's move incrementally from square
+to square in any of the eight directions.
+
+
+The Point of it All
+
+	To make a map that is fun to play, the designer needs a good idea of
+the theme of the map and the size of game he wishes to accomodate.  Small
+maps of about 4 rooms are good for anywhere from 2 to 8 players.  If there
+is plenty of ammunition, they can even make a good game for larger groups
+(although the scene is likely to be a bit bloody).  Care needs to be taken
+in creating maps.  There is so much lattitude given to map (and object
+definition) makers, that the game can be ruined easily by imbalancing or
+ridiculous senarios.  It is the responsibility of the map maker to provide a
+map that will be interesting, balanced, and not biased against beginners OR
+experts.  For example, providing a large number of 'instant death' weapons
+removes the need for skill in the game.  Players with the weopons simply
+wait for someone to come along and kill them with one shot.  Ideally,
+surprise should be an advantage for the atacker, but it should still be
+possible for a skilled player to survive the attack or even kill the
+ambusher.
+
+
+Map Editor
+
+	A program has been provided to help you create and edit maps.  It
+will probably be available where the other Griljor program executables are
+stored, under the name 'editmap'.  To start a new map using the default
+object set, type 'editmap mapfile', where mapfile will be the filename of
+the new map you are creating.  Be sure to be in a directory where you have
+write permission when you do this.  To use an object set of your own design,
+type 'editmap mapfile objectfile', where objectfile is the full absolute
+pathname of the object file you wish to use.  To edit a map that you've
+already created, just type 'editmap mapfile', you need not specify the
+object file to use after the initial creation (unless you'd like to switch
+to a different one).
+
+	The editor will popup displaying the first room in the new map on
+the left, and object set on the right.  A third window, underneath the room
+display contains the name of the map, the room, the team that owns the room,
+and a picture of a mouse (not of the squeaky variety).
+
+
+Room Window
+
+	The upper left window is a display of the current room you are
+editing.  Each room consists of 400 squares, 20 across, and 20 high.  Each
+square may contain up to three objects (two normal ones and one 'recorded'
+one).  The room number is displayed in the lower left window, along with the
+name of the room right below it.  You can easily change the room name by
+clicking the mouse on the name itself, and you can select another room by
+clicking on the room number line.
+
+
+Object Window
+
+	The right window contains the object set you have to work with.  The
+window itself contains up to 196 objects.  If there are more than 196
+objects in the set, then a set of scrolling buttons will appear at the top
+of the window.  The left two buttons, when you click the mouse on them,
+cause the object set window to scroll line by line.  The right two buttons
+cause the window to scroll page by page, until the end is reached.
+
+
+Stat Window
+
+	The bottom left window contains the name of the map and room.  You
+may change either of these by clicking the mouse on the name itself.  Also,
+the name of the team that owns the current room is displayed below the room
+name.  You may change the name of a team by clicking on that team's name when
+you see it displayed as the owner of a room.  You may not, however, change
+'neutral' to anything else.  On the right side of the window, there is a
+picture of a 'mouse' with 3 buttons on it.  Each of the button spaces
+represents a buffer where you may store objects from the object set.  The
+picture of the object stored in each buffer will be displayed there in the
+mouse picture.  When you start up the map editor, there will be nothing in
+the buffers.  Occasionally, text will appear at the bottom of the stat
+window, and often you will be required to enter text strings there (when,
+for example, you desire to change the name of the map).  A 'linking' symbol
+will appear in the mouse icon, by the way, whenever you use one-way or
+two-way linking commands.  The link symbol will display which room the link
+is originating from.
+
+
+Help Window
+
+	You can toggle the presence of the help window by pressing the '?'
+key.  The help window gives a one-liner reminder of the function of each
+keyboard key.  More elaborate explainations of the functions will be given
+below.
+
+
+Mouse Buttons
+
+	The mouse is used mainly for placing objects in the room and for
+specifying the location for some of the point specific keyboard functions.
+The operation of the mouse is different in each of the main windows.  When
+in the object window, pressing a mouse button while the cursor is on a
+particular object will place the object in the mouse picture in the status
+window and store it in the click buffer.  When in the room window, pressing
+that same mouse button will cause the object in the click buffer to be
+placed in the map at the point where the cursor is positioned.  This is the
+main mechanism you use for building up the rooms in the map.  You can grab
+up to three different objects at a time from the object window (by putting
+them in the mouse click buffer), and then move the cursor over to the room
+window and put any of those three objects down whereever you like.  As an
+additional bonus, you can pick up objects from the room window as well, if
+you hold down the shift key while pressing the button.
+
+	In the status window, there are several places you can click the
+mouse button to do something.  You may click on the map or room name to
+change it.  And you may click on the room number to select a different room
+to look at.  When a particular team own a room and you'd like to change the
+spelling of their name, you can even do that by clicking on it (except that
+you cannot change the name for neutrals.)
+
+
+Keyboard Functions
+
+ *	Edit map name and team names.
+
+ #	Edit information about the current room.
+
+ %	Edit recorded object variable values for
