@@ -1,4 +1,2 @@
-- "bogus recorded object in room"... find out why this happens.
-fix AllocMapProperties LSTRBOX so that editmap will work
-variable length messages needed for REPORT
-change player_error_out_message to handle newlines.
+use_weapon: restore the possible use of hand as a weapon
+swap_hand_and_inv: don't want a map notify if nothing being swapped
