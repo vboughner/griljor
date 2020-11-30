@@ -1,0 +1,63 @@
+		     Griljor Design Specification
+			     Revision 1.0
+				5/5/95
+
+	       Copyright (C) 1995  Griljor Design Group
+			 All rights reserved.
+
+
+Table of Contents
+
+The distribution of this document is limited to members of the Griljor
+design team.  Each chapter is contained in its own file (filename
+given between the parens.)
+
+
+1 Overview (overview)
+
+2 Client Server Protocol (protocol)
+ - network considerations, user interface definition across the net,
+   view display (scrolling?  animation?), irregularly shaped rooms,
+ - view display should be of adjustable size, with no inherant grid,
+   but stacking order yes
+ - few changes to protocol (versioning handshaking) so that clients
+   don't have to be continually reported
+ - do we use floating point for coordinates on display, and allow
+   scaling of some kind?  At least not eliminate the possibility?
+ - how much do we trust the client?
+
+3 Griljor Client (client)
+ - portability considerations, debug clients, clients with different
+   kinds of player-client objects in the same game (dungeon master
+   as an example)
+
+4 Griljor Server (server)
+ - selecting a new map, game restart, debugging
+
+5 Griljor Metaserver (metaserv)
+ - server selection, starting new servers
+
+6 Object Definition Language (odl)
+ - ease of use, flexibility, OO (simple inheiritance, mulitple inheiritance)
+ - tcl/tk? scheme?
+
+7 ODL Extensions (extent)
+ - services for interacting with humans running clients, metaservice
+
+8 Sample Object Implementation (sample)
+ - ease of adaptation, ease of understanding, ideas for doing it
+   right, building on it without copying the whole thing, multiple maps
+   using the same set of objects, combining objects from several
+   implementations
+- damage types, the force with with objects are thrown, or who is using
+  a weapon
+- map, room, squares, players, monsters, objects not having a location,
+  is everything a container?
+- how would you do vehicles? drive? look out the window?
+- how do we handle scale?
+- character classes (fighter, wizard, etc.) subclassed off of the
+  player-character class
+
+9 Object Manipulation Utilities (util)
+ - map editor, dependence on object definition (and adapting our map editor
+   to new object sets)

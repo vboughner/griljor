@@ -1,0 +1,205 @@
+
+    Copyright (C) 1995  Griljor Design Group
+             All rights reserved.
+
+             Griljor Design Group
+             6988 Blue Hill Drive
+             San Jose, CA  95129
+             U.S.A.
+
+		     Griljor Design Specification
+			     Revision 1.0
+				5/5/95
+
+	       Copyright (C) 1995  Griljor Design Group
+			 All rights reserved.
+
+
+Table of Contents
+
+The distribution of this document is limited to members of the Griljor
+design team.  Each chapter is contained in its own file (filename
+given between the parens.)
+
+
+1 Overview (overview)
+
+2 Client Server Protocol (protocol)
+ - network considerations, user interface definition across the net,
+   view display (scrolling?  animation?), irregularly shaped rooms,
+ - view display should be of adjustable size, with no inherant grid,
+   but stacking order yes
+ - few changes to protocol (versioning handshaking) so that clients
+   don't have to be continually reported
+ - do we use floating point for coordinates on display, and allow
+   scaling of some kind?  At least not eliminate the possibility?
+ - how much do we trust the client?
+
+3 Griljor Client (client)
+ - portability considerations, debug clients, clients with different
+   kinds of player-client objects in the same game (dungeon master
+   as an example)
+
+4 Griljor Server (server)
+ - selecting a new map, game restart, debugging
+
+5 Griljor Metaserver (metaserv)
+ - server selection, starting new servers
+
+6 Object Definition Language (odl)
+ - ease of use, flexibility, OO (simple inheiritance, mulitple inheiritance)
+ - tcl/tk? scheme?
+
+7 ODL Extensions (extent)
+ - services for interacting with humans running clients, metaservice
+
+8 Sample Object Implementation (sample)
+ - ease of adaptation, ease of understanding, ideas for doing it
+   right, building on it without copying the whole thing, multiple maps
+   using the same set of objects, combining objects from several
+   implementations
+- damage types, the force with with objects are thrown, or who is using
+  a weapon
+- map, room, squares, players, monsters, objects not having a location,
+  is everything a container?
+- how would you do vehicles? drive? look out the window?
+- how do we handle scale?
+- character classes (fighter, wizard, etc.) subclassed off of the
+  player-character class
+
+9 Object Manipulation Utilities (util)
+ - map editor, dependence on object definition (and adapting our map editor
+   to new object sets)
+		     Griljor Design Specification
+			     Revision 1.0
+				5/5/95
+
+	       Copyright (C) 1995  Griljor Design Group
+			 All rights reserved.
+
+
+1 Overview 
+
+1.1 Project Description
+
+The original computer game, Griljor, is being re-designed and
+re-implemented from scratch.  The name is being reused because Griljor
+was never officially released on the net.
+
+The original game is played on a map designed by placing objects in
+rooms on a grid.  Players act upon the objects in the map and interact
+with each other.  Objects and maps are designed with special editors.
+The redesigned game really covers a much broader spectrum of games,
+and is better described as simply a support system for multi-player
+network games with graphical user interfaces.
+
+In the redesigned game, objects are defined by code rather than data.
+Everything in the game is an object, including the map, the rooms, and
+the players.  Redefinition of the objects changes the game.  Only the
+client and server remain constant, and they provide support for the
+networking, graphical interface, and object servicing needs common to
+every game written using Griljor's object definition language.
+
+A standard server runs all the code associated with objects and
+handles all object interactions.  The server contains an
+object-oriented language interpreter to execute the code in each
+object's methods.  The server makes connections with as many clients as
+the game in progress will support.  The server does not use a
+graphical interface.
+
+Players use a client program with a graphical interface to establish a
+network connection with the server.  In the server, one or more
+objects represent the player and act(s) as mediator(s) for the player
+in the game world.  Using extensions of the object definition
+language, mediating objects feed information to the player and accept
+and act on player inputs.
+
+Non-player characters (or "monsters") are represented in much the same
+way as players, except that they have AI code to determine their
+actions, instead of a reliance on input from a human user.
+
+A metaserver helps players looking for servers running games they'd
+like to join.  Objects using metaservice extensions to the object
+definition language, can make a standard Griljor server act as a
+metaserver.
+
+1.2 Project History
+
+Griljor was originally conceived in the Fall of 1989 and in the couple
+years that followed, a successful but difficult to extend
+implementation was created at U.C. Berkeley.  Many CS students there
+played the game, but the source was never officially distributed on
+the net, probably because the authors never felt it was really
+finished.  Occasionally since that time, the source has been requested
+by Berkeley students interested in setting up the game.  The game is
+currently available to play the CSUA's machines at U.C. Berkeley.
+
+There was also some design activity about a year and a half ago.
+Those emails were archived and have been used as part of the basis for
+this document.
+
+1.3 Design Document
+
+This document describes the design details of a new implementation of
+Griljor.  The present tense is used throughout the document, even when
+describing features that are not yet implemented (or even decided
+upon!)  The purpose of this is to allow the document to evolve from
+design document into project description as the work progresses.
+
+The document is divided into chapters, which are separate files, so
+that responsibility for the writeup of chapters can be distributed
+among the members of the design team.
+
+1.4 Project Team
+
+1.4.1 Team Members
+
+The project team consists of as many people from the original design
+and implementation teams as are still interested in the project, plus
+any one else having an interest in providing input on this design.
+
+Input for this design has been received from the following people:
+	Eric van Bezooijen
+	Van A. Boughner
+	Tom Holub
+	Keir Morgan
+	Mel Nicholson
+	Douglas R. Stein
+
+1.4.2 Team Leadership
+
+Van A. Boughner is the project leader.  His responsibilities include
+(a) coordinating the work of team members, (b) arbitrating design and
+implementation decisions when a consensus cannot be reached by the
+team, (c) training new team members, (d) and acting as group
+representative.
+
+<Anything else I should be responsible for?  What guarantees would you
+like to see here to insure that I don't unfairly dominate the design
+and stifle your good ideas?>
+
+1.5 Policies
+
+1.5.1 Distribution
+
+The copyright notice should always be included on this document
+whenever it is distributed.  Distribution of the design document
+should be limited to personnel on the design team until the document
+is ready for wider distribution.
+
+1.5.2 Copyrights
+
+Initially, all rights will be reserved by the Griljor Design Group,
+jointly owned by all who contribute to design and implementation.  Van
+A. Boughner is the official representative of this group to outside
+parties.
+
+<Under what eventual copyright rules should we distribute the final
+product?  No Modification?  GNU?  Berkeley?  Free?>
+
+1.5.3 Monetary Considerations
+
+<Should we allow free distribution and modification?  Should we
+reserve all rights to making money off the software?  Should we
+actually try to make money with it somehow?  If so, how do we properly
+repay the people who contribute?>
