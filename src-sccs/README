@@ -1,0 +1,3 @@
+These are version 1.0 source code files.
+The files in this folder need to be converted from SCCS into regular files, and placed in the parent folder (repo top-level).
+Consider updating the Makefile so most of these files can go into a "src" folder instead.
