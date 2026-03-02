@@ -1,10 +1,28 @@
-// Image cache: URL -> processed ImageData (white=transparent applied)
 const imageCache = new Map<string, ImageData>();
 const loadingPromises = new Map<string, Promise<ImageData | null>>();
 
+/** Load a PNG and return raw ImageData with no color transforms. */
+function loadRaw(url: string): Promise<ImageData | null> {
+  const key = `raw:${url}`;
+  if (loadingPromises.has(key)) return loadingPromises.get(key)!;
+  const p = new Promise<ImageData | null>((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const oc = new OffscreenCanvas(img.width, img.height);
+      const ctx = oc.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      resolve(ctx.getImageData(0, 0, img.width, img.height));
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+  loadingPromises.set(key, p);
+  return p;
+}
+
 /**
- * Load a PNG, convert white pixels to transparent, return ImageData.
- * Returns null if the image fails to load (missing bitmap).
+ * Load a bitmap PNG: white → transparent, dark pixels → inverted bright.
+ * Returns null if the image fails to load.
  */
 function loadAndProcess(url: string): Promise<ImageData | null> {
   if (loadingPromises.has(url)) return loadingPromises.get(url)!;
@@ -16,14 +34,17 @@ function loadAndProcess(url: string): Promise<ImageData | null> {
       const ctx = oc.getContext('2d')!;
       ctx.drawImage(img, 0, 0);
       const id = ctx.getImageData(0, 0, img.width, img.height);
-      // White (255,255,255) → transparent; grayscale bitmaps
       for (let i = 0; i < id.data.length; i += 4) {
         const r = id.data[i];
-        // Treat near-white as transparent (threshold 200)
         if (r >= 200 && id.data[i + 1] >= 200 && id.data[i + 2] >= 200) {
+          // White → transparent (background)
           id.data[i + 3] = 0;
         } else {
-          // Make dark pixels opaque with slight tint for visibility
+          // Invert dark → bright so art shows on dark canvas
+          const v = 255 - r;
+          id.data[i] = v;
+          id.data[i + 1] = v;
+          id.data[i + 2] = v;
           id.data[i + 3] = 255;
         }
       }
@@ -50,7 +71,7 @@ export async function loadMaskedSprite(
   if (imageCache.has(cacheKey)) return imageCache.get(cacheKey)!;
   if (loadingPromises.has(cacheKey)) return loadingPromises.get(cacheKey)!;
 
-  const p = Promise.all([loadAndProcess(bitmapUrl), loadAndProcess(maskUrl)]).then(
+  const p = Promise.all([loadAndProcess(bitmapUrl), loadRaw(maskUrl)]).then(
     ([bitmapData, maskData]) => {
       if (!bitmapData) return null;
 

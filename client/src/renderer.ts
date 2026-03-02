@@ -109,17 +109,13 @@ export async function renderRoom(
     }
   }
 
-  // Recorded objects
+  // Recorded objects — only render if the object definition has a bitmap
   for (const ro of room.recorded_objects) {
     if (ro.type <= 0) continue;
+    const obj = objects[ro.type];
+    if (!obj?.bitmap) continue; // no bitmap defined (e.g. invisible exits) — skip
     const img = await getSprite(ro.type);
-    if (img) {
-      drawTile(ctx, img, ro.x, ro.y);
-    } else {
-      // Fallback: colored dot
-      ctx.fillStyle = '#f80';
-      ctx.fillRect(ro.x * TILE + 12, ro.y * TILE + 12, 8, 8);
-    }
+    if (img) drawTile(ctx, img, ro.x, ro.y);
   }
 
   // Player avatar at center (10, 10)
