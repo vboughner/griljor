@@ -69,7 +69,9 @@ export async function renderRoom(
   room: RoomData,
   objects: ObjDef[],
   objset: string,
-  playerSprite: ImageData | null
+  playerSprite: ImageData | null,
+  px: number,
+  py: number
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
 
@@ -118,12 +120,11 @@ export async function renderRoom(
     if (img) drawTile(ctx, img, ro.x, ro.y);
   }
 
-  // Player avatar at center (10, 10)
+  // Player avatar
   if (playerSprite) {
-    drawTile(ctx, playerSprite, 10, 10);
+    drawTile(ctx, playerSprite, px, py);
   } else {
-    // Fallback: white square
     ctx.fillStyle = '#fff';
-    ctx.fillRect(10 * TILE + 8, 10 * TILE + 8, 16, 16);
+    ctx.fillRect(px * TILE + 8, py * TILE + 8, 16, 16);
   }
 }

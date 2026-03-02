@@ -2,16 +2,19 @@ import { MapFile, ObjectFile, ObjDef } from './types';
 import { loadMaskedSprite } from './assets';
 import { preloadRoomSprites, renderRoom } from './renderer';
 
+const GRID = 20;
+
 export class Game {
   private mapData: MapFile;
   private objects: ObjDef[];
   private objset: string;
   private currentRoom: number = 0;
+  private px: number = 10;
+  private py: number = 10;
   private playerSprite: ImageData | null = null;
   private canvas: HTMLCanvasElement;
   private roomInfo: HTMLElement;
   private status: HTMLElement;
-  private navBtns: Record<string, HTMLButtonElement>;
 
   constructor(
     mapData: MapFile,
@@ -23,12 +26,16 @@ export class Game {
   ) {
     this.mapData = mapData;
     this.objects = objFile.objects;
-    // Derive objset name from objfilename: "default.obj" → "default"
     this.objset = mapData.map.objfilename.replace(/\.obj$/, '');
     this.canvas = canvas;
     this.roomInfo = roomInfo;
     this.status = status;
-    this.navBtns = navBtns;
+
+    navBtns['north'].onclick = () => this.move(0, -1);
+    navBtns['south'].onclick = () => this.move(0,  1);
+    navBtns['east'].onclick  = () => this.move( 1, 0);
+    navBtns['west'].onclick  = () => this.move(-1, 0);
+    for (const btn of Object.values(navBtns)) btn.disabled = false;
   }
 
   async loadPlayerSprite(): Promise<void> {
@@ -38,9 +45,40 @@ export class Game {
     );
   }
 
-  async goToRoom(index: number): Promise<void> {
+  async goToRoom(index: number, px = 10, py = 10): Promise<void> {
     if (index < 0 || index >= this.mapData.rooms.length) return;
     this.currentRoom = index;
+    this.px = px;
+    this.py = py;
+    await this.render();
+  }
+
+  private async move(dx: number, dy: number): Promise<void> {
+    const room = this.mapData.rooms[this.currentRoom];
+    let nx = this.px + dx;
+    let ny = this.py + dy;
+
+    // Room transitions at edges
+    if (ny < 0 && room.exit_north >= 0) {
+      await this.goToRoom(room.exit_north, nx, GRID - 1);
+      return;
+    }
+    if (ny >= GRID && room.exit_south >= 0) {
+      await this.goToRoom(room.exit_south, nx, 0);
+      return;
+    }
+    if (nx >= GRID && room.exit_east >= 0) {
+      await this.goToRoom(room.exit_east, 0, ny);
+      return;
+    }
+    if (nx < 0 && room.exit_west >= 0) {
+      await this.goToRoom(room.exit_west, GRID - 1, ny);
+      return;
+    }
+
+    // Clamp to grid bounds
+    this.px = Math.max(0, Math.min(GRID - 1, nx));
+    this.py = Math.max(0, Math.min(GRID - 1, ny));
     await this.render();
   }
 
@@ -49,22 +87,9 @@ export class Game {
     this.status.textContent = 'Loading room sprites…';
     await preloadRoomSprites(room, this.objects, this.objset);
     this.status.textContent = 'Rendering…';
-    await renderRoom(this.canvas, room, this.objects, this.objset, this.playerSprite);
+    await renderRoom(this.canvas, room, this.objects, this.objset, this.playerSprite, this.px, this.py);
     this.roomInfo.textContent =
-      `Room ${this.currentRoom}: "${room.name}" — Team: ${room.team}`;
-    this.updateNav(room);
+      `Room ${this.currentRoom}: "${room.name}" — (${this.px}, ${this.py})`;
     this.status.textContent = '';
-  }
-
-  private updateNav(room: { exit_north: number; exit_east: number; exit_south: number; exit_west: number }): void {
-    this.navBtns['north'].disabled = room.exit_north < 0;
-    this.navBtns['east'].disabled  = room.exit_east  < 0;
-    this.navBtns['south'].disabled = room.exit_south < 0;
-    this.navBtns['west'].disabled  = room.exit_west  < 0;
-
-    this.navBtns['north'].onclick = () => this.goToRoom(room.exit_north);
-    this.navBtns['east'].onclick  = () => this.goToRoom(room.exit_east);
-    this.navBtns['south'].onclick = () => this.goToRoom(room.exit_south);
-    this.navBtns['west'].onclick  = () => this.goToRoom(room.exit_west);
   }
 }
