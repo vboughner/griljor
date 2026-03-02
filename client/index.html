@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Griljor: The War of Griljor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #1a1a1a;
+      color: #ccc;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 12px;
+    }
+    h1 { font-size: 1.4em; color: #aaa; letter-spacing: 2px; }
+    #room-info {
+      font-size: 0.9em;
+      color: #888;
+      min-height: 1.2em;
+    }
+    #canvas-wrap {
+      position: relative;
+    }
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+      border: 1px solid #444;
+    }
+    #nav {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 6px;
+      width: 200px;
+    }
+    #nav button {
+      background: #2a2a2a;
+      border: 1px solid #555;
+      color: #bbb;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 0.85em;
+    }
+    #nav button:hover:not(:disabled) { background: #3a3a3a; }
+    #nav button:disabled { opacity: 0.3; cursor: default; }
+    #btn-north { grid-column: 2; grid-row: 1; }
+    #btn-west  { grid-column: 1; grid-row: 2; }
+    #btn-east  { grid-column: 3; grid-row: 2; }
+    #btn-south { grid-column: 2; grid-row: 3; }
+    #status { font-size: 0.8em; color: #666; min-height: 1em; }
+  </style>
+</head>
+<body>
+  <h1>GRILJOR</h1>
+  <div id="room-info"></div>
+  <div id="canvas-wrap">
+    <canvas id="game-canvas" width="640" height="640"></canvas>
+  </div>
+  <div id="nav">
+    <button id="btn-north" disabled>↑ N</button>
+    <button id="btn-west"  disabled>← W</button>
+    <button id="btn-east"  disabled>E →</button>
+    <button id="btn-south" disabled>↓ S</button>
+  </div>
+  <div id="status">Loading...</div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
