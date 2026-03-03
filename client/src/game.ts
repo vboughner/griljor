@@ -202,6 +202,11 @@ export class Game {
     // Block movement into walls
     if (isTileBlocked(nx, ny, room, this.objects)) return;
 
+    // Block movement into a tile occupied by another player in this room
+    for (const p of this.otherPlayers.values()) {
+      if (p.room === this.currentRoom && p.x === nx && p.y === ny) return;
+    }
+
     this.px = nx;
     this.py = ny;
     this.network?.sendLocation(this.currentRoom, this.px, this.py);
