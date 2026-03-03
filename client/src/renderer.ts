@@ -116,20 +116,39 @@ export async function buildRoomBackground(
   return oc;
 }
 
+export interface OtherPlayer {
+  px: number;
+  py: number;
+  sprite: ImageData | null;
+}
+
 /**
  * Composite a pre-built background and player sprite onto the visible canvas.
- * Synchronous and fast — called on every player move.
+ * Draws the local player and any other players in the same room.
  */
 export async function renderFrame(
   canvas: HTMLCanvasElement,
   bg: OffscreenCanvas,
   playerSprite: ImageData | null,
   px: number,
-  py: number
+  py: number,
+  others: OtherPlayer[] = []
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bg, 0, 0);
 
+  // Draw other players first (behind local player)
+  for (const other of others) {
+    if (other.sprite) {
+      const bm = await getBitmap(other.sprite);
+      ctx.drawImage(bm, other.px * TILE, other.py * TILE, TILE, TILE);
+    } else {
+      ctx.fillStyle = getColorMode() === 'dark' ? '#aaa' : '#666';
+      ctx.fillRect(other.px * TILE + 8, other.py * TILE + 8, 16, 16);
+    }
+  }
+
+  // Draw local player on top
   if (playerSprite) {
     const bm = await getBitmap(playerSprite);
     ctx.drawImage(bm, px * TILE, py * TILE, TILE, TILE);

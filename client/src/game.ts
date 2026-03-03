@@ -1,6 +1,7 @@
 import { MapFile, ObjectFile, ObjDef, RoomData } from './types';
 import { loadMaskedSprite, setColorMode, ColorMode } from './assets';
-import { preloadRoomSprites, buildRoomBackground, renderFrame } from './renderer';
+import { preloadRoomSprites, buildRoomBackground, renderFrame, OtherPlayer } from './renderer';
+import { GameNetwork } from './network';
 
 const GRID = 20;
 
@@ -28,6 +29,16 @@ function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, ExitTile> 
   return map;
 }
 
+interface RemotePlayer {
+  id: number;
+  name: string;
+  avatar: string;
+  room: number;
+  x: number;
+  y: number;
+  sprite: ImageData | null;
+}
+
 export class Game {
   private mapData: MapFile;
   private objects: ObjDef[];
@@ -44,13 +55,18 @@ export class Game {
   private status: HTMLElement;
   private onKeyDown!: (e: KeyboardEvent) => void;
 
+  private network: GameNetwork | null = null;
+  private myId: number | null = null;
+  private otherPlayers = new Map<number, RemotePlayer>();
+
   constructor(
     mapData: MapFile,
     objFile: ObjectFile,
     canvas: HTMLCanvasElement,
     roomInfo: HTMLElement,
     status: HTMLElement,
-    navBtns: Record<string, HTMLButtonElement>
+    navBtns: Record<string, HTMLButtonElement>,
+    network?: GameNetwork
   ) {
     this.mapData = mapData;
     this.objects = objFile.objects;
@@ -58,6 +74,7 @@ export class Game {
     this.canvas = canvas;
     this.roomInfo = roomInfo;
     this.status = status;
+    this.network = network ?? null;
 
     navBtns['north'].onclick = () => this.move(0, -1);
     navBtns['south'].onclick = () => this.move(0,  1);
@@ -73,22 +90,55 @@ export class Game {
       if (d) { e.preventDefault(); this.move(d[0], d[1]); }
     };
     window.addEventListener('keydown', this.onKeyDown);
+
+    if (this.network) this.wireNetwork(this.network);
+  }
+
+  private wireNetwork(net: GameNetwork): void {
+    net.onPlayerInfo = async (msg) => {
+      const sprite = await this.loadAvatarSprite(msg.avatar);
+      this.otherPlayers.set(msg.id, {
+        id: msg.id, name: msg.name, avatar: msg.avatar,
+        room: msg.room, x: msg.x, y: msg.y, sprite,
+      });
+      await this.render();
+    };
+
+    net.onLocation = async (msg) => {
+      if (msg.id === this.myId) return; // ignore echo of our own position
+      const p = this.otherPlayers.get(msg.id);
+      if (p) {
+        p.room = msg.room;
+        p.x = msg.x;
+        p.y = msg.y;
+        await this.render();
+      }
+    };
+
+    net.onLeave = async (msg) => {
+      this.otherPlayers.delete(msg.id);
+      await this.render();
+    };
   }
 
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+    this.network?.sendLeave();
   }
 
   async setMode(mode: ColorMode): Promise<void> {
     setColorMode(mode);
-    this.roomBg = null; // background colors change with mode
+    this.roomBg = null;
     await this.loadPlayerSprite();
     await this.render();
   }
 
   async loadPlayerSprite(): Promise<void> {
-    const name = this.avatarName;
-    this.playerSprite = await loadMaskedSprite(
+    this.playerSprite = await this.loadAvatarSprite(this.avatarName);
+  }
+
+  private async loadAvatarSprite(name: string): Promise<ImageData | null> {
+    return loadMaskedSprite(
       `/sprites/facebits/${name}bit.png`,
       `/sprites/facebits/${name}mask.png`
     );
@@ -100,13 +150,18 @@ export class Game {
     await this.render();
   }
 
+  setMyId(id: number): void {
+    this.myId = id;
+  }
+
   async goToRoom(index: number, px = 10, py = 10): Promise<void> {
     if (index < 0 || index >= this.mapData.rooms.length) return;
     this.currentRoom = index;
     this.px = px;
     this.py = py;
-    this.roomBg = null; // new room, rebuild background
+    this.roomBg = null;
     this.exitMap = buildExitMap(this.mapData.rooms[index], this.objects);
+    this.network?.sendLocation(this.currentRoom, this.px, this.py);
     await this.render();
   }
 
@@ -137,7 +192,7 @@ export class Game {
     nx = Math.max(0, Math.min(GRID - 1, nx));
     ny = Math.max(0, Math.min(GRID - 1, ny));
 
-    // Exits take priority over collision — check before blocking
+    // Exits take priority over collision
     const exit = this.exitMap.get(`${nx},${ny}`);
     if (exit) {
       await this.goToRoom(exit.destRoom, exit.landX, exit.landY);
@@ -149,6 +204,7 @@ export class Game {
 
     this.px = nx;
     this.py = ny;
+    this.network?.sendLocation(this.currentRoom, this.px, this.py);
 
     await this.render();
   }
@@ -163,7 +219,15 @@ export class Game {
       this.status.textContent = '';
     }
 
-    await renderFrame(this.canvas, this.roomBg, this.playerSprite, this.px, this.py);
+    // Collect other players in the same room
+    const others: OtherPlayer[] = [];
+    for (const p of this.otherPlayers.values()) {
+      if (p.room === this.currentRoom) {
+        others.push({ px: p.x, py: p.y, sprite: p.sprite });
+      }
+    }
+
+    await renderFrame(this.canvas, this.roomBg, this.playerSprite, this.px, this.py, others);
     this.roomInfo.textContent =
       `Room ${this.currentRoom}: "${room.name}" — (${this.px}, ${this.py})`;
   }

@@ -1,6 +1,7 @@
 import { MapFile, ObjectFile } from './types';
 import { Game } from './game';
 import { ColorMode } from './assets';
+import { GameNetwork } from './network';
 
 const AVATARS = [
   'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
@@ -35,6 +36,7 @@ async function main(): Promise<void> {
   const status = document.getElementById('status') as HTMLElement;
   const mapSelect = document.getElementById('map-select') as HTMLSelectElement;
   const avatarSelect = document.getElementById('avatar-select') as HTMLSelectElement;
+  const playerNameInput = document.getElementById('player-name') as HTMLInputElement;
   const modeToggle = document.getElementById('mode-toggle') as HTMLButtonElement;
   const navBtns = {
     north: document.getElementById('btn-north') as HTMLButtonElement,
@@ -80,10 +82,31 @@ async function main(): Promise<void> {
 
     try {
       const { mapData, objFile } = await loadMap(name);
-      const game = new Game(mapData, objFile, canvas, roomInfo, status, navBtns);
+
+      // Try to connect to the game server
+      let network: GameNetwork | undefined;
+      try {
+        network = new GameNetwork('ws://localhost:3001/ws');
+      } catch {
+        // Server unavailable — single-player mode
+      }
+
+      const game = new Game(mapData, objFile, canvas, roomInfo, status, navBtns, network);
       currentGame = game;
       await game.setAvatar(avatarSelect.value);
       await game.goToRoom(0);
+
+      if (network) {
+        const playerName = playerNameInput.value.trim() || 'player';
+        network.onAccepted = (msg) => {
+          game.setMyId(msg.id);
+          status.textContent = `Connected as ${playerName} (id=${msg.id})`;
+        };
+        network.onRejected = (msg) => {
+          status.textContent = `Rejected: ${msg.msg}`;
+        };
+        network.join(playerName, avatarSelect.value);
+      }
     } catch (err) {
       status.textContent = `Error: ${err}`;
     }
