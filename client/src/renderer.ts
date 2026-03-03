@@ -1,5 +1,5 @@
 import { RoomData, ObjDef } from './types';
-import { loadMaskedSprite, loadSprite } from './assets';
+import { loadMaskedSprite, loadSprite, getColorMode } from './assets';
 
 const TILE = 32;
 const GRID = 20;
@@ -76,7 +76,7 @@ export async function renderRoom(
   const ctx = canvas.getContext('2d')!;
 
   // Background
-  ctx.fillStyle = '#333';
+  ctx.fillStyle = getColorMode() === 'dark' ? '#333' : '#e8e8e8';
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
   // Build sprite cache for this render pass

@@ -1,5 +1,5 @@
 import { MapFile, ObjectFile, ObjDef, RoomData } from './types';
-import { loadMaskedSprite } from './assets';
+import { loadMaskedSprite, setColorMode, ColorMode } from './assets';
 import { preloadRoomSprites, renderRoom } from './renderer';
 
 const GRID = 20;
@@ -75,6 +75,12 @@ export class Game {
 
   destroy(): void {
     window.removeEventListener('keydown', this.onKeyDown);
+  }
+
+  async setMode(mode: ColorMode): Promise<void> {
+    setColorMode(mode);
+    await this.loadPlayerSprite();
+    await this.render();
   }
 
   async loadPlayerSprite(): Promise<void> {

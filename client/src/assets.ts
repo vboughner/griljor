@@ -1,3 +1,15 @@
+export type ColorMode = 'dark' | 'light';
+
+let colorMode: ColorMode = 'dark';
+
+export function setColorMode(mode: ColorMode): void {
+  colorMode = mode;
+}
+
+export function getColorMode(): ColorMode {
+  return colorMode;
+}
+
 const imageCache = new Map<string, ImageData>();
 const loadingPromises = new Map<string, Promise<ImageData | null>>();
 
@@ -21,11 +33,14 @@ function loadRaw(url: string): Promise<ImageData | null> {
 }
 
 /**
- * Load a bitmap PNG: white → transparent, dark pixels → inverted bright.
- * Returns null if the image fails to load.
+ * Load a bitmap PNG and apply the current color mode transform:
+ *   dark:  white → transparent, dark pixels inverted to bright
+ *   light: white → transparent, dark pixels kept as-is (black on white bg)
+ * Cache is keyed by mode so both can coexist.
  */
-function loadAndProcess(url: string): Promise<ImageData | null> {
-  if (loadingPromises.has(url)) return loadingPromises.get(url)!;
+function loadAndProcess(url: string, mode: ColorMode): Promise<ImageData | null> {
+  const key = `${mode}:${url}`;
+  if (loadingPromises.has(key)) return loadingPromises.get(key)!;
 
   const p = new Promise<ImageData | null>((resolve) => {
     const img = new Image();
@@ -37,41 +52,38 @@ function loadAndProcess(url: string): Promise<ImageData | null> {
       for (let i = 0; i < id.data.length; i += 4) {
         const r = id.data[i];
         if (r >= 200 && id.data[i + 1] >= 200 && id.data[i + 2] >= 200) {
-          // White → transparent (background)
-          id.data[i + 3] = 0;
-        } else {
-          // Invert dark → bright so art shows on dark canvas
-          const v = 255 - r;
+          id.data[i + 3] = 0; // white → transparent in both modes
+        } else if (mode === 'dark') {
+          const v = 255 - r;  // invert: black → white on dark bg
           id.data[i] = v;
           id.data[i + 1] = v;
           id.data[i + 2] = v;
           id.data[i + 3] = 255;
+        } else {
+          id.data[i + 3] = 255; // light: keep original dark pixels as-is
         }
       }
-      imageCache.set(url, id);
+      imageCache.set(key, id);
       resolve(id);
     };
     img.onerror = () => resolve(null);
     img.src = url;
   });
 
-  loadingPromises.set(url, p);
+  loadingPromises.set(key, p);
   return p;
 }
 
-/**
- * Load a bitmap and apply its mask. The mask PNG: black pixels = opaque area,
- * white pixels = transparent. Returns processed ImageData.
- */
 export async function loadMaskedSprite(
   bitmapUrl: string,
   maskUrl: string
 ): Promise<ImageData | null> {
-  const cacheKey = `masked:${bitmapUrl}`;
+  const mode = colorMode;
+  const cacheKey = `${mode}:masked:${bitmapUrl}`;
   if (imageCache.has(cacheKey)) return imageCache.get(cacheKey)!;
   if (loadingPromises.has(cacheKey)) return loadingPromises.get(cacheKey)!;
 
-  const p = Promise.all([loadAndProcess(bitmapUrl), loadRaw(maskUrl)]).then(
+  const p = Promise.all([loadAndProcess(bitmapUrl, mode), loadRaw(maskUrl)]).then(
     ([bitmapData, maskData]) => {
       if (!bitmapData) return null;
 
@@ -82,11 +94,8 @@ export async function loadMaskedSprite(
       );
 
       if (maskData) {
-        // Zero alpha where mask pixel is white (not part of sprite)
         for (let i = 0; i < result.data.length; i += 4) {
-          if (maskData.data[i] >= 200) {
-            result.data[i + 3] = 0;
-          }
+          if (maskData.data[i] >= 200) result.data[i + 3] = 0;
         }
       }
 
@@ -99,20 +108,6 @@ export async function loadMaskedSprite(
   return p;
 }
 
-/**
- * Load a plain (unmasked) bitmap with white→transparent conversion.
- */
 export async function loadSprite(url: string): Promise<ImageData | null> {
-  return loadAndProcess(url);
-}
-
-/**
- * Preload a set of URLs. Resolves when all are done (ignores failures).
- */
-export async function preloadAll(urls: string[]): Promise<void> {
-  await Promise.all(urls.map((u) => loadAndProcess(u)));
-}
-
-export function getCached(url: string): ImageData | undefined {
-  return imageCache.get(url) ?? imageCache.get(`masked:${url}`);
+  return loadAndProcess(url, colorMode);
 }

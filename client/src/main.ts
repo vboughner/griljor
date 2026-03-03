@@ -1,5 +1,6 @@
 import { MapFile, ObjectFile } from './types';
 import { Game } from './game';
+import { ColorMode } from './assets';
 
 const MAPS = [
   'battle', 'blowup', 'castle', 'default', 'flag', 'flames', 'flash',
@@ -26,6 +27,7 @@ async function main(): Promise<void> {
   const roomInfo = document.getElementById('room-info') as HTMLElement;
   const status = document.getElementById('status') as HTMLElement;
   const mapSelect = document.getElementById('map-select') as HTMLSelectElement;
+  const modeToggle = document.getElementById('mode-toggle') as HTMLButtonElement;
   const navBtns = {
     north: document.getElementById('btn-north') as HTMLButtonElement,
     east:  document.getElementById('btn-east')  as HTMLButtonElement,
@@ -43,6 +45,15 @@ async function main(): Promise<void> {
   mapSelect.value = 'battle';
 
   let currentGame: Game | null = null;
+  let currentMode: ColorMode = 'dark';
+
+  modeToggle.addEventListener('click', async () => {
+    currentMode = currentMode === 'dark' ? 'light' : 'dark';
+    modeToggle.textContent = currentMode === 'dark' ? '☀ Light' : '☾ Dark';
+    document.body.style.background = currentMode === 'dark' ? '#1a1a1a' : '#d0d0d0';
+    document.body.style.color = currentMode === 'dark' ? '#ccc' : '#222';
+    await currentGame?.setMode(currentMode);
+  });
 
   async function startMap(name: string): Promise<void> {
     currentGame?.destroy();
