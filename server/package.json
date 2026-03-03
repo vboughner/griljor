@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "ts-node src/main.ts",
+    "lobby": "ts-node src/lobby.ts",
     "build": "tsc",
     "start": "node dist/main.js"
   },

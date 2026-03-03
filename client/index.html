@@ -17,14 +17,28 @@
       gap: 12px;
     }
     h1 { font-size: 1.4em; color: #aaa; letter-spacing: 2px; }
-    #room-info {
-      font-size: 0.9em;
-      color: #888;
-      min-height: 1.2em;
+
+    /* ── Lobby ── */
+    #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 600px; }
+    #lobby-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    #server-list { width: 100%; border: 1px solid #444; min-height: 60px; }
+    .server-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; border-bottom: 1px solid #333;
     }
-    #canvas-wrap {
-      position: relative;
+    .server-row:last-child { border-bottom: none; }
+    .server-map { flex: 1; }
+    .server-players { width: 60px; text-align: center; color: #888; }
+    #lobby-status { font-size: 0.85em; color: #666; min-height: 1.2em; }
+    #refresh-btn {
+      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.9em;
     }
+    #refresh-btn:hover { background: #3a3a3a; }
+
+    /* ── Game ── */
+    #game-screen { display: none; flex-direction: column; align-items: center; gap: 12px; }
+    #room-info { font-size: 0.9em; color: #888; min-height: 1.2em; }
     canvas {
       display: block;
       image-rendering: pixelated;
@@ -38,13 +52,8 @@
       width: 200px;
     }
     #nav button {
-      background: #2a2a2a;
-      border: 1px solid #555;
-      color: #bbb;
-      padding: 6px 10px;
-      cursor: pointer;
-      font-family: monospace;
-      font-size: 0.85em;
+      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      padding: 6px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
     }
     #nav button:hover:not(:disabled) { background: #3a3a3a; }
     #nav button:disabled { opacity: 0.3; cursor: default; }
@@ -52,40 +61,58 @@
     #btn-west  { grid-column: 1; grid-row: 2; }
     #btn-east  { grid-column: 3; grid-row: 2; }
     #btn-south { grid-column: 2; grid-row: 3; }
-    #map-select-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
-    #map-select, #mode-toggle, #player-name {
-      background: #2a2a2a;
-      border: 1px solid #555;
-      color: #bbb;
-      padding: 5px 8px;
-      font-family: monospace;
-      font-size: 0.9em;
-      cursor: pointer;
-    }
-    #player-name { cursor: text; width: 120px; }
-    #mode-toggle:hover { background: #3a3a3a; }
+    #game-controls { display: flex; gap: 8px; }
     #status { font-size: 0.8em; color: #666; min-height: 1em; }
+
+    /* shared input style */
+    select, input, button.game-btn {
+      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      padding: 5px 8px; font-family: monospace; font-size: 0.9em; cursor: pointer;
+    }
+    input { cursor: text; }
+    #player-name { width: 120px; }
+    .join-btn, #leave-btn, #mode-toggle {
+      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
+    }
+    .join-btn:hover:not(:disabled), #leave-btn:hover, #mode-toggle:hover { background: #3a3a3a; }
+    .join-btn:disabled { opacity: 0.4; cursor: default; }
   </style>
 </head>
 <body>
-  <h1>GRILJOR</h1>
-  <div id="map-select-wrap">
-    <input id="player-name" value="player1" maxlength="24" placeholder="name" />
-    <select id="map-select"></select>
-    <select id="avatar-select"></select>
-    <button id="mode-toggle">☀ Light</button>
+
+  <!-- ── Lobby Screen ── -->
+  <div id="lobby-screen">
+    <h1>GRILJOR</h1>
+    <div id="lobby-controls">
+      <input id="player-name" maxlength="24" placeholder="name" />
+      <select id="avatar-select"></select>
+    </div>
+    <div id="server-list"></div>
+    <div>
+      <button id="refresh-btn">&#8635; Refresh</button>
+    </div>
+    <div id="lobby-status">Loading…</div>
   </div>
-  <div id="room-info"></div>
-  <div id="canvas-wrap">
+
+  <!-- ── Game Screen ── -->
+  <div id="game-screen">
+    <h1>GRILJOR</h1>
+    <div id="room-info"></div>
     <canvas id="game-canvas" width="640" height="640"></canvas>
+    <div id="nav">
+      <button id="btn-north" disabled>↑ N</button>
+      <button id="btn-west"  disabled>← W</button>
+      <button id="btn-east"  disabled>E →</button>
+      <button id="btn-south" disabled>↓ S</button>
+    </div>
+    <div id="game-controls">
+      <button id="mode-toggle">☀ Light</button>
+      <button id="leave-btn">Leave Game</button>
+    </div>
+    <div id="status"></div>
   </div>
-  <div id="nav">
-    <button id="btn-north" disabled>↑ N</button>
-    <button id="btn-west"  disabled>← W</button>
-    <button id="btn-east"  disabled>E →</button>
-    <button id="btn-south" disabled>↓ S</button>
-  </div>
-  <div id="status">Loading...</div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

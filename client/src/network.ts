@@ -22,12 +22,13 @@ export class GameNetwork {
   onLocation:   (msg: Extract<S2CMessage, { type: 'MY_LOCATION' }>) => void = () => {};
   onLeave:      (msg: Extract<S2CMessage, { type: 'LEAVING_GAME' }>) => void = () => {};
   onMessage:    (msg: Extract<S2CMessage, { type: 'MESSAGE' }>) => void      = () => {};
+  onClose:      () => void                                                   = () => {};
 
   constructor(url: string) {
     this.ws = new WebSocket(url);
     console.log(`[network] connecting to ${url}`);
     this.ws.addEventListener('open',  () => console.log('[network] connected'));
-    this.ws.addEventListener('close', (ev) => console.log(`[network] disconnected (code=${ev.code})`));
+    this.ws.addEventListener('close', (ev) => { console.log(`[network] disconnected (code=${ev.code})`); this.onClose(); });
     this.ws.addEventListener('error', () => console.log('[network] connection error'));
     this.ws.addEventListener('message', (ev) => {
       let msg: S2CMessage;

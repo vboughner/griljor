@@ -2,19 +2,13 @@ import { MapFile, ObjectFile } from './types';
 import { Game } from './game';
 import { ColorMode } from './assets';
 import { GameNetwork } from './network';
+import { fetchGames, GameInfo } from './lobby';
 
 const AVATARS = [
   'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
   'crom', 'drustan', 'duel', 'eric', 'gm', 'mahatma', 'mcelhoe', 'mel',
   'mike', 'mikey', 'moronus', 'ollie', 'savaki', 'spook', 'stefan',
   'stinglai', 'trevor', 'van',
-];
-
-const MAPS = [
-  'battle', 'blowup', 'castle', 'default', 'flag', 'flames', 'flash',
-  'hack', 'hack1', 'hometown', 'ivarr', 'main', 'outdoor', 'paradise2',
-  'paradise3', 'ring', 'shelter', 'shooter', 'standard', 'sword', 'three',
-  'title', 'trek', 'tunnel', 'two', 'twoperson',
 ];
 
 async function loadMap(name: string): Promise<{ mapData: MapFile; objFile: ObjectFile }> {
@@ -31,28 +25,27 @@ async function loadMap(name: string): Promise<{ mapData: MapFile; objFile: Objec
 }
 
 async function main(): Promise<void> {
-  const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-  const roomInfo = document.getElementById('room-info') as HTMLElement;
-  const status = document.getElementById('status') as HTMLElement;
-  const mapSelect = document.getElementById('map-select') as HTMLSelectElement;
-  const avatarSelect = document.getElementById('avatar-select') as HTMLSelectElement;
+  // DOM refs — lobby
+  const lobbyScreen    = document.getElementById('lobby-screen') as HTMLElement;
+  const gameScreen     = document.getElementById('game-screen') as HTMLElement;
   const playerNameInput = document.getElementById('player-name') as HTMLInputElement;
+  const avatarSelect   = document.getElementById('avatar-select') as HTMLSelectElement;
+  const serverList     = document.getElementById('server-list') as HTMLElement;
+  const refreshBtn     = document.getElementById('refresh-btn') as HTMLButtonElement;
+  const lobbyStatus    = document.getElementById('lobby-status') as HTMLElement;
+
+  // DOM refs — game
+  const canvas    = document.getElementById('game-canvas') as HTMLCanvasElement;
+  const roomInfo  = document.getElementById('room-info') as HTMLElement;
+  const status    = document.getElementById('status') as HTMLElement;
   const modeToggle = document.getElementById('mode-toggle') as HTMLButtonElement;
+  const leaveBtn  = document.getElementById('leave-btn') as HTMLButtonElement;
   const navBtns = {
     north: document.getElementById('btn-north') as HTMLButtonElement,
     east:  document.getElementById('btn-east')  as HTMLButtonElement,
     south: document.getElementById('btn-south') as HTMLButtonElement,
     west:  document.getElementById('btn-west')  as HTMLButtonElement,
   };
-
-  // Populate map selector
-  for (const name of MAPS) {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    mapSelect.appendChild(opt);
-  }
-  mapSelect.value = 'battle';
 
   // Populate avatar selector
   for (const name of AVATARS) {
@@ -66,7 +59,107 @@ async function main(): Promise<void> {
   playerNameInput.value = randomAvatar;
 
   let currentGame: Game | null = null;
+  let currentNetwork: GameNetwork | null = null;
   let currentMode: ColorMode = 'dark';
+  let isJoining = false;
+
+  function showLobby(): void {
+    lobbyScreen.style.display = 'flex';
+    gameScreen.style.display = 'none';
+  }
+
+  function showGame(): void {
+    lobbyScreen.style.display = 'none';
+    gameScreen.style.display = 'flex';
+  }
+
+  function setInputsDisabled(disabled: boolean): void {
+    playerNameInput.disabled = disabled;
+    avatarSelect.disabled = disabled;
+    serverList.querySelectorAll<HTMLButtonElement>('.join-btn').forEach((btn) => {
+      btn.disabled = disabled;
+    });
+  }
+
+  async function refreshServerList(): Promise<void> {
+    lobbyStatus.textContent = 'Loading\u2026';
+    serverList.innerHTML = '';
+    let games: GameInfo[];
+    try {
+      games = await fetchGames();
+    } catch (err) {
+      lobbyStatus.textContent = `Error: ${err}`;
+      return;
+    }
+
+    if (games.length === 0) {
+      lobbyStatus.textContent = 'No active servers found.';
+      return;
+    }
+
+    lobbyStatus.textContent = '';
+    for (const game of games) {
+      const row = document.createElement('div');
+      row.className = 'server-row';
+      row.innerHTML = `
+        <span class="server-map">${game.mapName}</span>
+        <span class="server-players">${game.players} / ${game.maxPlayers}</span>
+        <button class="join-btn" data-host="${game.host}" data-port="${game.port}">Join</button>
+      `;
+      row.querySelector<HTMLButtonElement>('.join-btn')!.addEventListener('click', () => joinServer(game));
+      serverList.appendChild(row);
+    }
+  }
+
+  async function joinServer(gameInfo: GameInfo): Promise<void> {
+    if (isJoining) return;
+    isJoining = true;
+    setInputsDisabled(true);
+    lobbyStatus.textContent = `Connecting to ${gameInfo.mapName}\u2026`;
+
+    const playerName = playerNameInput.value.trim() || 'player';
+
+    try {
+      const { mapData, objFile } = await loadMap(gameInfo.mapName);
+
+      const network = new GameNetwork(`ws://${gameInfo.host}:${gameInfo.port}/ws`);
+      currentNetwork = network;
+
+      network.onAccepted = (msg) => {
+        showGame();
+        status.textContent = `Connected as ${playerName} (id=${msg.id})`;
+        currentGame!.setMyId(msg.id);
+      };
+
+      network.onRejected = (msg) => {
+        setInputsDisabled(false);
+        lobbyStatus.textContent = `Rejected: ${msg.msg}`;
+        isJoining = false;
+      };
+
+      network.onClose = () => {
+        if (gameScreen.style.display !== 'none') {
+          currentGame?.destroy();
+          currentGame = null;
+          showLobby();
+          refreshServerList();
+        }
+        lobbyStatus.textContent = 'Disconnected from server.';
+        setInputsDisabled(false);
+        isJoining = false;
+      };
+
+      const game = new Game(mapData, objFile, canvas, roomInfo, status, navBtns, network);
+      currentGame = game;
+      await game.setAvatar(avatarSelect.value);
+      await game.goToRoom(0);
+      network.join(playerName, avatarSelect.value);
+    } catch (err) {
+      lobbyStatus.textContent = `Error: ${err}`;
+      setInputsDisabled(false);
+      isJoining = false;
+    }
+  }
 
   modeToggle.addEventListener('click', async () => {
     currentMode = currentMode === 'dark' ? 'light' : 'dark';
@@ -76,55 +169,30 @@ async function main(): Promise<void> {
     await currentGame?.setMode(currentMode);
   });
 
-  async function startMap(name: string): Promise<void> {
+  leaveBtn.addEventListener('click', () => {
+    currentNetwork?.sendLeave();
     currentGame?.destroy();
     currentGame = null;
-    status.textContent = `Loading ${name}…`;
-    roomInfo.textContent = '';
+    currentNetwork = null;
+    isJoining = false;
+    setInputsDisabled(false);
+    showLobby();
+    refreshServerList();
+  });
 
-    try {
-      const { mapData, objFile } = await loadMap(name);
-
-      // Try to connect to the game server
-      let network: GameNetwork | undefined;
-      try {
-        network = new GameNetwork('ws://localhost:3001/ws');
-      } catch {
-        // Server unavailable — single-player mode
-      }
-
-      const game = new Game(mapData, objFile, canvas, roomInfo, status, navBtns, network);
-      currentGame = game;
-      await game.setAvatar(avatarSelect.value);
-      await game.goToRoom(0);
-
-      if (network) {
-        const playerName = playerNameInput.value.trim() || 'player';
-        network.onAccepted = (msg) => {
-          game.setMyId(msg.id);
-          status.textContent = `Connected as ${playerName} (id=${msg.id})`;
-        };
-        network.onRejected = (msg) => {
-          status.textContent = `Rejected: ${msg.msg}`;
-        };
-        network.join(playerName, avatarSelect.value);
-      }
-    } catch (err) {
-      status.textContent = `Error: ${err}`;
-    }
-  }
-
-  mapSelect.addEventListener('change', () => startMap(mapSelect.value));
   avatarSelect.addEventListener('change', () => {
     playerNameInput.value = avatarSelect.value;
     currentGame?.setAvatar(avatarSelect.value);
   });
 
-  await startMap('battle');
+  refreshBtn.addEventListener('click', () => refreshServerList());
+
+  showLobby();
+  await refreshServerList();
 }
 
 main().catch((err) => {
-  const status = document.getElementById('status');
-  if (status) status.textContent = `Fatal: ${err}`;
+  const el = document.getElementById('lobby-status') ?? document.getElementById('status');
+  if (el) el.textContent = `Fatal: ${err}`;
   console.error(err);
 });

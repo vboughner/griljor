@@ -22,6 +22,8 @@ export class GameSession {
     this.world = world;
   }
 
+  get playerCount(): number { return this.players.size; }
+
   handleConnection(ws: WebSocket): void {
     ws.on('message', (data) => {
       let msg: C2SMessage;
