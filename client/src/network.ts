@@ -25,6 +25,10 @@ export class GameNetwork {
 
   constructor(url: string) {
     this.ws = new WebSocket(url);
+    console.log(`[network] connecting to ${url}`);
+    this.ws.addEventListener('open',  () => console.log('[network] connected'));
+    this.ws.addEventListener('close', (ev) => console.log(`[network] disconnected (code=${ev.code})`));
+    this.ws.addEventListener('error', () => console.log('[network] connection error'));
     this.ws.addEventListener('message', (ev) => {
       let msg: S2CMessage;
       try {
@@ -33,8 +37,8 @@ export class GameNetwork {
         return;
       }
       switch (msg.type) {
-        case 'ACCEPTED':     this.onAccepted(msg);    break;
-        case 'REJECTED':     this.onRejected(msg);    break;
+        case 'ACCEPTED':     console.log(`[network] accepted: id=${msg.id}, map=${msg.mapName}`); this.onAccepted(msg); break;
+        case 'REJECTED':     console.log(`[network] rejected: ${msg.msg}`);                       this.onRejected(msg); break;
         case 'PLAYER_INFO':  this.onPlayerInfo(msg);  break;
         case 'MY_LOCATION':  this.onLocation(msg);    break;
         case 'LEAVING_GAME': this.onLeave(msg);       break;
@@ -44,6 +48,7 @@ export class GameNetwork {
   }
 
   join(name: string, avatar: string): void {
+    console.log(`[network] joining as "${name}" (avatar: ${avatar})`);
     this.send({ type: 'JOIN', name, avatar });
   }
 

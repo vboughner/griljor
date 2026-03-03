@@ -61,7 +61,9 @@ async function main(): Promise<void> {
     opt.textContent = name;
     avatarSelect.appendChild(opt);
   }
-  avatarSelect.value = 'crom';
+  const randomAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+  avatarSelect.value = randomAvatar;
+  playerNameInput.value = randomAvatar;
 
   let currentGame: Game | null = null;
   let currentMode: ColorMode = 'dark';
@@ -113,7 +115,10 @@ async function main(): Promise<void> {
   }
 
   mapSelect.addEventListener('change', () => startMap(mapSelect.value));
-  avatarSelect.addEventListener('change', () => currentGame?.setAvatar(avatarSelect.value));
+  avatarSelect.addEventListener('change', () => {
+    playerNameInput.value = avatarSelect.value;
+    currentGame?.setAvatar(avatarSelect.value);
+  });
 
   await startMap('battle');
 }
