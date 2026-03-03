@@ -5,17 +5,10 @@ const TILE = 32;
 const GRID = 20;
 export const CANVAS_SIZE = TILE * GRID; // 640
 
-/**
- * Build the URL for an object's bitmap or mask, given the objset name.
- */
 function bitmapUrl(objset: string, filename: string): string {
   return `/data/objects/bitmaps/${objset}/${filename}`;
 }
 
-/**
- * Load the sprite ImageData for a single object definition.
- * Returns null if no bitmap is defined.
- */
 async function spriteForObj(obj: ObjDef, objset: string): Promise<ImageData | null> {
   if (!obj.bitmap) return null;
   const burl = bitmapUrl(objset, obj.bitmap);
@@ -25,9 +18,7 @@ async function spriteForObj(obj: ObjDef, objset: string): Promise<ImageData | nu
   return loadSprite(burl);
 }
 
-/**
- * Preload all sprites referenced by tiles in the given room.
- */
+/** Preload all sprites referenced by tiles in the given room. */
 export async function preloadRoomSprites(
   room: RoomData,
   objects: ObjDef[],
@@ -51,42 +42,44 @@ export async function preloadRoomSprites(
   }));
 }
 
-/**
- * Draw a single ImageData tile at grid position (gx, gy) on the canvas context.
- */
-function drawTile(ctx: CanvasRenderingContext2D, img: ImageData, gx: number, gy: number): void {
-  const oc = new OffscreenCanvas(TILE, TILE);
-  const octx = oc.getContext('2d')!;
-  octx.putImageData(img, 0, 0);
-  ctx.drawImage(oc, gx * TILE, gy * TILE, TILE, TILE);
+/** Convert ImageData to ImageBitmap once for fast drawImage calls. */
+async function toBitmap(img: ImageData): Promise<ImageBitmap> {
+  return createImageBitmap(img);
+}
+
+/** Cache of ImageData → ImageBitmap to avoid re-converting on each draw. */
+const bitmapCache = new WeakMap<ImageData, ImageBitmap>();
+
+async function getBitmap(img: ImageData): Promise<ImageBitmap> {
+  if (bitmapCache.has(img)) return bitmapCache.get(img)!;
+  const bm = await toBitmap(img);
+  bitmapCache.set(img, bm);
+  return bm;
 }
 
 /**
- * Render the full room to the canvas.
+ * Pre-render the static room (background fill + floor + walls + recorded objects)
+ * to an OffscreenCanvas. Call once per room load or mode change.
  */
-export async function renderRoom(
-  canvas: HTMLCanvasElement,
+export async function buildRoomBackground(
   room: RoomData,
   objects: ObjDef[],
-  objset: string,
-  playerSprite: ImageData | null,
-  px: number,
-  py: number
-): Promise<void> {
-  const ctx = canvas.getContext('2d')!;
+  objset: string
+): Promise<OffscreenCanvas> {
+  const oc = new OffscreenCanvas(CANVAS_SIZE, CANVAS_SIZE);
+  const ctx = oc.getContext('2d')!;
 
-  // Background
   ctx.fillStyle = getColorMode() === 'dark' ? '#333' : '#e8e8e8';
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-  // Build sprite cache for this render pass
-  const spriteMap = new Map<number, ImageData | null>();
-  const getSprite = async (id: number): Promise<ImageData | null> => {
+  const spriteMap = new Map<number, ImageBitmap | null>();
+  const getSprite = async (id: number): Promise<ImageBitmap | null> => {
     if (spriteMap.has(id)) return spriteMap.get(id)!;
     const obj = objects[id];
-    const img = obj ? await spriteForObj(obj, objset) : null;
-    spriteMap.set(id, img);
-    return img;
+    const imgData = obj ? await spriteForObj(obj, objset) : null;
+    const bm = imgData ? await getBitmap(imgData) : null;
+    spriteMap.set(id, bm);
+    return bm;
   };
 
   // Floor layer
@@ -94,37 +87,54 @@ export async function renderRoom(
     for (let y = 0; y < GRID; y++) {
       const flId = room.spot[x][y][0];
       if (flId > 0) {
-        const img = await getSprite(flId);
-        if (img) drawTile(ctx, img, x, y);
+        const bm = await getSprite(flId);
+        if (bm) ctx.drawImage(bm, x * TILE, y * TILE, TILE, TILE);
       }
     }
   }
 
-  // Wall layer (drawn on top of floor)
+  // Wall layer
   for (let x = 0; x < GRID; x++) {
     for (let y = 0; y < GRID; y++) {
       const wlId = room.spot[x][y][1];
       if (wlId > 0) {
-        const img = await getSprite(wlId);
-        if (img) drawTile(ctx, img, x, y);
+        const bm = await getSprite(wlId);
+        if (bm) ctx.drawImage(bm, x * TILE, y * TILE, TILE, TILE);
       }
     }
   }
 
-  // Recorded objects — only render if the object definition has a bitmap
+  // Recorded objects
   for (const ro of room.recorded_objects) {
     if (ro.type <= 0) continue;
     const obj = objects[ro.type];
-    if (!obj?.bitmap) continue; // no bitmap defined (e.g. invisible exits) — skip
-    const img = await getSprite(ro.type);
-    if (img) drawTile(ctx, img, ro.x, ro.y);
+    if (!obj?.bitmap) continue;
+    const bm = await getSprite(ro.type);
+    if (bm) ctx.drawImage(bm, ro.x * TILE, ro.y * TILE, TILE, TILE);
   }
 
-  // Player avatar
+  return oc;
+}
+
+/**
+ * Composite a pre-built background and player sprite onto the visible canvas.
+ * Synchronous and fast — called on every player move.
+ */
+export async function renderFrame(
+  canvas: HTMLCanvasElement,
+  bg: OffscreenCanvas,
+  playerSprite: ImageData | null,
+  px: number,
+  py: number
+): Promise<void> {
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bg, 0, 0);
+
   if (playerSprite) {
-    drawTile(ctx, playerSprite, px, py);
+    const bm = await getBitmap(playerSprite);
+    ctx.drawImage(bm, px * TILE, py * TILE, TILE, TILE);
   } else {
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = getColorMode() === 'dark' ? '#fff' : '#000';
     ctx.fillRect(px * TILE + 8, py * TILE + 8, 16, 16);
   }
 }

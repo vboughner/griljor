@@ -1,6 +1,6 @@
 import { MapFile, ObjectFile, ObjDef, RoomData } from './types';
 import { loadMaskedSprite, setColorMode, ColorMode } from './assets';
-import { preloadRoomSprites, renderRoom } from './renderer';
+import { preloadRoomSprites, buildRoomBackground, renderFrame } from './renderer';
 
 const GRID = 20;
 
@@ -36,6 +36,7 @@ export class Game {
   private px: number = 10;
   private py: number = 10;
   private exitMap: Map<string, ExitTile> = new Map();
+  private roomBg: OffscreenCanvas | null = null;
   private playerSprite: ImageData | null = null;
   private avatarName: string = 'crom';
   private canvas: HTMLCanvasElement;
@@ -80,6 +81,7 @@ export class Game {
 
   async setMode(mode: ColorMode): Promise<void> {
     setColorMode(mode);
+    this.roomBg = null; // background colors change with mode
     await this.loadPlayerSprite();
     await this.render();
   }
@@ -103,6 +105,7 @@ export class Game {
     this.currentRoom = index;
     this.px = px;
     this.py = py;
+    this.roomBg = null; // new room, rebuild background
     this.exitMap = buildExitMap(this.mapData.rooms[index], this.objects);
     await this.render();
   }
@@ -152,12 +155,16 @@ export class Game {
 
   private async render(): Promise<void> {
     const room = this.mapData.rooms[this.currentRoom];
-    this.status.textContent = 'Loading room sprites…';
-    await preloadRoomSprites(room, this.objects, this.objset);
-    this.status.textContent = 'Rendering…';
-    await renderRoom(this.canvas, room, this.objects, this.objset, this.playerSprite, this.px, this.py);
+
+    if (!this.roomBg) {
+      this.status.textContent = 'Loading room…';
+      await preloadRoomSprites(room, this.objects, this.objset);
+      this.roomBg = await buildRoomBackground(room, this.objects, this.objset);
+      this.status.textContent = '';
+    }
+
+    await renderFrame(this.canvas, this.roomBg, this.playerSprite, this.px, this.py);
     this.roomInfo.textContent =
       `Room ${this.currentRoom}: "${room.name}" — (${this.px}, ${this.py})`;
-    this.status.textContent = '';
   }
 }
