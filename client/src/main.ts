@@ -2,6 +2,13 @@ import { MapFile, ObjectFile } from './types';
 import { Game } from './game';
 import { ColorMode } from './assets';
 
+const AVATARS = [
+  'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
+  'crom', 'drustan', 'duel', 'eric', 'gm', 'mahatma', 'mcelhoe', 'mel',
+  'mike', 'mikey', 'moronus', 'ollie', 'savaki', 'spook', 'stefan',
+  'stinglai', 'trevor', 'van',
+];
+
 const MAPS = [
   'battle', 'blowup', 'castle', 'default', 'flag', 'flames', 'flash',
   'hack', 'hack1', 'hometown', 'ivarr', 'main', 'outdoor', 'paradise2',
@@ -27,6 +34,7 @@ async function main(): Promise<void> {
   const roomInfo = document.getElementById('room-info') as HTMLElement;
   const status = document.getElementById('status') as HTMLElement;
   const mapSelect = document.getElementById('map-select') as HTMLSelectElement;
+  const avatarSelect = document.getElementById('avatar-select') as HTMLSelectElement;
   const modeToggle = document.getElementById('mode-toggle') as HTMLButtonElement;
   const navBtns = {
     north: document.getElementById('btn-north') as HTMLButtonElement,
@@ -43,6 +51,15 @@ async function main(): Promise<void> {
     mapSelect.appendChild(opt);
   }
   mapSelect.value = 'battle';
+
+  // Populate avatar selector
+  for (const name of AVATARS) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    avatarSelect.appendChild(opt);
+  }
+  avatarSelect.value = 'crom';
 
   let currentGame: Game | null = null;
   let currentMode: ColorMode = 'dark';
@@ -65,7 +82,7 @@ async function main(): Promise<void> {
       const { mapData, objFile } = await loadMap(name);
       const game = new Game(mapData, objFile, canvas, roomInfo, status, navBtns);
       currentGame = game;
-      await game.loadPlayerSprite();
+      await game.setAvatar(avatarSelect.value);
       await game.goToRoom(0);
     } catch (err) {
       status.textContent = `Error: ${err}`;
@@ -73,6 +90,7 @@ async function main(): Promise<void> {
   }
 
   mapSelect.addEventListener('change', () => startMap(mapSelect.value));
+  avatarSelect.addEventListener('change', () => currentGame?.setAvatar(avatarSelect.value));
 
   await startMap('battle');
 }

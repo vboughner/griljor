@@ -37,6 +37,7 @@ export class Game {
   private py: number = 10;
   private exitMap: Map<string, ExitTile> = new Map();
   private playerSprite: ImageData | null = null;
+  private avatarName: string = 'crom';
   private canvas: HTMLCanvasElement;
   private roomInfo: HTMLElement;
   private status: HTMLElement;
@@ -84,10 +85,17 @@ export class Game {
   }
 
   async loadPlayerSprite(): Promise<void> {
+    const name = this.avatarName;
     this.playerSprite = await loadMaskedSprite(
-      '/sprites/facebits/crombit.png',
-      '/sprites/facebits/crommask.png'
+      `/sprites/facebits/${name}bit.png`,
+      `/sprites/facebits/${name}mask.png`
     );
+  }
+
+  async setAvatar(name: string): Promise<void> {
+    this.avatarName = name;
+    await this.loadPlayerSprite();
+    await this.render();
   }
 
   async goToRoom(index: number, px = 10, py = 10): Promise<void> {
