@@ -48,6 +48,7 @@ export interface ObjDef {
   transparent?: boolean;
   permeable?: boolean;
   movement?: number;
+  exit?: boolean;
 }
 
 export interface ObjectFile {

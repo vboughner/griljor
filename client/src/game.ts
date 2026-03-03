@@ -1,8 +1,24 @@
-import { MapFile, ObjectFile, ObjDef } from './types';
+import { MapFile, ObjectFile, ObjDef, RoomData } from './types';
 import { loadMaskedSprite } from './assets';
 import { preloadRoomSprites, renderRoom } from './renderer';
 
 const GRID = 20;
+
+interface ExitTile { destRoom: number; landX: number; landY: number; }
+
+/** Build a map from "x,y" → exit destination for all exit objects in the room. */
+function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, ExitTile> {
+  const map = new Map<string, ExitTile>();
+  for (const ro of room.recorded_objects) {
+    if (ro.detail < 0) continue;
+    const obj = objects[ro.type];
+    if (!obj?.exit) continue;
+    const landX = ro.infox >= 0 ? ro.infox : ro.x;
+    const landY = ro.infoy >= 0 ? ro.infoy : ro.y;
+    map.set(`${ro.x},${ro.y}`, { destRoom: ro.detail, landX, landY });
+  }
+  return map;
+}
 
 export class Game {
   private mapData: MapFile;
@@ -11,6 +27,7 @@ export class Game {
   private currentRoom: number = 0;
   private px: number = 10;
   private py: number = 10;
+  private exitMap: Map<string, ExitTile> = new Map();
   private playerSprite: ImageData | null = null;
   private canvas: HTMLCanvasElement;
   private roomInfo: HTMLElement;
@@ -58,6 +75,7 @@ export class Game {
     this.currentRoom = index;
     this.px = px;
     this.py = py;
+    this.exitMap = buildExitMap(this.mapData.rooms[index], this.objects);
     await this.render();
   }
 
@@ -87,6 +105,14 @@ export class Game {
     // Clamp to grid bounds
     this.px = Math.max(0, Math.min(GRID - 1, nx));
     this.py = Math.max(0, Math.min(GRID - 1, ny));
+
+    // Check for exit tile at new position
+    const exit = this.exitMap.get(`${this.px},${this.py}`);
+    if (exit) {
+      await this.goToRoom(exit.destRoom, exit.landX, exit.landY);
+      return;
+    }
+
     await this.render();
   }
 
