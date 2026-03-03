@@ -6,6 +6,14 @@ const GRID = 20;
 
 interface ExitTile { destRoom: number; landX: number; landY: number; }
 
+/** Returns true if the tile at (x, y) cannot be entered. */
+function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[]): boolean {
+  const [flId, wlId] = room.spot[x][y];
+  if (wlId > 0 && !objects[wlId]?.permeable) return true;
+  if (flId > 0 && !objects[flId]?.permeable) return true;
+  return false;
+}
+
 /** Build a map from "x,y" → exit destination for all exit objects in the room. */
 function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, ExitTile> {
   const map = new Map<string, ExitTile>();
@@ -103,15 +111,21 @@ export class Game {
     }
 
     // Clamp to grid bounds
-    this.px = Math.max(0, Math.min(GRID - 1, nx));
-    this.py = Math.max(0, Math.min(GRID - 1, ny));
+    nx = Math.max(0, Math.min(GRID - 1, nx));
+    ny = Math.max(0, Math.min(GRID - 1, ny));
 
-    // Check for exit tile at new position
-    const exit = this.exitMap.get(`${this.px},${this.py}`);
+    // Exits take priority over collision — check before blocking
+    const exit = this.exitMap.get(`${nx},${ny}`);
     if (exit) {
       await this.goToRoom(exit.destRoom, exit.landX, exit.landY);
       return;
     }
+
+    // Block movement into walls
+    if (isTileBlocked(nx, ny, room, this.objects)) return;
+
+    this.px = nx;
+    this.py = ny;
 
     await this.render();
   }
