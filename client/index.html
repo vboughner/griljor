@@ -52,11 +52,24 @@
     #btn-west  { grid-column: 1; grid-row: 2; }
     #btn-east  { grid-column: 3; grid-row: 2; }
     #btn-south { grid-column: 2; grid-row: 3; }
+    #map-select-wrap { display: flex; align-items: center; gap: 8px; }
+    #map-select {
+      background: #2a2a2a;
+      border: 1px solid #555;
+      color: #bbb;
+      padding: 5px 8px;
+      font-family: monospace;
+      font-size: 0.9em;
+      cursor: pointer;
+    }
     #status { font-size: 0.8em; color: #666; min-height: 1em; }
   </style>
 </head>
 <body>
   <h1>GRILJOR</h1>
+  <div id="map-select-wrap">
+    <select id="map-select"></select>
+  </div>
   <div id="room-info"></div>
   <div id="canvas-wrap">
     <canvas id="game-canvas" width="640" height="640"></canvas>

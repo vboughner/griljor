@@ -40,6 +40,7 @@ export class Game {
   private canvas: HTMLCanvasElement;
   private roomInfo: HTMLElement;
   private status: HTMLElement;
+  private onKeyDown!: (e: KeyboardEvent) => void;
 
   constructor(
     mapData: MapFile,
@@ -62,13 +63,18 @@ export class Game {
     navBtns['west'].onclick  = () => this.move(-1, 0);
     for (const btn of Object.values(navBtns)) btn.disabled = false;
 
-    window.addEventListener('keydown', (e) => {
+    this.onKeyDown = (e: KeyboardEvent) => {
       const dirs: Record<string, [number, number]> = {
         ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowRight: [1, 0], ArrowLeft: [-1, 0],
       };
       const d = dirs[e.key];
       if (d) { e.preventDefault(); this.move(d[0], d[1]); }
-    });
+    };
+    window.addEventListener('keydown', this.onKeyDown);
+  }
+
+  destroy(): void {
+    window.removeEventListener('keydown', this.onKeyDown);
   }
 
   async loadPlayerSprite(): Promise<void> {
