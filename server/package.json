@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "ts-node src/main.ts",
+    "dev": "nodemon --exec ts-node src/main.ts",
     "lobby": "ts-node src/lobby.ts",
     "build": "tsc",
     "start": "node dist/main.js"
@@ -14,6 +14,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.13",
+    "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.0"
   }

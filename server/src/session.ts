@@ -1,6 +1,7 @@
 import WebSocket from 'ws';
 import { C2SMessage, S2CMessage } from './protocol';
 import { World } from './world';
+import { filterText, randomScold } from './filter';
 
 interface Player {
   id: number;
@@ -140,10 +141,16 @@ export class GameSession {
   private onMessage(playerId: number, msg: Extract<C2SMessage, { type: 'MESSAGE' }>): void {
     const sender = this.players.get(playerId);
     if (!sender) return;
-    const s2c: S2CMessage = { type: 'MESSAGE', from: playerId, name: sender.name, to: msg.to, text: msg.text };
+    const { filtered, triggered } = filterText(msg.text);
+    const s2c: S2CMessage = { type: 'MESSAGE', from: playerId, name: sender.name, to: msg.to, text: filtered };
     if (msg.to === 'all') {
-      this.chatHistory.push({ from: playerId, name: sender.name, text: msg.text });
+      this.chatHistory.push({ from: playerId, name: sender.name, text: filtered });
       this.broadcast(s2c);
+      if (triggered) {
+        const gmMsg: S2CMessage = { type: 'MESSAGE', from: 0, name: 'GM', to: 'all', text: randomScold() };
+        this.broadcast(gmMsg);
+        this.chatHistory.push({ from: 0, name: 'GM', text: gmMsg.text });
+      }
     } else {
       const target = this.players.get(msg.to as number);
       if (target) this.send(target.ws, s2c);
