@@ -164,6 +164,10 @@ export class GameSession {
     this.players.delete(playerId);
     this.wsToId.delete(player.ws);
     this.broadcast({ type: 'LEAVING_GAME', id: playerId });
+    if (this.players.size === 0) {
+      this.chatHistory = [];
+      console.log('[chat] history cleared (server empty)');
+    }
     console.log(`[-] ${player.name} (id=${playerId}) left. Players: ${this.players.size}`);
   }
 
