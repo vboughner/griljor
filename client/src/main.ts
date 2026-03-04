@@ -3,6 +3,7 @@ import { Game } from './game';
 import { ColorMode } from './assets';
 import { GameNetwork } from './network';
 import { fetchGames, GameInfo } from './lobby';
+import { loadMaskedSprite } from './assets';
 
 const AVATARS = [
   'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
@@ -26,10 +27,12 @@ async function loadMap(name: string): Promise<{ mapData: MapFile; objFile: Objec
 
 async function main(): Promise<void> {
   // DOM refs — lobby
-  const lobbyScreen    = document.getElementById('lobby-screen') as HTMLElement;
-  const gameScreen     = document.getElementById('game-screen') as HTMLElement;
+  const lobbyScreen     = document.getElementById('lobby-screen') as HTMLElement;
+  const gameScreen      = document.getElementById('game-screen') as HTMLElement;
   const playerNameInput = document.getElementById('player-name') as HTMLInputElement;
-  const avatarSelect   = document.getElementById('avatar-select') as HTMLSelectElement;
+  const avatarSelect    = document.getElementById('avatar-select') as HTMLSelectElement;
+  const avatarPreview   = document.getElementById('avatar-preview') as HTMLCanvasElement;
+  const avatarPreviewCtx = avatarPreview.getContext('2d')!;
   const serverList     = document.getElementById('server-list') as HTMLElement;
   const refreshBtn     = document.getElementById('refresh-btn') as HTMLButtonElement;
   const lobbyStatus    = document.getElementById('lobby-status') as HTMLElement;
@@ -57,6 +60,19 @@ async function main(): Promise<void> {
   const randomAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
   avatarSelect.value = randomAvatar;
   playerNameInput.value = randomAvatar;
+
+  async function updateAvatarPreview(name: string): Promise<void> {
+    const imageData = await loadMaskedSprite(
+      `/sprites/facebits/${name}bit.png`,
+      `/sprites/facebits/${name}mask.png`,
+    );
+    avatarPreviewCtx.clearRect(0, 0, avatarPreview.width, avatarPreview.height);
+    if (!imageData) return;
+    const tmp = new OffscreenCanvas(imageData.width, imageData.height);
+    tmp.getContext('2d')!.putImageData(imageData, 0, 0);
+    avatarPreviewCtx.drawImage(tmp, 0, 0, avatarPreview.width, avatarPreview.height);
+  }
+  void updateAvatarPreview(randomAvatar);
 
   let currentGame: Game | null = null;
   let currentNetwork: GameNetwork | null = null;
@@ -182,6 +198,7 @@ async function main(): Promise<void> {
 
   avatarSelect.addEventListener('change', () => {
     playerNameInput.value = avatarSelect.value;
+    void updateAvatarPreview(avatarSelect.value);
     currentGame?.setAvatar(avatarSelect.value);
   });
 

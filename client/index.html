@@ -20,7 +20,14 @@
 
     /* ── Lobby ── */
     #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 600px; }
-    #lobby-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    #lobby-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+    #avatar-preview {
+      width: 32px; height: 32px;
+      image-rendering: pixelated;
+      border: 1px solid #444;
+      background: #111;
+      display: block;
+    }
     #server-list { width: 100%; border: 1px solid #444; min-height: 60px; }
     .server-row {
       display: flex; align-items: center; justify-content: space-between;
@@ -85,8 +92,9 @@
   <div id="lobby-screen">
     <h1>GRILJOR</h1>
     <div id="lobby-controls">
-      <input id="player-name" maxlength="24" placeholder="name" />
+      <canvas id="avatar-preview" width="32" height="32"></canvas>
       <select id="avatar-select"></select>
+      <input id="player-name" maxlength="24" placeholder="name" />
     </div>
     <div id="server-list"></div>
     <div>
