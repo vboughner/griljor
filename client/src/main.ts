@@ -5,6 +5,7 @@ import { GameNetwork } from './network';
 import { fetchGames, GameInfo } from './lobby';
 import { loadMaskedSprite } from './assets';
 import { initMouseWidget, setHandItem } from './mouse-widget';
+import { runTitleScreen } from './title';
 
 const AVATARS = [
   'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
@@ -54,6 +55,10 @@ async function drawAvatarOnCanvas(canvas: HTMLCanvasElement, avatarName: string)
 
 async function main(): Promise<void> {
   initMouseWidget();
+
+  // DOM refs — title
+  const titleScreen  = document.getElementById('title-screen') as HTMLElement;
+  const titleCanvas  = document.getElementById('title-canvas') as HTMLCanvasElement;
 
   // DOM refs — lobby
   const lobbyScreen     = document.getElementById('lobby-screen') as HTMLElement;
@@ -204,6 +209,16 @@ async function main(): Promise<void> {
   let currentNetwork: GameNetwork | null = null;
   let currentMode: ColorMode = 'dark';
   let isJoining = false;
+
+  function showTitle(): void {
+    titleScreen.style.display = 'flex';
+    lobbyScreen.style.display = 'none';
+    gameScreen.style.display = 'none';
+  }
+
+  function hideTitle(): void {
+    titleScreen.style.display = 'none';
+  }
 
   function showLobby(): void {
     lobbyScreen.style.display = 'flex';
@@ -365,8 +380,11 @@ async function main(): Promise<void> {
 
   refreshBtn.addEventListener('click', () => refreshServerList());
 
+  showTitle();
+  void refreshServerList(); // start fetching in background during title
+  await runTitleScreen(titleCanvas);
+  hideTitle();
   showLobby();
-  await refreshServerList();
 }
 
 export function setHandItems(left: string | null, right: string | null): void {

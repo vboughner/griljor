@@ -18,6 +18,14 @@
     }
     h1 { font-size: 1.4em; color: #aaa; letter-spacing: 2px; }
 
+    /* ── Title ── */
+    #title-screen {
+      position: fixed; inset: 0; z-index: 10;
+      background: #0a0a0a;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    }
+    #title-canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+
     /* ── Lobby ── */
     #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 600px; }
     #lobby-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
@@ -174,8 +182,13 @@
 </head>
 <body>
 
+  <!-- ── Title Screen ── -->
+  <div id="title-screen">
+    <canvas id="title-canvas"></canvas>
+  </div>
+
   <!-- ── Lobby Screen ── -->
-  <div id="lobby-screen">
+  <div id="lobby-screen" style="display:none">
     <h1>GRILJOR</h1>
     <div id="lobby-controls">
       <canvas id="avatar-preview" width="32" height="32"></canvas>
