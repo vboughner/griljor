@@ -25,12 +25,17 @@ async function loadMap(name: string): Promise<{ mapData: MapFile; objFile: Objec
   return { mapData, objFile };
 }
 
-function formatDuration(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  const h = Math.floor(m / 60);
-  if (h > 0) return `${h}:${String(m % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
-  return `${m}:${String(s % 60).padStart(2, '0')}`;
+function formatAge(ms: number): string {
+  const s = ms / 1000;
+  const m = s / 60;
+  const h = m / 60;
+  if (s < 45)   return 'just joined';
+  if (s < 90)   return 'a minute';
+  if (m < 45)   return `${Math.round(m)} minutes`;
+  if (m < 90)   return 'an hour';
+  if (h < 22)   return `${Math.round(h)} hours`;
+  if (h < 36)   return 'a day';
+  return `${Math.round(h / 24)} days`;
 }
 
 async function drawAvatarOnCanvas(canvas: HTMLCanvasElement, avatarName: string): Promise<void> {
@@ -125,7 +130,7 @@ async function main(): Promise<void> {
 
     const timeEl = document.createElement('div');
     timeEl.className = 'player-time';
-    timeEl.textContent = formatDuration(Date.now() - joinedAt);
+    timeEl.textContent = formatAge(Date.now() - joinedAt);
 
     details.appendChild(nameEl);
     details.appendChild(kdEl);
@@ -163,7 +168,7 @@ async function main(): Promise<void> {
     playerTickInterval = setInterval(() => {
       const now = Date.now();
       for (const p of playerMap.values()) {
-        p.timeEl.textContent = formatDuration(now - p.joinedAt);
+        p.timeEl.textContent = formatAge(now - p.joinedAt);
       }
     }, 1000);
   }
