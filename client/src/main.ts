@@ -43,6 +43,9 @@ async function main(): Promise<void> {
   const status    = document.getElementById('status') as HTMLElement;
   const modeToggle = document.getElementById('mode-toggle') as HTMLButtonElement;
   const leaveBtn  = document.getElementById('leave-btn') as HTMLButtonElement;
+  const chatLog   = document.getElementById('chat-log') as HTMLElement;
+  const chatInput = document.getElementById('chat-input') as HTMLInputElement;
+  const chatSend  = document.getElementById('chat-send') as HTMLButtonElement;
   const navBtns = {
     north: document.getElementById('btn-north') as HTMLButtonElement,
     east:  document.getElementById('btn-east')  as HTMLButtonElement,
@@ -73,6 +76,28 @@ async function main(): Promise<void> {
     avatarPreviewCtx.drawImage(tmp, 0, 0, avatarPreview.width, avatarPreview.height);
   }
   void updateAvatarPreview(randomAvatar);
+
+  function appendChat(name: string, text: string): void {
+    const line = document.createElement('div');
+    line.className = 'chat-msg';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'chat-name';
+    nameSpan.textContent = `${name}: `;
+    line.appendChild(nameSpan);
+    line.appendChild(document.createTextNode(text));
+    chatLog.appendChild(line);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function sendChat(): void {
+    const text = chatInput.value.trim();
+    if (!text || !currentNetwork) return;
+    currentNetwork.sendMessage(text);
+    chatInput.value = '';
+  }
+
+  chatSend.addEventListener('click', sendChat);
+  chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
 
   let currentGame: Game | null = null;
   let currentNetwork: GameNetwork | null = null;
@@ -153,10 +178,15 @@ async function main(): Promise<void> {
         isJoining = false;
       };
 
+      network.onMessage = (msg) => {
+        if (msg.to === 'all') appendChat(msg.name, msg.text);
+      };
+
       network.onClose = () => {
         if (gameScreen.style.display !== 'none') {
           currentGame?.destroy();
           currentGame = null;
+          chatLog.innerHTML = '';
           showLobby();
           refreshServerList();
         }
@@ -191,6 +221,7 @@ async function main(): Promise<void> {
     currentGame = null;
     currentNetwork = null;
     isJoining = false;
+    chatLog.innerHTML = '';
     setInputsDisabled(false);
     showLobby();
     refreshServerList();

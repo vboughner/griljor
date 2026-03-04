@@ -13,4 +13,4 @@ export type S2CMessage =
                             room: number; x: number; y: number }
   | { type: 'MY_LOCATION';  id: number; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME'; id: number }
-  | { type: 'MESSAGE';      from: number; to: number | 'all'; text: string };
+  | { type: 'MESSAGE';      from: number; name: string; to: number | 'all'; text: string };

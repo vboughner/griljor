@@ -11,7 +11,7 @@ type S2CMessage =
                             room: number; x: number; y: number }
   | { type: 'MY_LOCATION';  id: number; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME'; id: number }
-  | { type: 'MESSAGE';      from: number; to: number | 'all'; text: string };
+  | { type: 'MESSAGE';      from: number; name: string; to: number | 'all'; text: string };
 
 export class GameNetwork {
   private ws: WebSocket;
@@ -59,6 +59,10 @@ export class GameNetwork {
 
   sendLeave(): void {
     this.send({ type: 'LEAVING_GAME' });
+  }
+
+  sendMessage(text: string): void {
+    this.send({ type: 'MESSAGE', to: 'all', text });
   }
 
   private send(msg: C2SMessage): void {

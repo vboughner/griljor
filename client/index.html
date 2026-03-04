@@ -70,6 +70,41 @@
     #btn-south { grid-column: 2; grid-row: 3; }
     #game-controls { display: flex; gap: 8px; }
     #status { font-size: 0.8em; color: #666; min-height: 1em; }
+    #chat-panel {
+      width: 640px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #chat-log {
+      height: 120px;
+      overflow-y: auto;
+      background: #111;
+      border: 1px solid #444;
+      padding: 6px 8px;
+      font-size: 0.8em;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .chat-msg { color: #bbb; }
+    .chat-msg .chat-name { color: #888; }
+    #chat-input-row { display: flex; gap: 6px; }
+    #chat-input {
+      flex: 1;
+      background: #1e1e1e;
+      border: 1px solid #555;
+      color: #ccc;
+      padding: 5px 8px;
+      font-family: monospace;
+      font-size: 0.85em;
+    }
+    #chat-send {
+      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
+    }
+    #chat-send:hover { background: #3a3a3a; }
 
     /* shared input style */
     select, input, button.game-btn {
@@ -119,6 +154,13 @@
       <button id="leave-btn">Leave Game</button>
     </div>
     <div id="status"></div>
+    <div id="chat-panel">
+      <div id="chat-log"></div>
+      <div id="chat-input-row">
+        <input id="chat-input" type="text" maxlength="200" placeholder="Say something…" />
+        <button id="chat-send">Send</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="/src/main.ts"></script>

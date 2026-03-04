@@ -12,11 +12,18 @@ interface Player {
   ws: WebSocket;
 }
 
+interface ChatEntry {
+  from: number;
+  name: string;
+  text: string;
+}
+
 export class GameSession {
   private players = new Map<number, Player>();
   private wsToId = new Map<WebSocket, number>();
   private nextId = 1;
   private world: World;
+  private chatHistory: ChatEntry[] = [];
 
   constructor(world: World) {
     this.world = world;
@@ -104,6 +111,11 @@ export class GameSession {
       y: player.y,
     }, id);
 
+    // Replay chat history for the new player
+    for (const entry of this.chatHistory) {
+      this.send(ws, { type: 'MESSAGE', from: entry.from, name: entry.name, to: 'all', text: entry.text });
+    }
+
     console.log(`[+] ${msg.name} (id=${id}) joined. Players: ${this.players.size}`);
   }
 
@@ -117,15 +129,16 @@ export class GameSession {
   }
 
   private onMessage(playerId: number, msg: Extract<C2SMessage, { type: 'MESSAGE' }>): void {
-    const s2c: S2CMessage = { type: 'MESSAGE', from: playerId, to: msg.to, text: msg.text };
+    const sender = this.players.get(playerId);
+    if (!sender) return;
+    const s2c: S2CMessage = { type: 'MESSAGE', from: playerId, name: sender.name, to: msg.to, text: msg.text };
     if (msg.to === 'all') {
+      this.chatHistory.push({ from: playerId, name: sender.name, text: msg.text });
       this.broadcast(s2c);
     } else {
       const target = this.players.get(msg.to as number);
       if (target) this.send(target.ws, s2c);
-      // Also echo back to sender
-      const sender = this.players.get(playerId);
-      if (sender) this.send(sender.ws, s2c);
+      this.send(sender.ws, s2c);
     }
   }
 

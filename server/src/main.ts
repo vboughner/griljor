@@ -1,9 +1,9 @@
 import * as http from 'http';
+import * as net from 'net';
 import { WebSocketServer } from 'ws';
 import { loadWorld } from './world';
 import { GameSession } from './session';
 
-const PORT = 3001;
 const mapName = process.argv[2] ?? 'battle';
 const LOBBY_URL = 'http://localhost:3000';
 const LOBBY_HOST = 'localhost';
@@ -21,6 +21,22 @@ function postJson(url: string, body: unknown): void {
   req.on('error', () => {}); // lobby being down is non-fatal
   req.write(data);
   req.end();
+}
+
+function findFreePort(startPort: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const probe = net.createServer();
+    probe.once('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(findFreePort(startPort + 1));
+      } else {
+        reject(err);
+      }
+    });
+    probe.listen(startPort, () => {
+      probe.close(() => resolve(startPort));
+    });
+  });
 }
 
 async function main(): Promise<void> {
@@ -41,17 +57,22 @@ async function main(): Promise<void> {
     game.handleConnection(ws);
   });
 
-  server.listen(PORT, () => {
-    console.log(`Griljor server on :${PORT}, map: ${world.mapName} (${world.roomCount} rooms)`);
+  const startPort = parseInt(process.argv[3] ?? '3001', 10);
+  const PORT = await findFreePort(startPort);
+  await new Promise<void>((resolve) => server.listen(PORT, resolve));
 
-    // Register with lobby
-    postJson(`${LOBBY_URL}/register`, { mapName, host: LOBBY_HOST, port: PORT, maxPlayers: 16 });
+  if (PORT !== startPort) {
+    console.log(`Port ${startPort} in use, using :${PORT}`);
+  }
+  console.log(`Griljor server on :${PORT}, map: ${world.mapName} (${world.roomCount} rooms)`);
 
-    // Heartbeat every 5s
-    setInterval(() => {
-      postJson(`${LOBBY_URL}/heartbeat`, { host: LOBBY_HOST, port: PORT, players: game.playerCount });
-    }, 5_000);
-  });
+  // Register with lobby
+  postJson(`${LOBBY_URL}/register`, { mapName, host: LOBBY_HOST, port: PORT, maxPlayers: 16 });
+
+  // Heartbeat every 5s
+  setInterval(() => {
+    postJson(`${LOBBY_URL}/heartbeat`, { host: LOBBY_HOST, port: PORT, players: game.playerCount });
+  }, 5_000);
 
   // Graceful shutdown
   const shutdown = () => {
