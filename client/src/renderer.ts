@@ -25,14 +25,16 @@ export async function preloadRoomSprites(
   objset: string
 ): Promise<void> {
   const needed = new Set<number>();
-  for (let x = 0; x < GRID; x++) {
-    for (let y = 0; y < GRID; y++) {
-      const [fl, wl] = room.spot[x][y];
-      if (fl > 0) needed.add(fl);
-      if (wl > 0) needed.add(wl);
+  if (room.spot) {
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        const [fl, wl] = room.spot[x][y];
+        if (fl > 0) needed.add(fl);
+        if (wl > 0) needed.add(wl);
+      }
     }
   }
-  for (const ro of room.recorded_objects) {
+  for (const ro of room.recorded_objects ?? []) {
     if (ro.type > 0) needed.add(ro.type);
   }
   await Promise.all([...needed].map((id) => {
@@ -84,29 +86,33 @@ export async function buildRoomBackground(
   };
 
   // Floor layer
-  for (let x = 0; x < GRID; x++) {
-    for (let y = 0; y < GRID; y++) {
-      const flId = room.spot[x][y][0];
-      if (flId > 0) {
-        const bm = await getSprite(flId);
-        if (bm) ctx.drawImage(bm, x * TILE, y * TILE, TILE, TILE);
+  if (room.spot) {
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        const flId = room.spot[x][y][0];
+        if (flId > 0) {
+          const bm = await getSprite(flId);
+          if (bm) ctx.drawImage(bm, x * TILE, y * TILE, TILE, TILE);
+        }
       }
     }
   }
 
   // Wall layer
-  for (let x = 0; x < GRID; x++) {
-    for (let y = 0; y < GRID; y++) {
-      const wlId = room.spot[x][y][1];
-      if (wlId > 0) {
-        const bm = await getSprite(wlId);
-        if (bm) ctx.drawImage(bm, x * TILE, y * TILE, TILE, TILE);
+  if (room.spot) {
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        const wlId = room.spot[x][y][1];
+        if (wlId > 0) {
+          const bm = await getSprite(wlId);
+          if (bm) ctx.drawImage(bm, x * TILE, y * TILE, TILE, TILE);
+        }
       }
     }
   }
 
   // Recorded objects — skip takeable items (they're in floorItems)
-  for (const ro of room.recorded_objects) {
+  for (const ro of room.recorded_objects ?? []) {
     if (ro.type <= 0) continue;
     const obj = objects[ro.type];
     if (!obj?.bitmap) continue;

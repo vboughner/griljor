@@ -9,7 +9,9 @@ interface ExitTile { destRoom: number; landX: number; landY: number; }
 
 /** Returns true if the tile at (x, y) cannot be entered. */
 function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[]): boolean {
-  const [flId, wlId] = room.spot[x][y];
+  const cell = room.spot?.[x]?.[y];
+  if (!cell) return false;
+  const [flId, wlId] = cell;
   if (wlId > 0 && !objects[wlId]?.permeable) return true;
   if (flId > 0 && !objects[flId]?.permeable) return true;
   return false;
@@ -18,7 +20,7 @@ function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[]):
 /** Build a map from "x,y" → exit destination for all exit objects in the room. */
 function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, ExitTile> {
   const map = new Map<string, ExitTile>();
-  for (const ro of room.recorded_objects) {
+  for (const ro of room.recorded_objects ?? []) {
     if (ro.detail < 0) continue;
     const obj = objects[ro.type];
     if (!obj?.exit) continue;
@@ -106,12 +108,16 @@ export class Game {
 
       if (e.button === 0 || e.button === 1) {
         // Left-click → right hand, middle-click → left hand
-        const hand = e.button === 1 ? 'left' : 'right';
+        const hand: 'left' | 'right' = e.button === 1 ? 'left' : 'right';
         const key = `${tx},${ty}`;
         if (this.floorItems.get(this.currentRoom)?.has(key)) {
+          // Pick up floor item
           this.network?.sendPickup(tx, ty, hand);
-          return;
+        } else if (tx !== this.px || ty !== this.py) {
+          // Fire weapon toward clicked tile
+          this.network?.sendFireWeapon(hand, tx, ty);
         }
+        return;
       }
 
       // Right-click: move toward tile
@@ -129,7 +135,7 @@ export class Game {
     for (let roomIdx = 0; roomIdx < this.mapData.rooms.length; roomIdx++) {
       const room = this.mapData.rooms[roomIdx];
       const itemMap = new Map<string, InventoryItem>();
-      for (const ro of room.recorded_objects) {
+      for (const ro of room.recorded_objects ?? []) {
         if (ro.type <= 0) continue;
         const obj = this.objects[ro.type];
         if (!obj?.takeable) continue;
@@ -197,6 +203,10 @@ export class Game {
       }
       roomMap.set(`${msg.x},${msg.y}`, msg.item);
       if (msg.room === this.currentRoom) await this.render();
+    };
+
+    net.onYouDied = async (msg) => {
+      await this.goToRoom(msg.respawnRoom, msg.respawnX, msg.respawnY);
     };
   }
 

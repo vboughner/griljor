@@ -19,8 +19,8 @@ export interface RoomData {
   exit_west: number;
   appearance: number;
   dark: number;
-  spot: number[][][]; // [x][y][2] — [floor_id, wall_id]
-  recorded_objects: RecObj[];
+  spot?: number[][][]; // [x][y][2] — [floor_id, wall_id]; absent in diag-format maps
+  recorded_objects?: RecObj[]; // absent in diag-format maps
 }
 
 export interface MapMeta {
@@ -51,6 +51,10 @@ export interface ObjDef {
   exit?: boolean;
   takeable?: boolean;
   weapon?: boolean;
+  damage?: number;
+  range?: number;
+  movingobj?: number;
+  speed?: number;
   weight?: number;
   numbered?: boolean;
   capacity?: number;

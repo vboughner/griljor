@@ -294,6 +294,20 @@ async function main(): Promise<void> {
     }, 1000);
   }
 
+  // ── Stats panel ──────────────────────────────────────────────────
+  function updateStats(hp: number, maxHp: number, power: number, maxPower: number, xp: number, level: number): void {
+    const hpBar  = document.getElementById('hp-bar');
+    const mpBar  = document.getElementById('mp-bar');
+    const hpText = document.getElementById('hp-text');
+    const mpText = document.getElementById('mp-text');
+    const xpLine = document.getElementById('xp-line');
+    if (hpBar)  hpBar.style.width  = `${Math.max(0, (hp / maxHp) * 100)}%`;
+    if (mpBar)  mpBar.style.width  = `${Math.max(0, (power / maxPower) * 100)}%`;
+    if (hpText) hpText.textContent = `${hp}/${maxHp}`;
+    if (mpText) mpText.textContent = `${power}/${maxPower}`;
+    if (xpLine) xpLine.textContent = `Lvl ${level} · XP: ${xp}`;
+  }
+
   // ── Chat ─────────────────────────────────────────────────────────
   function appendChat(name: string, text: string): void {
     const line = document.createElement('div');
@@ -303,6 +317,14 @@ async function main(): Promise<void> {
     nameSpan.textContent = `${name}: `;
     line.appendChild(nameSpan);
     line.appendChild(document.createTextNode(text));
+    chatLog.appendChild(line);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function appendReport(text: string): void {
+    const line = document.createElement('div');
+    line.className = 'chat-msg chat-report';
+    line.textContent = `* ${text}`;
     chatLog.appendChild(line);
     chatLog.scrollTop = chatLog.scrollHeight;
   }
@@ -408,7 +430,12 @@ async function main(): Promise<void> {
       };
 
       network.onMessage = (msg) => {
-        if (msg.to === 'all') appendChat(msg.name, msg.text);
+        if (msg.to === 'all') {
+          appendChat(msg.name, msg.text);
+        } else if (msg.from === 0) {
+          // Private GM message (warnings like "too heavy", "hands full")
+          appendReport(msg.text);
+        }
       };
 
       network.onClose = () => {
@@ -453,6 +480,18 @@ async function main(): Promise<void> {
 
       network.onInventory = (msg) => {
         void updateInventoryPanel(msg);
+      };
+
+      network.onYourStats = (msg) => {
+        updateStats(msg.hp, msg.maxHp, msg.power, msg.maxPower, msg.xp, msg.level);
+      };
+
+      network.onReport = (msg) => {
+        appendReport(msg.text);
+      };
+
+      network.onYouDied = (msg) => {
+        appendReport(`You were slain by ${msg.killerName}. Respawning…`);
       };
 
       network.onAccepted = (msg) => {
