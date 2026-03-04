@@ -91,11 +91,33 @@ export class Game {
     for (const btn of Object.values(navBtns)) btn.disabled = false;
 
     this.onKeyDown = (e: KeyboardEvent) => {
-      const dirs: Record<string, [number, number]> = {
+      // Don't intercept keys while typing in an input
+      const tag = (document.activeElement as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      const keyDirs: Record<string, [number, number]> = {
+        // Arrow keys
         ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowRight: [1, 0], ArrowLeft: [-1, 0],
+        // QWERTY 8-directional (original layout)
+        q: [-1, -1], w: [0, -1], e: [1, -1],
+        a: [-1,  0],             d: [1,  0],
+        z: [-1,  1], x: [0,  1], c: [1,  1],
       };
-      const d = dirs[e.key];
-      if (d) { e.preventDefault(); this.move(d[0], d[1]); }
+      const codeDirs: Record<string, [number, number]> = {
+        // Numpad (use e.code to avoid NumLock interference)
+        Numpad7: [-1, -1], Numpad8: [0, -1], Numpad9: [1, -1],
+        Numpad4: [-1,  0],                   Numpad6: [1,  0],
+        Numpad1: [-1,  1], Numpad2: [0,  1], Numpad3: [1,  1],
+      };
+
+      const d = keyDirs[e.key] ?? codeDirs[e.code];
+      if (d) { e.preventDefault(); this.move(d[0], d[1]); return; }
+
+      // Item actions
+      if (e.key === 's') { e.preventDefault(); this.network?.sendPickup(this.px, this.py, 'left'); return; }
+      if (e.key === 'S') { e.preventDefault(); this.network?.sendPickup(this.px, this.py, 'right'); return; }
+      if (e.key === 'Z') { e.preventDefault(); this.network?.sendDrop('left'); return; }
+      if (e.key === 'X') { e.preventDefault(); this.network?.sendDrop('right'); return; }
     };
     window.addEventListener('keydown', this.onKeyDown);
 

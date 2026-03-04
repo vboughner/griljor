@@ -337,7 +337,17 @@ async function main(): Promise<void> {
   }
 
   chatSend.addEventListener('click', sendChat);
-  chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendChat();
+    else if (e.key === 'Escape') chatInput.blur();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (gameScreen.style.display === 'none') return;
+    const tag = (document.activeElement as HTMLElement)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === 't') { e.preventDefault(); chatInput.focus(); }
+  });
 
   // ── State ─────────────────────────────────────────────────────────
   let currentGame: Game | null = null;
