@@ -202,6 +202,92 @@ No bird's-eye map feature existed.
 
 ---
 
+---
+
+## Phase 5 — Inventory System
+
+**Goal**: Server-authoritative inventory — 35 slots + 2 hand slots,
+weight limits, floor items, pickup/drop, multiplayer sync.
+
+### Data Model
+
+`InventoryItem { type: number; quantity: number }` is the unit of
+currency everywhere. `type` is an `ObjDef` array index; `quantity`
+is 1 for non-numbered items and the charge count for `numbered` items
+(e.g. a hand gun with 13 rounds).
+
+Each player on the server holds:
+- `leftHand / rightHand: InventoryItem | null`
+- `inventory: Array<InventoryItem | null>` — 35 slots (`INV_SIZE = 35`)
+- `currentWeight: number` — sum of `weight * quantity` for all held items
+- `MAX_WEIGHT = 150` (flat limit, no leveling system)
+
+Floor items live in `roomItems: Map<roomIdx, Map<"x,y", InventoryItem>>`,
+initialized from each room's `recorded_objects` filtered by `obj.takeable`.
+
+### New Protocol Messages
+
+**C→S**: `PICKUP { x, y, hand }`, `DROP { source }`, `INV_SWAP { slot, hand }`
+
+**S→C**: `ITEM_REMOVED { room, x, y }`, `ITEM_ADDED { room, x, y, item }`,
+`YOUR_INVENTORY { leftHand, rightHand, inventory, currentWeight, maxWeight }`,
+`ITEMS_SYNC { items[] }` (sent once to new joiners to replace local defaults)
+
+`YOUR_INVENTORY` is only sent to the acting player. `ITEM_REMOVED` /
+`ITEM_ADDED` are broadcast to all players.
+
+### Server Handler Details (`session.ts`)
+
+**PICKUP**: checks item exists at `(x,y)` in player's current room, that
+weight won't exceed limit, and that the target hand or inventory has a free
+slot. Places item in hand if empty, else first free inventory slot. Rejects
+with a GM chat message if overweight or all slots full.
+
+**DROP**: removes item from hand/slot, finds the nearest free tile via spiral
+search (`nearbyFreeTile`), and places the item there. "Free" means: inside
+the 20×20 grid, no existing floor item, and wall/floor objects both have
+`permeable: true` (same passability rule as player movement). Radius ≤ 5;
+items with nowhere to go are lost (logged server-side).
+
+**INV_SWAP**: swaps a named hand slot with an inventory slot in-place.
+No weight check needed — total weight doesn't change.
+
+**onLeave**: iterates all non-null hand + inventory slots and drops each
+item to the floor near the player's last position, broadcasting `ITEM_ADDED`
+for each. This restores items to the world when a player disconnects.
+
+### Client Side
+
+**`renderer.ts`**: `buildRoomBackground` now skips `recorded_objects` where
+`obj.takeable === true` (they are rendered dynamically). `renderFrame` gains
+`floorItems`, `objects`, and `objset` parameters; floor items are drawn as
+a layer between the background and players.
+
+**`game.ts`**: `floorItems: Map<roomIdx, Map<"x,y", InventoryItem>>` is
+initialized from the map file on startup and then kept in sync by the
+network callbacks. `onItemsSync` replaces the local state entirely (server
+is authoritative). Canvas left-click on a floor item tile → `sendPickup`
+(right hand); middle-click → left hand. Right-click retains its original
+"move toward" behavior.
+
+**`main.ts`** / **`index.html`**: 35-slot CSS grid (`7 col × 5 row`,
+34×34 px cells with 32×32 canvas children). Weight displayed as
+`{current} / {max}`. Click on occupied slot → `sendDrop(slotIndex)`.
+Right-click → `sendInvSwap(slot, 'right')`. Click on hand-slot canvases
+→ `sendDrop('left'|'right')`. Item bitmaps drawn via `loadMaskedSprite`
+/ `loadSprite`; charge count overlaid in yellow for `numbered` items.
+
+### Key Edge Cases
+
+- **Overweight**: server rejects pickup with GM chat "That is too heavy to carry."
+- **All slots full**: server rejects with GM chat "Your hands are full."
+- **Drop on occupied tile**: spiral search finds nearest free tile.
+- **`detail = -1`** (e.g. keys without a set charge): quantity defaults to 1.
+- **`ITEMS_SYNC` on join**: replaces client's map-file-derived floor items
+  entirely, ensuring late joiners see the live world state.
+- **Numbered items**: `quantity` is preserved through pickup/drop cycles;
+  no stack splitting is implemented.
+
 ## What's Next
 
 **Phase 3 — Server + WebSocket connection**

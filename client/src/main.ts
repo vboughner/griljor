@@ -1,9 +1,9 @@
-import { MapFile, ObjectFile } from './types';
+import { MapFile, ObjectFile, ObjDef, InventoryItem } from './types';
 import { Game } from './game';
 import { ColorMode } from './assets';
 import { GameNetwork } from './network';
 import { fetchGames, GameInfo } from './lobby';
-import { loadMaskedSprite } from './assets';
+import { loadMaskedSprite, loadSprite } from './assets';
 import { initMouseWidget, setHandItem } from './mouse-widget';
 import { runTitleScreen } from './title';
 
@@ -53,8 +53,121 @@ async function drawAvatarOnCanvas(canvas: HTMLCanvasElement, avatarName: string)
   ctx.drawImage(tmp, 0, 0, canvas.width, canvas.height);
 }
 
+const INV_SIZE = 35;
+
+// Inventory panel state
+let invObjects: ObjDef[] = [];
+let invObjset = '';
+let invNetwork: GameNetwork | null = null;
+
+function buildInvGrid(): void {
+  const grid = document.getElementById('inv-grid')!;
+  grid.innerHTML = '';
+  for (let i = 0; i < INV_SIZE; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'inv-cell';
+    cell.dataset['slot'] = String(i);
+
+    const c = document.createElement('canvas');
+    c.width = 32;
+    c.height = 32;
+    cell.appendChild(c);
+
+    const countSpan = document.createElement('span');
+    countSpan.className = 'inv-count';
+    cell.appendChild(countSpan);
+
+    cell.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!invNetwork) return;
+      invNetwork.sendDrop(i);
+    });
+    cell.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (!invNetwork) return;
+      // Right-click swaps with right hand
+      invNetwork.sendInvSwap(i, 'right');
+    });
+
+    grid.appendChild(cell);
+  }
+}
+
+async function drawItemOnCanvas(canvas: HTMLCanvasElement, item: InventoryItem): Promise<void> {
+  const obj = invObjects[item.type];
+  if (!obj?.bitmap) return;
+  const baseUrl = `/data/objects/bitmaps/${invObjset}/${obj.bitmap}`;
+  let imgData: ImageData | null = null;
+  if (obj.masked && obj.mask) {
+    imgData = await loadMaskedSprite(baseUrl, `/data/objects/bitmaps/${invObjset}/${obj.mask}`);
+  } else {
+    imgData = await loadSprite(baseUrl);
+  }
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!imgData) return;
+  const tmp = new OffscreenCanvas(imgData.width, imgData.height);
+  tmp.getContext('2d')!.putImageData(imgData, 0, 0);
+  ctx.drawImage(tmp, 0, 0, canvas.width, canvas.height);
+}
+
+async function updateInventoryPanel(msg: {
+  leftHand: InventoryItem | null;
+  rightHand: InventoryItem | null;
+  inventory: Array<InventoryItem | null>;
+  currentWeight: number;
+  maxWeight: number;
+}): Promise<void> {
+  // Update weight display
+  const weightEl = document.getElementById('inv-weight');
+  if (weightEl) weightEl.textContent = `${msg.currentWeight} / ${msg.maxWeight}`;
+
+  // Update hand slot labels
+  setHandItems(
+    msg.leftHand  ? (invObjects[msg.leftHand.type]?.name  ?? '?') : null,
+    msg.rightHand ? (invObjects[msg.rightHand.type]?.name ?? '?') : null,
+  );
+
+  // Update hand slot click handlers (set once via data attr trick, easier to redo here)
+  const handLeftCanvas = document.getElementById('hand-left-canvas') as HTMLCanvasElement;
+  const handMiddleCanvas = document.getElementById('hand-middle-canvas') as HTMLCanvasElement;
+  if (handLeftCanvas) {
+    handLeftCanvas.onclick = () => {
+      if (msg.leftHand && invNetwork) invNetwork.sendDrop('left');
+    };
+  }
+  if (handMiddleCanvas) {
+    handMiddleCanvas.onclick = () => {
+      if (msg.rightHand && invNetwork) invNetwork.sendDrop('right');
+    };
+  }
+
+  // Update each inventory slot
+  const grid = document.getElementById('inv-grid');
+  if (!grid) return;
+  const cells = grid.querySelectorAll<HTMLElement>('.inv-cell');
+  for (let i = 0; i < INV_SIZE; i++) {
+    const cell = cells[i];
+    if (!cell) continue;
+    const canvas = cell.querySelector('canvas') as HTMLCanvasElement;
+    const countSpan = cell.querySelector('.inv-count') as HTMLElement;
+    const item = msg.inventory[i];
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, 32, 32);
+    countSpan.textContent = '';
+    if (item) {
+      await drawItemOnCanvas(canvas, item);
+      const obj = invObjects[item.type];
+      if (obj?.numbered && item.quantity > 1) {
+        countSpan.textContent = String(item.quantity);
+      }
+    }
+  }
+}
+
 async function main(): Promise<void> {
   initMouseWidget();
+  buildInvGrid();
 
   // DOM refs — title
   const titleScreen  = document.getElementById('title-screen') as HTMLElement;
@@ -280,8 +393,13 @@ async function main(): Promise<void> {
     try {
       const { mapData, objFile } = await loadMap(gameInfo.mapName);
 
+      // Set up inventory object references for the panel
+      invObjects = objFile.objects;
+      invObjset = mapData.map.objfilename.replace(/\.obj$/, '');
+
       const network = new GameNetwork(`ws://${gameInfo.host}:${gameInfo.port}/ws`);
       currentNetwork = network;
+      invNetwork = network;
 
       network.onRejected = (msg) => {
         setInputsDisabled(false);
@@ -302,6 +420,7 @@ async function main(): Promise<void> {
           showLobby();
           refreshServerList();
         }
+        invNetwork = null;
         lobbyStatus.textContent = 'Disconnected from server.';
         setInputsDisabled(false);
         isJoining = false;
@@ -330,6 +449,10 @@ async function main(): Promise<void> {
 
       network.onPlayerStats = (msg) => {
         updatePlayerStats(msg.id, msg.kills, msg.deaths);
+      };
+
+      network.onInventory = (msg) => {
+        void updateInventoryPanel(msg);
       };
 
       network.onAccepted = (msg) => {
@@ -364,6 +487,7 @@ async function main(): Promise<void> {
     currentGame?.destroy();
     currentGame = null;
     currentNetwork = null;
+    invNetwork = null;
     isJoining = false;
     chatLog.innerHTML = '';
     clearPlayerList();

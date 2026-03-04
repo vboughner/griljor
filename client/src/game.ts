@@ -1,4 +1,4 @@
-import { MapFile, ObjectFile, ObjDef, RoomData } from './types';
+import { MapFile, ObjectFile, ObjDef, RoomData, InventoryItem } from './types';
 import { loadMaskedSprite, setColorMode, ColorMode } from './assets';
 import { preloadRoomSprites, buildRoomBackground, renderFrame, OtherPlayer } from './renderer';
 import { GameNetwork } from './network';
@@ -59,6 +59,9 @@ export class Game {
   private myId: number | null = null;
   private otherPlayers = new Map<number, RemotePlayer>();
 
+  // floor items: per-room map of "x,y" → item
+  private floorItems = new Map<number, Map<string, InventoryItem>>();
+
   constructor(
     mapData: MapFile,
     objFile: ObjectFile,
@@ -75,6 +78,9 @@ export class Game {
     this.roomInfo = roomInfo;
     this.status = status;
     this.network = network ?? null;
+
+    // Initialize floor items from map data
+    this.initFloorItems();
 
     navBtns['north'].onclick = () => this.move(0, -1);
     navBtns['south'].onclick = () => this.move(0,  1);
@@ -94,17 +100,44 @@ export class Game {
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     this.canvas.addEventListener('mousedown', (e) => {
       e.preventDefault();
+      const rect = this.canvas.getBoundingClientRect();
+      const tx = Math.floor((e.clientX - rect.left) / 32);
+      const ty = Math.floor((e.clientY - rect.top)  / 32);
+
+      if (e.button === 0 || e.button === 1) {
+        // Left-click → right hand, middle-click → left hand
+        const hand = e.button === 1 ? 'left' : 'right';
+        const key = `${tx},${ty}`;
+        if (this.floorItems.get(this.currentRoom)?.has(key)) {
+          this.network?.sendPickup(tx, ty, hand);
+          return;
+        }
+      }
+
+      // Right-click: move toward tile
       if (e.button === 2) {
-        const rect = this.canvas.getBoundingClientRect();
-        const tx = Math.floor((e.clientX - rect.left) / 32);
-        const ty = Math.floor((e.clientY - rect.top)  / 32);
-        const dx = Math.sign(tx - this.x);
-        const dy = Math.sign(ty - this.y);
-        if (dx !== 0 || dy !== 0) this.move(dx, dy);
+        const dx = Math.sign(tx - this.px);
+        const dy = Math.sign(ty - this.py);
+        if (dx !== 0 || dy !== 0) void this.move(dx, dy);
       }
     });
 
     if (this.network) this.wireNetwork(this.network);
+  }
+
+  private initFloorItems(): void {
+    for (let roomIdx = 0; roomIdx < this.mapData.rooms.length; roomIdx++) {
+      const room = this.mapData.rooms[roomIdx];
+      const itemMap = new Map<string, InventoryItem>();
+      for (const ro of room.recorded_objects) {
+        if (ro.type <= 0) continue;
+        const obj = this.objects[ro.type];
+        if (!obj?.takeable) continue;
+        const quantity = ro.detail > 0 ? ro.detail : 1;
+        itemMap.set(`${ro.x},${ro.y}`, { type: ro.type, quantity });
+      }
+      this.floorItems.set(roomIdx, itemMap);
+    }
   }
 
   private wireNetwork(net: GameNetwork): void {
@@ -131,6 +164,39 @@ export class Game {
     net.onLeave = async (msg) => {
       this.otherPlayers.delete(msg.id);
       await this.render();
+    };
+
+    net.onItemsSync = async (msg) => {
+      // Replace local floor items entirely with server state
+      this.floorItems.clear();
+      for (const entry of msg.items) {
+        let roomMap = this.floorItems.get(entry.room);
+        if (!roomMap) {
+          roomMap = new Map<string, InventoryItem>();
+          this.floorItems.set(entry.room, roomMap);
+        }
+        roomMap.set(`${entry.x},${entry.y}`, entry.item);
+      }
+      this.roomBg = null; // force rebuild (background exclusion is correct already)
+      await this.render();
+    };
+
+    net.onItemRemoved = async (msg) => {
+      const roomMap = this.floorItems.get(msg.room);
+      if (roomMap) {
+        roomMap.delete(`${msg.x},${msg.y}`);
+        if (msg.room === this.currentRoom) await this.render();
+      }
+    };
+
+    net.onItemAdded = async (msg) => {
+      let roomMap = this.floorItems.get(msg.room);
+      if (!roomMap) {
+        roomMap = new Map<string, InventoryItem>();
+        this.floorItems.set(msg.room, roomMap);
+      }
+      roomMap.set(`${msg.x},${msg.y}`, msg.item);
+      if (msg.room === this.currentRoom) await this.render();
     };
   }
 
@@ -245,7 +311,12 @@ export class Game {
       }
     }
 
-    await renderFrame(this.canvas, this.roomBg, this.playerSprite, this.px, this.py, others);
+    const floorItems = this.floorItems.get(this.currentRoom) ?? new Map<string, InventoryItem>();
+
+    await renderFrame(
+      this.canvas, this.roomBg, this.playerSprite, this.px, this.py,
+      others, floorItems, this.objects, this.objset
+    );
     this.roomInfo.textContent =
       `Room ${this.currentRoom}: "${room.name}" — (${this.px}, ${this.py})`;
   }

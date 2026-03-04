@@ -134,7 +134,7 @@
 
     /* ── Player list ── */
     #player-list-panel {
-      width: 200px;
+      width: 240px;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -164,6 +164,56 @@
     .player-name { font-size: 0.85em; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .player-kd   { font-size: 0.75em; color: #666; }
     .player-time { font-size: 0.75em; color: #555; }
+
+    /* ── Inventory panel ── */
+    #inv-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #inv-panel h2 {
+      font-size: 0.8em;
+      color: #666;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+    }
+    #inv-weight {
+      font-size: 0.75em;
+      color: #555;
+    }
+    #inv-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 34px);
+      gap: 1px;
+    }
+    .inv-cell {
+      width: 34px;
+      height: 34px;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      position: relative;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+    .inv-cell:hover { border-color: #555; }
+    .inv-cell canvas {
+      display: block;
+      width: 32px;
+      height: 32px;
+      image-rendering: pixelated;
+      border: none;
+    }
+    .inv-cell .inv-count {
+      position: absolute;
+      bottom: 1px;
+      right: 2px;
+      font-size: 9px;
+      color: #ff0;
+      pointer-events: none;
+      line-height: 1;
+    }
 
     /* shared input style */
     select, input, button.game-btn {
@@ -236,6 +286,11 @@
             <canvas id="hand-middle-canvas" width="32" height="32"></canvas>
             <canvas id="hand-right-canvas"  width="32" height="32"></canvas>
           </div>
+        </div>
+        <div id="inv-panel">
+          <h2>Inventory</h2>
+          <div id="inv-weight">0 / 150</div>
+          <div id="inv-grid"></div>
         </div>
         <h2>Players</h2>
         <div id="player-list"></div>

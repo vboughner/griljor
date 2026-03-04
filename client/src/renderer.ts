@@ -1,4 +1,4 @@
-import { RoomData, ObjDef } from './types';
+import { RoomData, ObjDef, InventoryItem } from './types';
 import { loadMaskedSprite, loadSprite, getColorMode } from './assets';
 
 const TILE = 32;
@@ -58,8 +58,9 @@ async function getBitmap(img: ImageData): Promise<ImageBitmap> {
 }
 
 /**
- * Pre-render the static room (background fill + floor + walls + recorded objects)
+ * Pre-render the static room (background fill + floor + walls + non-takeable recorded objects)
  * to an OffscreenCanvas. Call once per room load or mode change.
+ * Takeable items are excluded — they are rendered dynamically via floorItems.
  */
 export async function buildRoomBackground(
   room: RoomData,
@@ -104,11 +105,12 @@ export async function buildRoomBackground(
     }
   }
 
-  // Recorded objects
+  // Recorded objects — skip takeable items (they're in floorItems)
   for (const ro of room.recorded_objects) {
     if (ro.type <= 0) continue;
     const obj = objects[ro.type];
     if (!obj?.bitmap) continue;
+    if (obj.takeable) continue; // rendered dynamically
     const bm = await getSprite(ro.type);
     if (bm) ctx.drawImage(bm, ro.x * TILE, ro.y * TILE, TILE, TILE);
   }
@@ -123,8 +125,8 @@ export interface OtherPlayer {
 }
 
 /**
- * Composite a pre-built background and player sprite onto the visible canvas.
- * Draws the local player and any other players in the same room.
+ * Composite a pre-built background, dynamic floor items, and player sprites
+ * onto the visible canvas.
  */
 export async function renderFrame(
   canvas: HTMLCanvasElement,
@@ -132,10 +134,25 @@ export async function renderFrame(
   playerSprite: ImageData | null,
   px: number,
   py: number,
-  others: OtherPlayer[] = []
+  others: OtherPlayer[] = [],
+  floorItems: Map<string, InventoryItem> = new Map(),
+  objects: ObjDef[] = [],
+  objset: string = ''
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bg, 0, 0);
+
+  // Draw floor items (between background and players)
+  for (const [key, item] of floorItems) {
+    const [ix, iy] = key.split(',').map(Number);
+    const obj = objects[item.type];
+    if (!obj?.bitmap) continue;
+    const imgData = await spriteForObj(obj, objset);
+    if (imgData) {
+      const bm = await getBitmap(imgData);
+      ctx.drawImage(bm, ix * TILE, iy * TILE, TILE, TILE);
+    }
+  }
 
   // Draw other players first (behind local player)
   for (const other of others) {

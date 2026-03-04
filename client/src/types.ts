@@ -49,6 +49,16 @@ export interface ObjDef {
   permeable?: boolean;
   movement?: number;
   exit?: boolean;
+  takeable?: boolean;
+  weapon?: boolean;
+  weight?: number;
+  numbered?: boolean;
+  capacity?: number;
+}
+
+export interface InventoryItem {
+  type: number;
+  quantity: number;
 }
 
 export interface ObjectFile {

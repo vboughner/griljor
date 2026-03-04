@@ -1,8 +1,13 @@
+import { InventoryItem } from './types';
+
 type C2SMessage =
   | { type: 'JOIN';         name: string; avatar: string }
   | { type: 'MY_LOCATION';  room: number; x: number; y: number }
   | { type: 'LEAVING_GAME' }
-  | { type: 'MESSAGE';      to: number | 'all'; text: string };
+  | { type: 'MESSAGE';      to: number | 'all'; text: string }
+  | { type: 'PICKUP';       x: number; y: number; hand: 'left' | 'right' }
+  | { type: 'DROP';         source: 'left' | 'right' | number }
+  | { type: 'INV_SWAP';     slot: number; hand: 'left' | 'right' };
 
 type S2CMessage =
   | { type: 'ACCEPTED';     id: number; msg: string; mapName: string; rooms: number }
@@ -13,19 +18,32 @@ type S2CMessage =
   | { type: 'PLAYER_STATS'; id: number; kills: number; deaths: number }
   | { type: 'MY_LOCATION';  id: number; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME'; id: number }
-  | { type: 'MESSAGE';      from: number; name: string; to: number | 'all'; text: string };
+  | { type: 'MESSAGE';      from: number; name: string; to: number | 'all'; text: string }
+  | { type: 'ITEM_REMOVED'; room: number; x: number; y: number }
+  | { type: 'ITEM_ADDED';   room: number; x: number; y: number; item: InventoryItem }
+  | { type: 'YOUR_INVENTORY';
+      leftHand: InventoryItem | null;
+      rightHand: InventoryItem | null;
+      inventory: Array<InventoryItem | null>;
+      currentWeight: number; maxWeight: number }
+  | { type: 'ITEMS_SYNC';
+      items: Array<{ room: number; x: number; y: number; item: InventoryItem }> };
 
 export class GameNetwork {
   private ws: WebSocket;
 
-  onAccepted:   (msg: Extract<S2CMessage, { type: 'ACCEPTED' }>) => void    = () => {};
-  onRejected:   (msg: Extract<S2CMessage, { type: 'REJECTED' }>) => void    = () => {};
-  onPlayerInfo: (msg: Extract<S2CMessage, { type: 'PLAYER_INFO' }>) => void = () => {};
-  onPlayerStats:(msg: Extract<S2CMessage, { type: 'PLAYER_STATS' }>) => void = () => {};
-  onLocation:   (msg: Extract<S2CMessage, { type: 'MY_LOCATION' }>) => void = () => {};
-  onLeave:      (msg: Extract<S2CMessage, { type: 'LEAVING_GAME' }>) => void = () => {};
-  onMessage:    (msg: Extract<S2CMessage, { type: 'MESSAGE' }>) => void      = () => {};
-  onClose:      () => void                                                   = () => {};
+  onAccepted:    (msg: Extract<S2CMessage, { type: 'ACCEPTED' }>) => void      = () => {};
+  onRejected:    (msg: Extract<S2CMessage, { type: 'REJECTED' }>) => void      = () => {};
+  onPlayerInfo:  (msg: Extract<S2CMessage, { type: 'PLAYER_INFO' }>) => void   = () => {};
+  onPlayerStats: (msg: Extract<S2CMessage, { type: 'PLAYER_STATS' }>) => void  = () => {};
+  onLocation:    (msg: Extract<S2CMessage, { type: 'MY_LOCATION' }>) => void   = () => {};
+  onLeave:       (msg: Extract<S2CMessage, { type: 'LEAVING_GAME' }>) => void  = () => {};
+  onMessage:     (msg: Extract<S2CMessage, { type: 'MESSAGE' }>) => void       = () => {};
+  onItemRemoved: (msg: Extract<S2CMessage, { type: 'ITEM_REMOVED' }>) => void  = () => {};
+  onItemAdded:   (msg: Extract<S2CMessage, { type: 'ITEM_ADDED' }>) => void    = () => {};
+  onInventory:   (msg: Extract<S2CMessage, { type: 'YOUR_INVENTORY' }>) => void = () => {};
+  onItemsSync:   (msg: Extract<S2CMessage, { type: 'ITEMS_SYNC' }>) => void    = () => {};
+  onClose:       () => void                                                     = () => {};
 
   constructor(url: string) {
     this.ws = new WebSocket(url);
@@ -41,13 +59,17 @@ export class GameNetwork {
         return;
       }
       switch (msg.type) {
-        case 'ACCEPTED':      console.log(`[network] accepted: id=${msg.id}, map=${msg.mapName}`); this.onAccepted(msg); break;
-        case 'REJECTED':      console.log(`[network] rejected: ${msg.msg}`);                       this.onRejected(msg); break;
-        case 'PLAYER_INFO':   this.onPlayerInfo(msg);   break;
-        case 'PLAYER_STATS':  this.onPlayerStats(msg);  break;
-        case 'MY_LOCATION':   this.onLocation(msg);     break;
-        case 'LEAVING_GAME':  this.onLeave(msg);        break;
-        case 'MESSAGE':       this.onMessage(msg);      break;
+        case 'ACCEPTED':       console.log(`[network] accepted: id=${msg.id}, map=${msg.mapName}`); this.onAccepted(msg); break;
+        case 'REJECTED':       console.log(`[network] rejected: ${msg.msg}`);                       this.onRejected(msg); break;
+        case 'PLAYER_INFO':    this.onPlayerInfo(msg);   break;
+        case 'PLAYER_STATS':   this.onPlayerStats(msg);  break;
+        case 'MY_LOCATION':    this.onLocation(msg);     break;
+        case 'LEAVING_GAME':   this.onLeave(msg);        break;
+        case 'MESSAGE':        this.onMessage(msg);      break;
+        case 'ITEM_REMOVED':   this.onItemRemoved(msg);  break;
+        case 'ITEM_ADDED':     this.onItemAdded(msg);    break;
+        case 'YOUR_INVENTORY': this.onInventory(msg);    break;
+        case 'ITEMS_SYNC':     this.onItemsSync(msg);    break;
       }
     });
   }
@@ -67,6 +89,18 @@ export class GameNetwork {
 
   sendMessage(text: string): void {
     this.send({ type: 'MESSAGE', to: 'all', text });
+  }
+
+  sendPickup(x: number, y: number, hand: 'left' | 'right'): void {
+    this.send({ type: 'PICKUP', x, y, hand });
+  }
+
+  sendDrop(source: 'left' | 'right' | number): void {
+    this.send({ type: 'DROP', source });
+  }
+
+  sendInvSwap(slot: number, hand: 'left' | 'right'): void {
+    this.send({ type: 'INV_SWAP', slot, hand });
   }
 
   private send(msg: C2SMessage): void {
