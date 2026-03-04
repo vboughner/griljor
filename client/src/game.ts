@@ -91,6 +91,19 @@ export class Game {
     };
     window.addEventListener('keydown', this.onKeyDown);
 
+    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.canvas.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      if (e.button === 2) {
+        const rect = this.canvas.getBoundingClientRect();
+        const tx = Math.floor((e.clientX - rect.left) / 32);
+        const ty = Math.floor((e.clientY - rect.top)  / 32);
+        const dx = Math.sign(tx - this.x);
+        const dy = Math.sign(ty - this.y);
+        if (dx !== 0 || dy !== 0) this.move(dx, dy);
+      }
+    });
+
     if (this.network) this.wireNetwork(this.network);
   }
 

@@ -108,12 +108,29 @@
     }
     #chat-send:hover { background: #3a3a3a; }
 
+    /* ── Mouse widget ── */
+    #mouse-widget { margin-bottom: 10px; }
+    #mouse-bitmap-wrap {
+      position: relative;
+      display: inline-block;
+      background: #111;
+    }
+    #mouse-bitmap { display: block; border: none; }
+    #hand-left-canvas, #hand-middle-canvas, #hand-right-canvas {
+      position: absolute;
+      top: 18px;
+    }
+    #hand-left-canvas   { left:  8px; }
+    #hand-middle-canvas { left: 48px; }
+    #hand-right-canvas  { left: 88px; }
+
     /* ── Player list ── */
     #player-list-panel {
       width: 200px;
       display: flex;
       flex-direction: column;
       gap: 6px;
+      padding-top: 29px;
     }
     #player-list-panel h2 {
       font-size: 0.8em;
@@ -199,6 +216,14 @@
         </div>
       </div>
       <div id="player-list-panel">
+        <div id="mouse-widget">
+          <div id="mouse-bitmap-wrap">
+            <canvas id="mouse-bitmap" width="128" height="128"></canvas>
+            <canvas id="hand-left-canvas"   width="32" height="32"></canvas>
+            <canvas id="hand-middle-canvas" width="32" height="32"></canvas>
+            <canvas id="hand-right-canvas"  width="32" height="32"></canvas>
+          </div>
+        </div>
         <h2>Players</h2>
         <div id="player-list"></div>
       </div>

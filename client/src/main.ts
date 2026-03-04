@@ -4,6 +4,7 @@ import { ColorMode } from './assets';
 import { GameNetwork } from './network';
 import { fetchGames, GameInfo } from './lobby';
 import { loadMaskedSprite } from './assets';
+import { initMouseWidget, setHandItem } from './mouse-widget';
 
 const AVATARS = [
   'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
@@ -52,6 +53,8 @@ async function drawAvatarOnCanvas(canvas: HTMLCanvasElement, avatarName: string)
 }
 
 async function main(): Promise<void> {
+  initMouseWidget();
+
   // DOM refs — lobby
   const lobbyScreen     = document.getElementById('lobby-screen') as HTMLElement;
   const gameScreen      = document.getElementById('game-screen') as HTMLElement;
@@ -364,6 +367,11 @@ async function main(): Promise<void> {
 
   showLobby();
   await refreshServerList();
+}
+
+export function setHandItems(left: string | null, right: string | null): void {
+  setHandItem('left', left);
+  setHandItem('right', right);
 }
 
 main().catch((err) => {
