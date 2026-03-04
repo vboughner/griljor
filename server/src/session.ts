@@ -1,10 +1,45 @@
 import WebSocket from 'ws';
 import { C2SMessage, S2CMessage, InventoryItem } from './protocol';
-import { World } from './world';
+import { World, ObjDef } from './world';
 import { filterText, randomScold } from './filter';
 
 const INV_SIZE = 35;
 const MAX_WEIGHT = 150;
+const GRID = 20;
+
+/**
+ * For numbered items (guns, potions with charges), quantity represents the
+ * charge count — the item itself is still ONE physical object. Weight is
+ * per-item, not per-charge.  For non-numbered stackable items, multiply by
+ * the stack size.
+ */
+function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryItem): number {
+  if (!obj) return 0;
+  if (obj.numbered) return obj.weight ?? 0;
+  return (obj.weight ?? 0) * item.quantity;
+}
+
+// Level/XP progression
+const BASE_HP    = 100;
+const BASE_POWER = 50;
+const HP_PER_LEVEL    = 20;
+const POWER_PER_LEVEL = 10;
+const XP_PER_LEVEL    = 100; // level N requires N*100 XP to advance
+
+function maxHpForLevel(level: number): number    { return BASE_HP    + (level - 1) * HP_PER_LEVEL; }
+function maxPowerForLevel(level: number): number { return BASE_POWER + (level - 1) * POWER_PER_LEVEL; }
+
+function levelForXp(xp: number): number {
+  let level = 1;
+  let xpLeft = xp;
+  let needed = level * XP_PER_LEVEL;
+  while (xpLeft >= needed) {
+    xpLeft -= needed;
+    level++;
+    needed = level * XP_PER_LEVEL;
+  }
+  return level;
+}
 
 interface Player {
   id: number;
@@ -21,6 +56,13 @@ interface Player {
   rightHand: InventoryItem | null;
   inventory: Array<InventoryItem | null>;
   currentWeight: number;
+  // combat stats
+  hp: number;
+  maxHp: number;
+  power: number;
+  maxPower: number;
+  xp: number;
+  level: number;
 }
 
 interface ChatEntry {
@@ -87,6 +129,8 @@ export class GameSession {
           this.onDrop(playerId, msg);
         } else if (msg.type === 'INV_SWAP') {
           this.onInvSwap(playerId, msg);
+        } else if (msg.type === 'FIRE_WEAPON') {
+          this.onFireWeapon(playerId, msg);
         }
       }
     });
@@ -116,6 +160,9 @@ export class GameSession {
       leftHand: null, rightHand: null,
       inventory: new Array<InventoryItem | null>(INV_SIZE).fill(null),
       currentWeight: 0,
+      hp: BASE_HP, maxHp: BASE_HP,
+      power: BASE_POWER, maxPower: BASE_POWER,
+      xp: 0, level: 1,
     };
     this.players.set(id, player);
     this.wsToId.set(ws, id);
@@ -143,6 +190,8 @@ export class GameSession {
         deaths: other.deaths,
         joinedAt: other.joinedAt,
       });
+      // Also send their current HP so the new player sees health bars
+      this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
     }
 
     // Tell everyone else about the new player
@@ -174,8 +223,9 @@ export class GameSession {
     }
     this.send(ws, { type: 'ITEMS_SYNC', items: syncItems });
 
-    // Send empty inventory to new player
+    // Send empty inventory and starting stats to new player
     this.sendInventory(player);
+    this.sendStats(player);
 
     console.log(`[+] ${msg.name} (id=${id}) joined. Players: ${this.players.size}`);
   }
@@ -219,7 +269,7 @@ export class GameSession {
     if (!item) return;
 
     const obj = this.world.objects[item.type];
-    const itemWeight = (obj?.weight ?? 0) * item.quantity;
+    const itemWeight = calcItemWeight(obj, item);
 
     if (player.currentWeight + itemWeight > MAX_WEIGHT) {
       this.send(player.ws, {
@@ -234,14 +284,11 @@ export class GameSession {
     const handOccupied = hand === 'left' ? player.leftHand !== null : player.rightHand !== null;
 
     if (!handOccupied) {
-      // Place in hand
       if (hand === 'left') player.leftHand = item;
       else player.rightHand = item;
     } else {
-      // Hand occupied — find first free inventory slot
       const freeSlot = player.inventory.indexOf(null);
       if (freeSlot === -1) {
-        // Inventory full too
         this.send(player.ws, {
           type: 'MESSAGE', from: 0, name: 'GM', to: player.id,
           text: 'Your hands are full.',
@@ -277,7 +324,7 @@ export class GameSession {
     if (!item) return;
 
     const obj = this.world.objects[item.type];
-    const itemWeight = (obj?.weight ?? 0) * item.quantity;
+    const itemWeight = calcItemWeight(obj, item);
     player.currentWeight = Math.max(0, player.currentWeight - itemWeight);
 
     const tile = this.nearbyFreeTile(player.room, player.x, player.y);
@@ -308,15 +355,148 @@ export class GameSession {
     this.sendInventory(player);
   }
 
-  private onLeave(playerId: number): void {
+  // ── Combat ────────────────────────────────────────────────────────────────
+
+  private onFireWeapon(playerId: number, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
 
-    // Drop all held items to floor
-    const heldItems: Array<InventoryItem | null> = [
+    const handItem = msg.hand === 'left' ? player.leftHand : player.rightHand;
+    if (!handItem) return;
+
+    const obj = this.world.objects[handItem.type];
+    if (!obj?.weapon) return;
+
+    const damage = obj.damage ?? 10;
+    const range  = obj.range  ?? 5;
+    const movingObjType = obj.movingobj ?? handItem.type;
+
+    // Compute unit direction toward target
+    const rawDx = msg.targetX - player.x;
+    const rawDy = msg.targetY - player.y;
+    if (rawDx === 0 && rawDy === 0) return;
+    const dx = Math.sign(rawDx);
+    const dy = Math.sign(rawDy);
+
+    const room = this.world.rooms[player.room];
+    if (!room) return;
+
+    // Trace projectile
+    let hitPlayer: Player | null = null;
+    let hitX = player.x;
+    let hitY = player.y;
+
+    for (let i = 1; i <= range; i++) {
+      const tx = player.x + dx * i;
+      const ty = player.y + dy * i;
+      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) break;
+
+      // Stop at solid walls (skip check if map has no tile grid)
+      const cell = room.spot?.[tx]?.[ty];
+      if (cell) {
+        const [flId, wlId] = cell;
+        const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+        const floorObj = flId > 0 ? this.world.objects[flId] : null;
+        if (wallObj  && !wallObj.permeable)  break;
+        if (floorObj && !floorObj.permeable) break;
+      }
+
+      hitX = tx;
+      hitY = ty;
+
+      // Check for player collision
+      for (const other of this.players.values()) {
+        if (other.id === playerId || other.room !== player.room) continue;
+        if (other.x === tx && other.y === ty) {
+          hitPlayer = other;
+          break;
+        }
+      }
+      if (hitPlayer) break;
+    }
+
+    // Broadcast missile to everyone in the room
+    this.broadcastToRoom(player.room, {
+      type: 'MISSILE',
+      room: player.room,
+      fromX: player.x, fromY: player.y,
+      toX: hitX, toY: hitY,
+      objType: movingObjType,
+    });
+
+    if (hitPlayer) {
+      this.dealDamage(hitPlayer, damage, player);
+    }
+
+    console.log(`[combat] ${player.name} fired ${obj.name ?? '?'} → (${hitX},${hitY})${hitPlayer ? ` hit ${hitPlayer.name}` : ''}`);
+  }
+
+  private dealDamage(victim: Player, damage: number, attacker: Player | null): void {
+    victim.hp = Math.max(0, victim.hp - damage);
+
+    this.broadcast({ type: 'PLAYER_HEALTH', id: victim.id, hp: victim.hp, maxHp: victim.maxHp });
+
+    const atkName = attacker?.name ?? 'something';
+    this.send(victim.ws, { type: 'REPORT', text: `${atkName} hits you for ${damage}!` });
+    if (attacker) {
+      this.send(attacker.ws, { type: 'REPORT', text: `You hit ${victim.name} for ${damage}.` });
+    }
+
+    if (victim.hp <= 0) {
+      this.killPlayer(victim, attacker);
+    }
+  }
+
+  private killPlayer(victim: Player, killer: Player | null): void {
+    victim.deaths++;
+    this.broadcast({ type: 'PLAYER_STATS', id: victim.id, kills: victim.kills, deaths: victim.deaths });
+
+    if (killer) {
+      killer.kills++;
+      const xpReward = 10 + victim.level * 10;
+      killer.xp += xpReward;
+
+      // Check level-up
+      const newLevel = levelForXp(killer.xp);
+      if (newLevel > killer.level) {
+        killer.level = newLevel;
+        killer.maxHp    = maxHpForLevel(killer.level);
+        killer.maxPower = maxPowerForLevel(killer.level);
+        killer.hp = Math.min(killer.hp, killer.maxHp);
+        this.send(killer.ws, { type: 'REPORT', text: `Level up! You are now level ${killer.level}.` });
+      }
+
+      this.send(killer.ws, { type: 'REPORT', text: `You killed ${victim.name}! (+${xpReward} XP)` });
+      this.broadcast({ type: 'PLAYER_STATS', id: killer.id, kills: killer.kills, deaths: killer.deaths });
+      this.sendStats(killer);
+    }
+
+    // Announce death in global chat
+    const killerDesc = killer ? killer.name : 'the void';
+    const deathMsg: S2CMessage = {
+      type: 'MESSAGE', from: 0, name: 'GM', to: 'all',
+      text: `${victim.name} was slain by ${killerDesc}.`,
+    };
+    this.broadcast(deathMsg);
+    this.chatHistory.push({ from: 0, name: 'GM', text: deathMsg.text });
+
+    // Drop all inventory items
+    this.dropPlayerItems(victim);
+
+    // Respawn
+    this.respawnPlayer(victim, killer);
+  }
+
+  private dropPlayerItems(player: Player): void {
+    const items: Array<InventoryItem | null> = [
       player.leftHand, player.rightHand, ...player.inventory
     ];
-    for (const item of heldItems) {
+    player.leftHand = null;
+    player.rightHand = null;
+    player.inventory.fill(null);
+    player.currentWeight = 0;
+
+    for (const item of items) {
       if (!item) continue;
       const tile = this.nearbyFreeTile(player.room, player.x, player.y);
       if (tile) {
@@ -326,6 +506,50 @@ export class GameSession {
         this.broadcast({ type: 'ITEM_ADDED', room: player.room, x: tile.x, y: tile.y, item });
       }
     }
+  }
+
+  private respawnPlayer(victim: Player, _killer: Player | null): void {
+    victim.hp    = victim.maxHp;
+    victim.power = victim.maxPower;
+
+    // Find a free spawn tile near (10,10) in room 0
+    const spawn = this.nearbyFreeTile(0, 10, 10) ?? { x: 10, y: 10 };
+    victim.room = 0;
+    victim.x = spawn.x;
+    victim.y = spawn.y;
+
+    // Tell victim they died and where they respawned
+    this.send(victim.ws, {
+      type: 'YOU_DIED',
+      killedBy: _killer?.id ?? 0,
+      killerName: _killer?.name ?? 'the void',
+      respawnRoom: victim.room,
+      respawnX: victim.x,
+      respawnY: victim.y,
+    });
+
+    // Broadcast new position to all
+    this.broadcast({
+      type: 'PLAYER_INFO',
+      id: victim.id, name: victim.name, avatar: victim.avatar,
+      room: victim.room, x: victim.x, y: victim.y,
+      kills: victim.kills, deaths: victim.deaths, joinedAt: victim.joinedAt,
+    });
+
+    this.broadcast({ type: 'PLAYER_HEALTH', id: victim.id, hp: victim.hp, maxHp: victim.maxHp });
+    this.sendStats(victim);
+    this.sendInventory(victim);
+
+    console.log(`[combat] ${victim.name} respawned at room=${victim.room} (${victim.x},${victim.y})`);
+  }
+
+  // ── Leave ─────────────────────────────────────────────────────────────────
+
+  private onLeave(playerId: number): void {
+    const player = this.players.get(playerId);
+    if (!player) return;
+
+    this.dropPlayerItems(player);
 
     this.players.delete(playerId);
     this.wsToId.delete(player.ws);
@@ -336,6 +560,8 @@ export class GameSession {
     }
     console.log(`[-] ${player.name} (id=${playerId}) left. Players: ${this.players.size}`);
   }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   private sendInventory(player: Player): void {
     this.send(player.ws, {
@@ -348,11 +574,19 @@ export class GameSession {
     });
   }
 
+  private sendStats(player: Player): void {
+    this.send(player.ws, {
+      type: 'YOUR_STATS',
+      hp: player.hp, maxHp: player.maxHp,
+      power: player.power, maxPower: player.maxPower,
+      xp: player.xp, level: player.level,
+    });
+  }
+
   private nearbyFreeTile(roomIdx: number, px: number, py: number): { x: number; y: number } | null {
     const room = this.world.rooms[roomIdx];
     if (!room) return null;
     const roomMap = this.roomItems.get(roomIdx) ?? new Map<string, InventoryItem>();
-    const GRID = 20;
 
     // Spiral search outward from player position
     for (let radius = 0; radius <= 5; radius++) {
@@ -363,12 +597,19 @@ export class GameSession {
           const ty = py + dy;
           if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) continue;
           if (roomMap.has(`${tx},${ty}`)) continue;
-          // Check if tile is passable (not a solid wall)
-          const [flId, wlId] = room.spot[tx][ty];
-          const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
-          const floorObj = flId > 0 ? this.world.objects[flId] : null;
-          if (wallObj && !wallObj.permeable) continue;
-          if (floorObj && !floorObj.permeable) continue;
+          const cell = room.spot?.[tx]?.[ty];
+          if (cell) {
+            const [flId, wlId] = cell;
+            const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+            const floorObj = flId > 0 ? this.world.objects[flId] : null;
+            if (wallObj  && !wallObj.permeable)  continue;
+            if (floorObj && !floorObj.permeable) continue;
+          }
+          // Also skip tiles occupied by other players
+          const occupied = [...this.players.values()].some(
+            (p) => p.room === roomIdx && p.x === tx && p.y === ty
+          );
+          if (occupied) continue;
           return { x: tx, y: ty };
         }
       }
@@ -386,6 +627,12 @@ export class GameSession {
     for (const player of this.players.values()) {
       if (exceptId !== undefined && player.id === exceptId) continue;
       this.send(player.ws, msg);
+    }
+  }
+
+  private broadcastToRoom(roomIdx: number, msg: S2CMessage): void {
+    for (const player of this.players.values()) {
+      if (player.room === roomIdx) this.send(player.ws, msg);
     }
   }
 }

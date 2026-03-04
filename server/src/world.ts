@@ -8,6 +8,11 @@ export interface ObjDef {
   weight?: number;
   numbered?: boolean;
   permeable?: boolean;
+  weapon?: boolean;
+  damage?: number;
+  range?: number;
+  movingobj?: number;
+  speed?: number;
 }
 
 export interface RecObj {
@@ -20,7 +25,7 @@ export interface RecObj {
 export interface RoomData {
   name: string;
   recorded_objects: RecObj[];
-  spot: number[][][]; // [x][y][2]
+  spot?: number[][][]; // [x][y][2]; absent in diag-format maps
 }
 
 export interface World {
