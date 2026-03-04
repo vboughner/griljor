@@ -25,6 +25,27 @@ async function loadMap(name: string): Promise<{ mapData: MapFile; objFile: Objec
   return { mapData, objFile };
 }
 
+function formatDuration(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}:${String(m % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  return `${m}:${String(s % 60).padStart(2, '0')}`;
+}
+
+async function drawAvatarOnCanvas(canvas: HTMLCanvasElement, avatarName: string): Promise<void> {
+  const imageData = await loadMaskedSprite(
+    `/sprites/facebits/${avatarName}bit.png`,
+    `/sprites/facebits/${avatarName}mask.png`,
+  );
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!imageData) return;
+  const tmp = new OffscreenCanvas(imageData.width, imageData.height);
+  tmp.getContext('2d')!.putImageData(imageData, 0, 0);
+  ctx.drawImage(tmp, 0, 0, canvas.width, canvas.height);
+}
+
 async function main(): Promise<void> {
   // DOM refs — lobby
   const lobbyScreen     = document.getElementById('lobby-screen') as HTMLElement;
@@ -32,20 +53,20 @@ async function main(): Promise<void> {
   const playerNameInput = document.getElementById('player-name') as HTMLInputElement;
   const avatarSelect    = document.getElementById('avatar-select') as HTMLSelectElement;
   const avatarPreview   = document.getElementById('avatar-preview') as HTMLCanvasElement;
-  const avatarPreviewCtx = avatarPreview.getContext('2d')!;
-  const serverList     = document.getElementById('server-list') as HTMLElement;
-  const refreshBtn     = document.getElementById('refresh-btn') as HTMLButtonElement;
-  const lobbyStatus    = document.getElementById('lobby-status') as HTMLElement;
+  const serverList      = document.getElementById('server-list') as HTMLElement;
+  const refreshBtn      = document.getElementById('refresh-btn') as HTMLButtonElement;
+  const lobbyStatus     = document.getElementById('lobby-status') as HTMLElement;
 
   // DOM refs — game
-  const canvas    = document.getElementById('game-canvas') as HTMLCanvasElement;
-  const roomInfo  = document.getElementById('room-info') as HTMLElement;
-  const status    = document.getElementById('status') as HTMLElement;
+  const canvas     = document.getElementById('game-canvas') as HTMLCanvasElement;
+  const roomInfo   = document.getElementById('room-info') as HTMLElement;
+  const status     = document.getElementById('status') as HTMLElement;
   const modeToggle = document.getElementById('mode-toggle') as HTMLButtonElement;
-  const leaveBtn  = document.getElementById('leave-btn') as HTMLButtonElement;
-  const chatLog   = document.getElementById('chat-log') as HTMLElement;
-  const chatInput = document.getElementById('chat-input') as HTMLInputElement;
-  const chatSend  = document.getElementById('chat-send') as HTMLButtonElement;
+  const leaveBtn   = document.getElementById('leave-btn') as HTMLButtonElement;
+  const chatLog    = document.getElementById('chat-log') as HTMLElement;
+  const chatInput  = document.getElementById('chat-input') as HTMLInputElement;
+  const chatSend   = document.getElementById('chat-send') as HTMLButtonElement;
+  const playerListEl = document.getElementById('player-list') as HTMLElement;
   const navBtns = {
     north: document.getElementById('btn-north') as HTMLButtonElement,
     east:  document.getElementById('btn-east')  as HTMLButtonElement,
@@ -53,7 +74,7 @@ async function main(): Promise<void> {
     west:  document.getElementById('btn-west')  as HTMLButtonElement,
   };
 
-  // Populate avatar selector
+  // ── Avatar selector ──────────────────────────────────────────────
   for (const name of AVATARS) {
     const opt = document.createElement('option');
     opt.value = name;
@@ -63,20 +84,91 @@ async function main(): Promise<void> {
   const randomAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
   avatarSelect.value = randomAvatar;
   playerNameInput.value = randomAvatar;
+  void drawAvatarOnCanvas(avatarPreview, randomAvatar);
 
-  async function updateAvatarPreview(name: string): Promise<void> {
-    const imageData = await loadMaskedSprite(
-      `/sprites/facebits/${name}bit.png`,
-      `/sprites/facebits/${name}mask.png`,
-    );
-    avatarPreviewCtx.clearRect(0, 0, avatarPreview.width, avatarPreview.height);
-    if (!imageData) return;
-    const tmp = new OffscreenCanvas(imageData.width, imageData.height);
-    tmp.getContext('2d')!.putImageData(imageData, 0, 0);
-    avatarPreviewCtx.drawImage(tmp, 0, 0, avatarPreview.width, avatarPreview.height);
+  // ── Player list state ────────────────────────────────────────────
+  interface PlayerEntry {
+    id: number; name: string; avatar: string;
+    kills: number; deaths: number; joinedAt: number;
+    row: HTMLElement; timeEl: HTMLElement;
   }
-  void updateAvatarPreview(randomAvatar);
+  const playerMap = new Map<number, PlayerEntry>();
+  let playerTickInterval: ReturnType<typeof setInterval> | null = null;
 
+  function renderPlayerList(): void {
+    playerListEl.innerHTML = '';
+    for (const p of playerMap.values()) {
+      playerListEl.appendChild(p.row);
+    }
+  }
+
+  async function addPlayerRow(id: number, name: string, avatar: string,
+                               kills: number, deaths: number, joinedAt: number): Promise<void> {
+    const row = document.createElement('div');
+    row.className = 'player-row';
+
+    const avatarCanvas = document.createElement('canvas');
+    avatarCanvas.width = 32;
+    avatarCanvas.height = 32;
+    void drawAvatarOnCanvas(avatarCanvas, avatar);
+
+    const details = document.createElement('div');
+    details.className = 'player-details';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'player-name';
+    nameEl.textContent = name;
+
+    const kdEl = document.createElement('div');
+    kdEl.className = 'player-kd';
+    kdEl.textContent = `K:${kills}  D:${deaths}`;
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'player-time';
+    timeEl.textContent = formatDuration(Date.now() - joinedAt);
+
+    details.appendChild(nameEl);
+    details.appendChild(kdEl);
+    details.appendChild(timeEl);
+    row.appendChild(avatarCanvas);
+    row.appendChild(details);
+
+    playerMap.set(id, { id, name, avatar, kills, deaths, joinedAt, row, timeEl });
+    renderPlayerList();
+  }
+
+  function updatePlayerStats(id: number, kills: number, deaths: number): void {
+    const p = playerMap.get(id);
+    if (!p) return;
+    p.kills = kills;
+    p.deaths = deaths;
+    p.row.querySelector<HTMLElement>('.player-kd')!.textContent = `K:${kills}  D:${deaths}`;
+  }
+
+  function removePlayer(id: number): void {
+    playerMap.delete(id);
+    renderPlayerList();
+  }
+
+  function clearPlayerList(): void {
+    playerMap.clear();
+    playerListEl.innerHTML = '';
+    if (playerTickInterval !== null) {
+      clearInterval(playerTickInterval);
+      playerTickInterval = null;
+    }
+  }
+
+  function startPlayerTick(): void {
+    playerTickInterval = setInterval(() => {
+      const now = Date.now();
+      for (const p of playerMap.values()) {
+        p.timeEl.textContent = formatDuration(now - p.joinedAt);
+      }
+    }, 1000);
+  }
+
+  // ── Chat ─────────────────────────────────────────────────────────
   function appendChat(name: string, text: string): void {
     const line = document.createElement('div');
     line.className = 'chat-msg';
@@ -99,6 +191,7 @@ async function main(): Promise<void> {
   chatSend.addEventListener('click', sendChat);
   chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChat(); });
 
+  // ── State ─────────────────────────────────────────────────────────
   let currentGame: Game | null = null;
   let currentNetwork: GameNetwork | null = null;
   let currentMode: ColorMode = 'dark';
@@ -122,6 +215,7 @@ async function main(): Promise<void> {
     });
   }
 
+  // ── Lobby ─────────────────────────────────────────────────────────
   async function refreshServerList(): Promise<void> {
     lobbyStatus.textContent = 'Loading\u2026';
     serverList.innerHTML = '';
@@ -166,12 +260,6 @@ async function main(): Promise<void> {
       const network = new GameNetwork(`ws://${gameInfo.host}:${gameInfo.port}/ws`);
       currentNetwork = network;
 
-      network.onAccepted = (msg) => {
-        showGame();
-        status.textContent = `Connected as ${playerName} (id=${msg.id})`;
-        currentGame!.setMyId(msg.id);
-      };
-
       network.onRejected = (msg) => {
         setInputsDisabled(false);
         lobbyStatus.textContent = `Rejected: ${msg.msg}`;
@@ -187,6 +275,7 @@ async function main(): Promise<void> {
           currentGame?.destroy();
           currentGame = null;
           chatLog.innerHTML = '';
+          clearPlayerList();
           showLobby();
           refreshServerList();
         }
@@ -197,6 +286,38 @@ async function main(): Promise<void> {
 
       const game = new Game(mapData, objFile, canvas, roomInfo, status, navBtns, network);
       currentGame = game;
+
+      // Wrap the callbacks Game.wireNetwork() just installed so both game
+      // rendering and the player list stay in sync.
+      const gameOnPlayerInfo = network.onPlayerInfo;
+      network.onPlayerInfo = async (msg) => {
+        await gameOnPlayerInfo(msg);
+        if (playerMap.has(msg.id)) {
+          updatePlayerStats(msg.id, msg.kills, msg.deaths);
+        } else {
+          void addPlayerRow(msg.id, msg.name, msg.avatar, msg.kills, msg.deaths, msg.joinedAt);
+        }
+      };
+
+      const gameOnLeave = network.onLeave;
+      network.onLeave = async (msg) => {
+        await gameOnLeave(msg);
+        removePlayer(msg.id);
+      };
+
+      network.onPlayerStats = (msg) => {
+        updatePlayerStats(msg.id, msg.kills, msg.deaths);
+      };
+
+      network.onAccepted = (msg) => {
+        showGame();
+        startPlayerTick();
+        status.textContent = `Connected as ${playerName} (id=${msg.id})`;
+        game.setMyId(msg.id);
+        // Server doesn't send PLAYER_INFO for the local player back to themselves
+        void addPlayerRow(msg.id, playerName, avatarSelect.value, 0, 0, Date.now());
+      };
+
       await game.setAvatar(avatarSelect.value);
       await game.goToRoom(0);
       network.join(playerName, avatarSelect.value);
@@ -222,6 +343,7 @@ async function main(): Promise<void> {
     currentNetwork = null;
     isJoining = false;
     chatLog.innerHTML = '';
+    clearPlayerList();
     setInputsDisabled(false);
     showLobby();
     refreshServerList();
@@ -229,7 +351,7 @@ async function main(): Promise<void> {
 
   avatarSelect.addEventListener('change', () => {
     playerNameInput.value = avatarSelect.value;
-    void updateAvatarPreview(avatarSelect.value);
+    void drawAvatarOnCanvas(avatarPreview, avatarSelect.value);
     currentGame?.setAvatar(avatarSelect.value);
   });
 

@@ -10,7 +10,9 @@ export type S2CMessage =
   | { type: 'ACCEPTED';     id: number; msg: string; mapName: string; rooms: number }
   | { type: 'REJECTED';     msg: string }
   | { type: 'PLAYER_INFO';  id: number; name: string; avatar: string;
-                            room: number; x: number; y: number }
+                            room: number; x: number; y: number;
+                            kills: number; deaths: number; joinedAt: number }
+  | { type: 'PLAYER_STATS'; id: number; kills: number; deaths: number }
   | { type: 'MY_LOCATION';  id: number; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME'; id: number }
   | { type: 'MESSAGE';      from: number; name: string; to: number | 'all'; text: string };

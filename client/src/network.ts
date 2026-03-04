@@ -8,7 +8,9 @@ type S2CMessage =
   | { type: 'ACCEPTED';     id: number; msg: string; mapName: string; rooms: number }
   | { type: 'REJECTED';     msg: string }
   | { type: 'PLAYER_INFO';  id: number; name: string; avatar: string;
-                            room: number; x: number; y: number }
+                            room: number; x: number; y: number;
+                            kills: number; deaths: number; joinedAt: number }
+  | { type: 'PLAYER_STATS'; id: number; kills: number; deaths: number }
   | { type: 'MY_LOCATION';  id: number; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME'; id: number }
   | { type: 'MESSAGE';      from: number; name: string; to: number | 'all'; text: string };
@@ -19,6 +21,7 @@ export class GameNetwork {
   onAccepted:   (msg: Extract<S2CMessage, { type: 'ACCEPTED' }>) => void    = () => {};
   onRejected:   (msg: Extract<S2CMessage, { type: 'REJECTED' }>) => void    = () => {};
   onPlayerInfo: (msg: Extract<S2CMessage, { type: 'PLAYER_INFO' }>) => void = () => {};
+  onPlayerStats:(msg: Extract<S2CMessage, { type: 'PLAYER_STATS' }>) => void = () => {};
   onLocation:   (msg: Extract<S2CMessage, { type: 'MY_LOCATION' }>) => void = () => {};
   onLeave:      (msg: Extract<S2CMessage, { type: 'LEAVING_GAME' }>) => void = () => {};
   onMessage:    (msg: Extract<S2CMessage, { type: 'MESSAGE' }>) => void      = () => {};
@@ -38,12 +41,13 @@ export class GameNetwork {
         return;
       }
       switch (msg.type) {
-        case 'ACCEPTED':     console.log(`[network] accepted: id=${msg.id}, map=${msg.mapName}`); this.onAccepted(msg); break;
-        case 'REJECTED':     console.log(`[network] rejected: ${msg.msg}`);                       this.onRejected(msg); break;
-        case 'PLAYER_INFO':  this.onPlayerInfo(msg);  break;
-        case 'MY_LOCATION':  this.onLocation(msg);    break;
-        case 'LEAVING_GAME': this.onLeave(msg);       break;
-        case 'MESSAGE':      this.onMessage(msg);     break;
+        case 'ACCEPTED':      console.log(`[network] accepted: id=${msg.id}, map=${msg.mapName}`); this.onAccepted(msg); break;
+        case 'REJECTED':      console.log(`[network] rejected: ${msg.msg}`);                       this.onRejected(msg); break;
+        case 'PLAYER_INFO':   this.onPlayerInfo(msg);   break;
+        case 'PLAYER_STATS':  this.onPlayerStats(msg);  break;
+        case 'MY_LOCATION':   this.onLocation(msg);     break;
+        case 'LEAVING_GAME':  this.onLeave(msg);        break;
+        case 'MESSAGE':       this.onMessage(msg);      break;
       }
     });
   }

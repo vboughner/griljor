@@ -10,6 +10,9 @@ interface Player {
   x: number;
   y: number;
   ws: WebSocket;
+  kills: number;
+  deaths: number;
+  joinedAt: number;
 }
 
 interface ChatEntry {
@@ -74,7 +77,7 @@ export class GameSession {
     }
 
     const id = this.nextId++;
-    const player: Player = { id, name: msg.name, avatar: msg.avatar, room: 0, x: 10, y: 10, ws };
+    const player: Player = { id, name: msg.name, avatar: msg.avatar, room: 0, x: 10, y: 10, ws, kills: 0, deaths: 0, joinedAt: Date.now() };
     this.players.set(id, player);
     this.wsToId.set(ws, id);
 
@@ -97,6 +100,9 @@ export class GameSession {
         room: other.room,
         x: other.x,
         y: other.y,
+        kills: other.kills,
+        deaths: other.deaths,
+        joinedAt: other.joinedAt,
       });
     }
 
@@ -109,6 +115,9 @@ export class GameSession {
       room: player.room,
       x: player.x,
       y: player.y,
+      kills: player.kills,
+      deaths: player.deaths,
+      joinedAt: player.joinedAt,
     }, id);
 
     // Replay chat history for the new player
