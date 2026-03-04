@@ -1,4 +1,5 @@
 import mousexbm from '../../bit/mouse?raw';
+import movexbm from '../../bit/movemark?raw';
 
 // XBM slot geometry (derived from original MOUSE_START_X/Y and bitmap hole analysis)
 // Each hole is 32px wide; the 4×0x00 bytes per row give exactly 32 transparent pixels.
@@ -37,13 +38,21 @@ function renderXbm(canvas: HTMLCanvasElement): void {
 }
 
 function drawMovementSlot(canvas: HTMLCanvasElement): void {
+  const bytes = parseXbmBytes(movexbm);
   const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, SLOT_W, SLOT_H);
-  ctx.fillStyle = '#444';
-  ctx.font = '18px monospace';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('↕', SLOT_W / 2, SLOT_H / 2);
+  const img = ctx.createImageData(SLOT_W, SLOT_H);
+  for (let y = 0; y < SLOT_H; y++) {
+    for (let x = 0; x < SLOT_W; x++) {
+      const idx = y * SLOT_W + x;
+      const isSet = (bytes[idx >> 3] >> (idx & 7)) & 1;
+      const p = idx * 4;
+      img.data[p]     = 255;
+      img.data[p + 1] = 255;
+      img.data[p + 2] = 255;
+      img.data[p + 3] = isSet ? 0 : 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
 }
 
 export function initMouseWidget(): void {
