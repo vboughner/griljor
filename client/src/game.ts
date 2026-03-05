@@ -543,6 +543,10 @@ export class Game {
     if (flObj) {
       const blocked = flObj.permeable === false ? ' <span class="tip-lbl">[blocks]</span>' : '';
       rows.push(`<div class="tip-row"><span class="tip-lbl">floor</span> ${flObj.name ?? `#${flId}`}${blocked}</div>`);
+      const mov = flObj.movement ?? 0;
+      const delay = Math.max(80, 250 + mov * 150);
+      const speedLabel = mov === 0 ? 'normal' : mov > 0 ? `slow ×${1 + mov}` : `fast ×${(250 / delay).toFixed(1)}`;
+      rows.push(`<div class="tip-row"><span class="tip-lbl">speed</span> ${speedLabel} (${delay} ms/step)</div>`);
     }
     if (wlObj) {
       const passable = wlObj.permeable ? ' <span class="tip-lbl">[passable]</span>' : ' <span class="tip-lbl">[blocks]</span>';
