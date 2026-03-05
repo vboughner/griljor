@@ -75,6 +75,12 @@ function findNextStep(
 }
 
 /** Build a map from "x,y" → exit destination for all exit objects in the room. */
+/** Convert a movement speed (1-9, where 9=fastest) to a step delay in ms.
+ *  speed 9 → 150 ms, speed 5 → 270 ms, speed 4 → 338 ms. */
+function stepDelay(spd: number): number {
+  return Math.max(50, Math.round(150 * 9 / Math.max(1, spd)));
+}
+
 function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, ExitTile> {
   const map = new Map<string, ExitTile>();
   for (const ro of room.recorded_objects ?? []) {
@@ -542,13 +548,13 @@ export class Game {
     if (this.moveTarget) this.scheduleMoveStep();
   }
 
-  /** Delay in ms for one step based on current floor tile's movement modifier. */
+  /** Delay in ms for one step. movement field is a speed 1-9 (9=fastest).
+   *  Absent movement means blocked (0); open tiles with no object default to 9. */
   private getMoveDelay(): number {
     const room = this.mapData.rooms[this.currentRoom];
     const flId = room.spot?.[this.px]?.[this.py]?.[0] ?? 0;
-    const movMod = (flId > 0 ? this.objects[flId]?.movement : null) ?? 0;
-    // Base 150 ms (~40% faster than original 250 ms); slow terrain adds proportionally
-    return Math.max(50, 150 + movMod * 90);
+    const spd = flId > 0 ? (this.objects[flId]?.movement ?? 0) : 9;
+    return stepDelay(spd);
   }
 
   // ── Tile hover debug ──────────────────────────────────────────────────────
@@ -564,10 +570,10 @@ export class Game {
     if (flObj) {
       const blocked = flObj.permeable === false ? ' <span class="tip-lbl">[blocks]</span>' : '';
       rows.push(`<div class="tip-row"><span class="tip-lbl">floor</span> ${flObj.name ?? `#${flId}`}${blocked}</div>`);
-      const mov = flObj.movement ?? 0;
-      const delay = Math.max(80, 250 + mov * 150);
-      const speedLabel = mov === 0 ? 'normal' : mov > 0 ? `slow ×${1 + mov}` : `fast ×${(250 / delay).toFixed(1)}`;
-      rows.push(`<div class="tip-row"><span class="tip-lbl">speed</span> ${speedLabel} (${delay} ms/step)</div>`);
+      const spd = flObj.movement ?? 0;
+      const delay = spd > 0 ? stepDelay(spd) : null;
+      const speedLabel = delay === null ? 'blocked' : `${delay} ms/step`;
+      rows.push(`<div class="tip-row"><span class="tip-lbl">speed</span> ${speedLabel}</div>`);
     }
     if (wlObj) {
       const passable = (wlObj.movement ?? 0) > 0 ? ' <span class="tip-lbl">[passable]</span>' : ' <span class="tip-lbl">[blocks]</span>';
