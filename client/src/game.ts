@@ -557,13 +557,7 @@ export class Game {
       rows.push(`<div class="tip-row">• ${nm}${tag}</div>`);
     }
 
-    const fi = this.floorItems.get(this.currentRoom)?.get(`${tx},${ty}`);
-    if (fi) {
-      const obj = this.objects[fi.type];
-      rows.push(`<div class="tip-row">★ ${obj?.name ?? `#${fi.type}`} <span class="tip-lbl">[dropped]</span></div>`);
-    }
-
-    if (!flObj && !wlObj && recHere.length === 0 && !fi) {
+    if (!flObj && !wlObj && recHere.length === 0) {
       rows.push(`<div class="tip-row tip-lbl">empty</div>`);
     }
     return rows.join('');
