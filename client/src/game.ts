@@ -17,8 +17,8 @@ function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[]):
     const [flId, wlId] = cell;
     // Wall layer: blocks unless movement > 0
     if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
-    // Floor layer: blocks only if movement is explicitly 0
-    if (flId > 0 && objects[flId]?.movement === 0) return true;
+    // Floor layer: absent movement defaults to 0 (blocked), same as wall layer
+    if (flId > 0 && !((objects[flId]?.movement ?? 0) > 0)) return true;
   }
   // Recorded objects (doors, etc.): block if movement absent (=0) or explicitly 0
   for (const ro of room.recorded_objects ?? []) {
