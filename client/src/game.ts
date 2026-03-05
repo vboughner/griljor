@@ -194,10 +194,12 @@ export class Game {
       if (d) {
         e.preventDefault();
         this.stopMoving();
-        const now = Date.now();
-        if (now < this.moveReadyAt) return;
-        this.moveReadyAt = now + this.getMoveDelay();
-        void this.move(d[0], d[1]);
+        if (Date.now() < this.moveReadyAt) return;
+        this.moveReadyAt = Infinity; // lock until move resolves
+        void this.move(d[0], d[1]).then(() => {
+          // Sample delay from the tile we just arrived on (same as click-to-move)
+          this.moveReadyAt = Date.now() + this.getMoveDelay();
+        });
         return;
       }
 
