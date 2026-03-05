@@ -6,6 +6,7 @@ import { fetchGames, GameInfo } from './lobby';
 import { loadMaskedSprite, loadSprite } from './assets';
 import { initMouseWidget, setHandItem } from './mouse-widget';
 import { runTitleScreen } from './title';
+import { showTooltip, hideTooltip, moveTooltip, buildItemHtml } from './tooltip';
 
 const AVATARS = [
   'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
@@ -60,6 +61,14 @@ let invObjects: ObjDef[] = [];
 let invObjset = '';
 let invNetwork: GameNetwork | null = null;
 
+// Track current hand items for tooltips
+let currentLeftHand:  InventoryItem | null = null;
+let currentRightHand: InventoryItem | null = null;
+// Per-slot item for tooltips (indexed 0..INV_SIZE-1)
+const slotItems: Array<InventoryItem | null> = [];
+
+window.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
+
 function buildInvGrid(): void {
   const grid = document.getElementById('inv-grid')!;
   grid.innerHTML = '';
@@ -95,7 +104,34 @@ function buildInvGrid(): void {
       invNetwork.sendDrop(i);
     });
 
+    cell.addEventListener('mouseenter', (e) => {
+      const item = slotItems[i];
+      if (!item) return;
+      const obj = invObjects[item.type];
+      if (!obj) return;
+      showTooltip(buildItemHtml(obj, item), (e as MouseEvent).clientX, (e as MouseEvent).clientY);
+    });
+    cell.addEventListener('mouseleave', () => hideTooltip());
+
     grid.appendChild(cell);
+  }
+}
+
+function initHandTooltips(): void {
+  const hands: Array<{ id: string; getItem: () => InventoryItem | null }> = [
+    { id: 'hand-left-canvas',   getItem: () => currentLeftHand  },
+    { id: 'hand-middle-canvas', getItem: () => currentRightHand },
+  ];
+  for (const { id, getItem } of hands) {
+    const canvas = document.getElementById(id)!;
+    canvas.addEventListener('mouseenter', (e) => {
+      const item = getItem();
+      if (!item) return;
+      const obj = invObjects[item.type];
+      if (!obj) return;
+      showTooltip(buildItemHtml(obj, item), (e as MouseEvent).clientX, (e as MouseEvent).clientY);
+    });
+    canvas.addEventListener('mouseleave', () => hideTooltip());
   }
 }
 
@@ -126,6 +162,10 @@ async function updateInventoryPanel(msg: {
   currentWeight: number;
   maxWeight: number;
 }): Promise<void> {
+  // Track hand items for tooltips
+  currentLeftHand  = msg.leftHand;
+  currentRightHand = msg.rightHand;
+
   // Update weight display
   const weightEl = document.getElementById('inv-weight');
   if (weightEl) weightEl.textContent = `${msg.currentWeight} / ${msg.maxWeight}`;
@@ -160,6 +200,7 @@ async function updateInventoryPanel(msg: {
     const canvas = cell.querySelector('canvas') as HTMLCanvasElement;
     const countSpan = cell.querySelector('.inv-count') as HTMLElement;
     const item = msg.inventory[i];
+    slotItems[i] = item ?? null;
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, 32, 32);
     countSpan.textContent = '';
@@ -176,6 +217,7 @@ async function updateInventoryPanel(msg: {
 async function main(): Promise<void> {
   initMouseWidget();
   buildInvGrid();
+  initHandTooltips();
 
   // DOM refs — title
   const titleScreen  = document.getElementById('title-screen') as HTMLElement;

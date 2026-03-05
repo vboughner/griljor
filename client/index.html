@@ -252,6 +252,25 @@
       line-height: 1;
     }
 
+    /* ── Tooltip ── */
+    #tooltip {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      background: #1a1a1a;
+      border: 1px solid #555;
+      padding: 7px 10px;
+      font-family: monospace;
+      font-size: 0.8em;
+      color: #ccc;
+      pointer-events: none;
+      max-width: 200px;
+      line-height: 1.5;
+    }
+    .tip-name { color: #eee; font-weight: bold; margin-bottom: 3px; }
+    .tip-row  { color: #aaa; }
+    .tip-lbl  { color: #666; }
+
     /* shared input style */
     select, input, button.game-btn {
       background: #2a2a2a; border: 1px solid #555; color: #bbb;
@@ -268,6 +287,8 @@
   </style>
 </head>
 <body>
+
+  <div id="tooltip"></div>
 
   <!-- ── Title Screen ── -->
   <div id="title-screen">
