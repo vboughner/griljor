@@ -78,6 +78,10 @@ export class Game {
   // cache: objType → ImageBitmap for missile sprites
   private missileSpriteCache = new Map<number, ImageBitmap | null>();
 
+  // click-to-move path: walk toward this tile step by step
+  private moveTarget: { x: number; y: number } | null = null;
+  private moveTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor(
     mapData: MapFile,
     objFile: ObjectFile,
@@ -125,7 +129,7 @@ export class Game {
       };
 
       const d = keyDirs[e.key] ?? codeDirs[e.code];
-      if (d) { e.preventDefault(); this.move(d[0], d[1]); return; }
+      if (d) { e.preventDefault(); this.stopMoving(); void this.move(d[0], d[1]); return; }
 
       // Item actions
       if (e.key === 's') { e.preventDefault(); this.network?.sendPickup(this.px, this.py, 'left'); return; }
@@ -143,41 +147,31 @@ export class Game {
       const tx = Math.floor((e.clientX - rect.left) / TILE) - 1;
       const ty = Math.floor((e.clientY - rect.top)  / TILE) - 1;
 
-      // Border click → attempt room exit in that direction
+      // Border click → walk toward that exit (any button)
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
-        const room = this.mapData.rooms[this.currentRoom];
-        const cx = Math.max(0, Math.min(GRID - 1, tx));
-        const cy = Math.max(0, Math.min(GRID - 1, ty));
-        if (tx < 0 && room.exit_west >= 0)
-          void this.goToRoom(room.exit_west, GRID - 1, cy);
-        else if (tx >= GRID && room.exit_east >= 0)
-          void this.goToRoom(room.exit_east, 0, cy);
-        else if (ty < 0 && room.exit_north >= 0)
-          void this.goToRoom(room.exit_north, cx, GRID - 1);
-        else if (ty >= GRID && room.exit_south >= 0)
-          void this.goToRoom(room.exit_south, cx, 0);
+        if      (tx < 0)    this.startMovingTo(-(GRID), this.py);
+        else if (tx >= GRID) this.startMovingTo(GRID * 2, this.py);
+        else if (ty < 0)    this.startMovingTo(this.px, -(GRID));
+        else                 this.startMovingTo(this.px, GRID * 2);
         return;
       }
 
       if (e.button === 0 || e.button === 1) {
-        // Left-click → left hand, middle-click → right hand
+        // Left/middle: cancel movement, then fire weapon or pick up
+        this.stopMoving();
         const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
         const key = `${tx},${ty}`;
         if (this.floorItems.get(this.currentRoom)?.has(key)) {
-          // Pick up floor item
           this.network?.sendPickup(tx, ty, hand);
         } else if (tx !== this.px || ty !== this.py) {
-          // Fire weapon toward clicked tile
           this.network?.sendFireWeapon(hand, tx, ty);
         }
         return;
       }
 
-      // Right-click: move toward tile
+      // Right-click: walk toward clicked tile
       if (e.button === 2) {
-        const dx = Math.sign(tx - this.px);
-        const dy = Math.sign(ty - this.py);
-        if (dx !== 0 || dy !== 0) void this.move(dx, dy);
+        this.startMovingTo(tx, ty);
       }
     });
 
@@ -394,6 +388,67 @@ export class Game {
 
     await this.render();
   }
+
+  // ── Click-to-move ─────────────────────────────────────────────────────────
+
+  private startMovingTo(x: number, y: number): void {
+    this.stopMoving();
+    this.moveTarget = { x, y };
+    this.scheduleMoveStep();
+  }
+
+  private stopMoving(): void {
+    if (this.moveTimer !== null) { clearTimeout(this.moveTimer); this.moveTimer = null; }
+    this.moveTarget = null;
+  }
+
+  private scheduleMoveStep(): void {
+    const delay = this.getMoveDelay();
+    this.moveTimer = setTimeout(() => {
+      this.moveTimer = null;
+      void this.doMoveStep();
+    }, delay);
+  }
+
+  private async doMoveStep(): Promise<void> {
+    if (!this.moveTarget) return;
+    const dx = Math.sign(this.moveTarget.x - this.px);
+    const dy = Math.sign(this.moveTarget.y - this.py);
+
+    if (dx === 0 && dy === 0) { this.stopMoving(); return; }
+
+    const prevRoom = this.currentRoom;
+    const prevX = this.px;
+    const prevY = this.py;
+
+    await this.move(dx, dy);
+
+    // Blocked: position unchanged and still in same room
+    if (this.currentRoom === prevRoom && this.px === prevX && this.py === prevY) {
+      this.stopMoving();
+      return;
+    }
+
+    // Room changed: arrived in new room, stop
+    if (this.currentRoom !== prevRoom) {
+      this.stopMoving();
+      return;
+    }
+
+    // Still have a target — keep going
+    if (this.moveTarget) this.scheduleMoveStep();
+  }
+
+  /** Delay in ms for one step based on current floor tile's movement modifier. */
+  private getMoveDelay(): number {
+    const room = this.mapData.rooms[this.currentRoom];
+    const flId = room.spot?.[this.px]?.[this.py]?.[0] ?? 0;
+    const movMod = (flId > 0 ? this.objects[flId]?.movement : null) ?? 0;
+    // Base 250 ms; each movement unit adds 150 ms (positive = slower terrain)
+    return Math.max(80, 250 + movMod * 150);
+  }
+
+  // ── Rendering ──────────────────────────────────────────────────────────────
 
   private async render(): Promise<void> {
     const room = this.mapData.rooms[this.currentRoom];
