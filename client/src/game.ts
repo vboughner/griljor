@@ -13,12 +13,19 @@ interface ExitTile { destRoom: number; landX: number; landY: number; }
  *  permeable controls missile passage only (not player movement). */
 function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[]): boolean {
   const cell = room.spot?.[x]?.[y];
-  if (!cell) return false;
-  const [flId, wlId] = cell;
-  // Wall layer: blocks unless movement > 0
-  if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
-  // Floor layer: blocks only if movement is explicitly 0
-  if (flId > 0 && objects[flId]?.movement === 0) return true;
+  if (cell) {
+    const [flId, wlId] = cell;
+    // Wall layer: blocks unless movement > 0
+    if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
+    // Floor layer: blocks only if movement is explicitly 0
+    if (flId > 0 && objects[flId]?.movement === 0) return true;
+  }
+  // Recorded objects (doors, etc.): block if movement absent (=0) or explicitly 0
+  for (const ro of room.recorded_objects ?? []) {
+    if (ro.x === x && ro.y === y && ro.type > 0) {
+      if (!((objects[ro.type]?.movement ?? 0) > 0)) return true;
+    }
+  }
   return false;
 }
 
@@ -131,6 +138,8 @@ export class Game {
   // click-to-move path: walk toward this tile step by step
   private moveTarget: { x: number; y: number } | null = null;
   private moveTimer: ReturnType<typeof setTimeout> | null = null;
+  // rate-limit: keyboard cannot move faster than click-to-move
+  private moveReadyAt = 0;
 
   // tile hover debug mode (toggled by ?)
   private hoverMode = false;
@@ -182,7 +191,15 @@ export class Game {
       };
 
       const d = keyDirs[e.key] ?? codeDirs[e.code];
-      if (d) { e.preventDefault(); this.stopMoving(); void this.move(d[0], d[1]); return; }
+      if (d) {
+        e.preventDefault();
+        this.stopMoving();
+        const now = Date.now();
+        if (now < this.moveReadyAt) return;
+        this.moveReadyAt = now + this.getMoveDelay();
+        void this.move(d[0], d[1]);
+        return;
+      }
 
       // Toggle tile hover debug mode
       if (e.key === '?') {
@@ -528,8 +545,8 @@ export class Game {
     const room = this.mapData.rooms[this.currentRoom];
     const flId = room.spot?.[this.px]?.[this.py]?.[0] ?? 0;
     const movMod = (flId > 0 ? this.objects[flId]?.movement : null) ?? 0;
-    // Base 250 ms; each movement unit adds 150 ms (positive = slower terrain)
-    return Math.max(80, 250 + movMod * 150);
+    // Base 150 ms (~40% faster than original 250 ms); slow terrain adds proportionally
+    return Math.max(50, 150 + movMod * 90);
   }
 
   // ── Tile hover debug ──────────────────────────────────────────────────────
