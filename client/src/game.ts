@@ -2,6 +2,7 @@ import { MapFile, ObjectFile, ObjDef, RoomData, InventoryItem } from './types';
 import { loadMaskedSprite, loadSprite, setColorMode, getColorMode, ColorMode } from './assets';
 import { preloadRoomSprites, buildRoomBackground, renderFrame, OtherPlayer, TILE, BORDER } from './renderer';
 import { GameNetwork } from './network';
+import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
 
 const GRID = 20;
 
@@ -12,9 +13,56 @@ function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[]):
   const cell = room.spot?.[x]?.[y];
   if (!cell) return false;
   const [flId, wlId] = cell;
+  // Wall objects block by default; only passable if explicitly permeable:true
   if (wlId > 0 && !objects[wlId]?.permeable) return true;
-  if (flId > 0 && !objects[flId]?.permeable) return true;
+  // Floor objects are walkable by default; only block if explicitly permeable:false
+  if (flId > 0 && objects[flId]?.permeable === false) return true;
   return false;
+}
+
+const STEP_DIRS: [number, number][] = [
+  [0,-1],[1,0],[0,1],[-1,0],       // cardinal first (preferred for straight paths)
+  [1,-1],[1,1],[-1,1],[-1,-1],     // then diagonal
+];
+
+/**
+ * BFS to find the first step from (sx,sy) toward (tx,ty) through walkable tiles.
+ * Returns [dx,dy] for the next step, or null if no path or already at target.
+ */
+function findNextStep(
+  sx: number, sy: number,
+  tx: number, ty: number,
+  room: RoomData, objects: ObjDef[]
+): [number, number] | null {
+  if (sx === tx && sy === ty) return null;
+  const visited = new Uint8Array(GRID * GRID);
+  type Node = { x: number; y: number; first: [number, number] };
+  const queue: Node[] = [];
+  visited[sy * GRID + sx] = 1;
+  for (const [dx, dy] of STEP_DIRS) {
+    const nx = sx + dx, ny = sy + dy;
+    if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+    if (isTileBlocked(nx, ny, room, objects)) continue;
+    const k = ny * GRID + nx;
+    if (visited[k]) continue;
+    visited[k] = 1;
+    if (nx === tx && ny === ty) return [dx, dy];
+    queue.push({ x: nx, y: ny, first: [dx, dy] });
+  }
+  while (queue.length > 0) {
+    const { x, y, first } = queue.shift()!;
+    for (const [dx, dy] of STEP_DIRS) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+      if (isTileBlocked(nx, ny, room, objects)) continue;
+      const k = ny * GRID + nx;
+      if (visited[k]) continue;
+      visited[k] = 1;
+      if (nx === tx && ny === ty) return first;
+      queue.push({ x: nx, y: ny, first });
+    }
+  }
+  return null; // no path
 }
 
 /** Build a map from "x,y" → exit destination for all exit objects in the room. */
@@ -82,6 +130,9 @@ export class Game {
   private moveTarget: { x: number; y: number } | null = null;
   private moveTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // tile hover debug mode (toggled by ?)
+  private hoverMode = false;
+
   constructor(
     mapData: MapFile,
     objFile: ObjectFile,
@@ -131,6 +182,16 @@ export class Game {
       const d = keyDirs[e.key] ?? codeDirs[e.code];
       if (d) { e.preventDefault(); this.stopMoving(); void this.move(d[0], d[1]); return; }
 
+      // Toggle tile hover debug mode
+      if (e.key === '?') {
+        e.preventDefault();
+        this.hoverMode = !this.hoverMode;
+        this.canvas.style.cursor = this.hoverMode ? 'crosshair' : '';
+        this.status.textContent = this.hoverMode ? '[Hover mode ON — move mouse over tiles]' : '';
+        if (!this.hoverMode) hideTooltip();
+        return;
+      }
+
       // Item actions
       if (e.key === 's') { e.preventDefault(); this.network?.sendPickup(this.px, this.py, 'left'); return; }
       if (e.key === 'S') { e.preventDefault(); this.network?.sendPickup(this.px, this.py, 'right'); return; }
@@ -173,6 +234,16 @@ export class Game {
         this.startMovingTo(tx, ty);
       }
     });
+
+    this.canvas.addEventListener('mousemove', (e) => {
+      if (!this.hoverMode) { moveTooltip(e.clientX, e.clientY); return; }
+      const rect = this.canvas.getBoundingClientRect();
+      const tx = Math.floor((e.clientX - rect.left) / TILE) - 1;
+      const ty = Math.floor((e.clientY - rect.top)  / TILE) - 1;
+      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) { hideTooltip(); return; }
+      showTooltip(this.buildTileHtml(tx, ty), e.clientX, e.clientY);
+    });
+    this.canvas.addEventListener('mouseleave', () => { if (this.hoverMode) hideTooltip(); });
 
     if (this.network) this.wireNetwork(this.network);
   }
@@ -411,8 +482,20 @@ export class Game {
 
   private async doMoveStep(): Promise<void> {
     if (!this.moveTarget) return;
-    const dx = Math.sign(this.moveTarget.x - this.px);
-    const dy = Math.sign(this.moveTarget.y - this.py);
+    const target = this.moveTarget;
+
+    let dx: number, dy: number;
+    if (target.x < 0 || target.x >= GRID || target.y < 0 || target.y >= GRID) {
+      // Off-map target (border exit): walk straight in that direction
+      dx = Math.sign(target.x - this.px);
+      dy = Math.sign(target.y - this.py);
+    } else {
+      // In-room target: use BFS to navigate around obstacles
+      const room = this.mapData.rooms[this.currentRoom];
+      const step = findNextStep(this.px, this.py, target.x, target.y, room, this.objects);
+      if (!step) { this.stopMoving(); return; }
+      [dx, dy] = step;
+    }
 
     if (dx === 0 && dy === 0) { this.stopMoving(); return; }
 
@@ -445,6 +528,45 @@ export class Game {
     const movMod = (flId > 0 ? this.objects[flId]?.movement : null) ?? 0;
     // Base 250 ms; each movement unit adds 150 ms (positive = slower terrain)
     return Math.max(80, 250 + movMod * 150);
+  }
+
+  // ── Tile hover debug ──────────────────────────────────────────────────────
+
+  private buildTileHtml(tx: number, ty: number): string {
+    const room = this.mapData.rooms[this.currentRoom];
+    const rows: string[] = [`<div class="tip-name">Tile (${tx}, ${ty})</div>`];
+
+    const [flId, wlId] = room.spot?.[tx]?.[ty] ?? [0, 0];
+    const flObj = flId > 0 ? this.objects[flId] : null;
+    const wlObj = wlId > 0 ? this.objects[wlId] : null;
+
+    if (flObj) {
+      const blocked = flObj.permeable === false ? ' <span class="tip-lbl">[blocks]</span>' : '';
+      rows.push(`<div class="tip-row"><span class="tip-lbl">floor</span> ${flObj.name ?? `#${flId}`}${blocked}</div>`);
+    }
+    if (wlObj) {
+      const passable = wlObj.permeable ? ' <span class="tip-lbl">[passable]</span>' : ' <span class="tip-lbl">[blocks]</span>';
+      rows.push(`<div class="tip-row"><span class="tip-lbl">wall&nbsp;</span> ${wlObj.name ?? `#${wlId}`}${passable}</div>`);
+    }
+
+    const recHere = (room.recorded_objects ?? []).filter(ro => ro.x === tx && ro.y === ty && ro.type > 0);
+    for (const ro of recHere) {
+      const obj = this.objects[ro.type];
+      const nm = obj?.name ?? `#${ro.type}`;
+      const tag = obj?.takeable ? ' <span class="tip-lbl">[pickup]</span>' : '';
+      rows.push(`<div class="tip-row">• ${nm}${tag}</div>`);
+    }
+
+    const fi = this.floorItems.get(this.currentRoom)?.get(`${tx},${ty}`);
+    if (fi) {
+      const obj = this.objects[fi.type];
+      rows.push(`<div class="tip-row">★ ${obj?.name ?? `#${fi.type}`} <span class="tip-lbl">[dropped]</span></div>`);
+    }
+
+    if (!flObj && !wlObj && recHere.length === 0 && !fi) {
+      rows.push(`<div class="tip-row tip-lbl">empty</div>`);
+    }
+    return rows.join('');
   }
 
   // ── Rendering ──────────────────────────────────────────────────────────────
