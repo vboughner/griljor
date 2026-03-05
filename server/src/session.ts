@@ -400,21 +400,31 @@ export class GameSession {
     const room = this.world.rooms[player.room];
     if (!room) return;
 
-    // Compute full wall-stopped path tile by tile
+    // Compute Bresenham path from player to target, capped at range
     const path: Array<{x: number, y: number}> = [];
-    for (let i = 1; i <= range; i++) {
-      const tx = player.x + dx * i;
-      const ty = player.y + dy * i;
-      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) break;
-      const cell = room.spot?.[tx]?.[ty];
-      if (cell) {
-        const [flId, wlId] = cell;
-        const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
-        const floorObj = flId > 0 ? this.world.objects[flId] : null;
-        if (wallObj  && !wallObj.permeable)  break;
-        if (floorObj && !floorObj.permeable) break;
+    {
+      const x0 = player.x, y0 = player.y;
+      const x1 = msg.targetX, y1 = msg.targetY;
+      const adx = Math.abs(x1 - x0), ady = Math.abs(y1 - y0);
+      const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+      let err = adx - ady;
+      let cx = x0, cy = y0;
+      while (path.length < range) {
+        const e2 = 2 * err;
+        if (e2 > -ady) { err -= ady; cx += sx; }
+        if (e2 <  adx) { err += adx; cy += sy; }
+        if (cx < 0 || cx >= GRID || cy < 0 || cy >= GRID) break;
+        const cell = room.spot?.[cx]?.[cy];
+        if (cell) {
+          const [flId, wlId] = cell;
+          const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+          const floorObj = flId > 0 ? this.world.objects[flId] : null;
+          if (wallObj  && !wallObj.permeable)  break;
+          if (floorObj && !floorObj.permeable) break;
+        }
+        path.push({ x: cx, y: cy });
+        if (cx === x1 && cy === y1) break; // reached target tile
       }
-      path.push({ x: tx, y: ty });
     }
 
     // Find first player hit along path
