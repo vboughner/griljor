@@ -81,6 +81,29 @@ function stepDelay(spd: number): number {
   return Math.max(50, Math.round(150 * 9 / Math.max(1, spd)));
 }
 
+/**
+ * Bresenham path from (x0,y0) to (x1,y1) — returns the sequence of tile
+ * positions to visit, distributing diagonal steps evenly throughout so the
+ * path looks like a straight line.  Does NOT check for walls; caller handles
+ * fallback when a step is blocked.
+ */
+function computeBresenhamPath(
+  x0: number, y0: number, x1: number, y1: number
+): Array<{x: number, y: number}> {
+  const path: Array<{x: number, y: number}> = [];
+  const adx = Math.abs(x1 - x0), ady = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  let err = adx - ady;
+  let cx = x0, cy = y0;
+  while (cx !== x1 || cy !== y1) {
+    const e2 = 2 * err;
+    if (e2 > -ady) { err -= ady; cx += sx; }
+    if (e2 <  adx) { err += adx; cy += sy; }
+    path.push({ x: cx, y: cy });
+  }
+  return path;
+}
+
 function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, ExitTile> {
   const map = new Map<string, ExitTile>();
   for (const ro of room.recorded_objects ?? []) {
@@ -143,6 +166,7 @@ export class Game {
 
   // click-to-move path: walk toward this tile step by step
   private moveTarget: { x: number; y: number } | null = null;
+  private movePath: Array<{x: number, y: number}> = [];
   private moveTimer: ReturnType<typeof setTimeout> | null = null;
   // rate-limit: keyboard cannot move faster than click-to-move
   private moveReadyAt = 0;
@@ -491,12 +515,18 @@ export class Game {
   private startMovingTo(x: number, y: number): void {
     this.stopMoving();
     this.moveTarget = { x, y };
+    if (x >= 0 && x < GRID && y >= 0 && y < GRID) {
+      this.movePath = computeBresenhamPath(this.px, this.py, x, y);
+    } else {
+      this.movePath = []; // off-grid targets handled separately
+    }
     this.scheduleMoveStep();
   }
 
   private stopMoving(): void {
     if (this.moveTimer !== null) { clearTimeout(this.moveTimer); this.moveTimer = null; }
     this.moveTarget = null;
+    this.movePath = [];
   }
 
   private scheduleMoveStep(): void {
@@ -517,11 +547,24 @@ export class Game {
       dx = Math.sign(target.x - this.px);
       dy = Math.sign(target.y - this.py);
     } else {
-      // In-room target: use BFS to navigate around obstacles
+      // In-room: follow pre-computed Bresenham path
+      if (this.movePath.length === 0) { this.stopMoving(); return; }
+
       const room = this.mapData.rooms[this.currentRoom];
-      const step = findNextStep(this.px, this.py, target.x, target.y, room, this.objects);
-      if (!step) { this.stopMoving(); return; }
-      [dx, dy] = step;
+      const next = this.movePath[0];
+
+      // If the next Bresenham tile is blocked, fall back to BFS for one step
+      // then recompute a fresh Bresenham path from the redirected position onward
+      if (isTileBlocked(next.x, next.y, room, this.objects)) {
+        const step = findNextStep(this.px, this.py, target.x, target.y, room, this.objects);
+        if (!step) { this.stopMoving(); return; }
+        const [sdx, sdy] = step;
+        this.movePath = computeBresenhamPath(this.px + sdx, this.py + sdy, target.x, target.y);
+        this.movePath.unshift({ x: this.px + sdx, y: this.py + sdy });
+      }
+
+      dx = this.movePath[0].x - this.px;
+      dy = this.movePath[0].y - this.py;
     }
 
     if (dx === 0 && dy === 0) { this.stopMoving(); return; }
@@ -532,16 +575,16 @@ export class Game {
 
     await this.move(dx, dy);
 
-    // Blocked: position unchanged and still in same room
-    if (this.currentRoom === prevRoom && this.px === prevX && this.py === prevY) {
-      this.stopMoving();
-      return;
-    }
-
     // Room changed: arrived in new room, stop
-    if (this.currentRoom !== prevRoom) {
-      this.stopMoving();
-      return;
+    if (this.currentRoom !== prevRoom) { this.stopMoving(); return; }
+
+    // Blocked (e.g. another player on that tile): stop
+    if (this.px === prevX && this.py === prevY) { this.stopMoving(); return; }
+
+    // Consume the step we just completed
+    if (this.movePath.length > 0 &&
+        this.movePath[0].x === this.px && this.movePath[0].y === this.py) {
+      this.movePath.shift();
     }
 
     // Still have a target — keep going
