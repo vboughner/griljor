@@ -32,8 +32,11 @@ type S2CMessage =
   | { type: 'YOUR_STATS';    hp: number; maxHp: number; power: number; maxPower: number;
                              xp: number; level: number }
   | { type: 'PLAYER_HEALTH'; id: number; hp: number; maxHp: number }
-  | { type: 'MISSILE';       room: number; fromX: number; fromY: number;
-                             toX: number; toY: number; objType: number }
+  | { type: 'MISSILE_START'; id: number; room: number;
+                             path: Array<{x: number, y: number}>;
+                             objType: number; msPerStep: number;
+                             dx: number; dy: number }
+  | { type: 'MISSILE_END';   id: number }
   | { type: 'REPORT';        text: string }
   | { type: 'YOU_DIED';      killedBy: number; killerName: string;
                              respawnRoom: number; respawnX: number; respawnY: number };
@@ -54,7 +57,8 @@ export class GameNetwork {
   onItemsSync:   (msg: Extract<S2CMessage, { type: 'ITEMS_SYNC' }>) => void     = () => {};
   onYourStats:   (msg: Extract<S2CMessage, { type: 'YOUR_STATS' }>) => void     = () => {};
   onPlayerHealth:(msg: Extract<S2CMessage, { type: 'PLAYER_HEALTH' }>) => void  = () => {};
-  onMissile:     (msg: Extract<S2CMessage, { type: 'MISSILE' }>) => void        = () => {};
+  onMissileStart:(msg: Extract<S2CMessage, { type: 'MISSILE_START' }>) => void  = () => {};
+  onMissileEnd:  (msg: Extract<S2CMessage, { type: 'MISSILE_END' }>) => void    = () => {};
   onReport:      (msg: Extract<S2CMessage, { type: 'REPORT' }>) => void         = () => {};
   onYouDied:     (msg: Extract<S2CMessage, { type: 'YOU_DIED' }>) => void       = () => {};
   onClose:       () => void                                                      = () => {};
@@ -86,7 +90,8 @@ export class GameNetwork {
         case 'ITEMS_SYNC':     this.onItemsSync(msg);    break;
         case 'YOUR_STATS':     this.onYourStats(msg);    break;
         case 'PLAYER_HEALTH':  this.onPlayerHealth(msg); break;
-        case 'MISSILE':        this.onMissile(msg);      break;
+        case 'MISSILE_START':  this.onMissileStart(msg); break;
+        case 'MISSILE_END':    this.onMissileEnd(msg);   break;
         case 'REPORT':         this.onReport(msg);       break;
         case 'YOU_DIED':       this.onYouDied(msg);      break;
       }

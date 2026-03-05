@@ -81,6 +81,10 @@ export class GameSession {
   // roomItems: Map<roomIndex, Map<"x,y", InventoryItem>>
   private roomItems = new Map<number, Map<string, InventoryItem>>();
 
+  // active missiles: id → pending damage/end timer
+  private nextMissileId = 1;
+  private activeMissiles = new Map<number, ReturnType<typeof setTimeout>>();
+
   constructor(world: World) {
     this.world = world;
     this.initRoomItems();
@@ -367,9 +371,24 @@ export class GameSession {
     const obj = this.world.objects[handItem.type];
     if (!obj?.weapon) return;
 
-    const damage = obj.damage ?? 10;
+    // For numbered items (guns, staves), require charges
+    if (obj.numbered && handItem.quantity <= 0) return;
+
+    // Damage may live on the bullet/projectile object rather than the weapon itself
+    const bulletObj = obj.movingobj ? this.world.objects[obj.movingobj] : null;
+    const damage = obj.damage ?? bulletObj?.damage ?? 10;
     const range  = obj.range  ?? 5;
     const movingObjType = obj.movingobj ?? handItem.type;
+
+    // Decrement ammo/charges for numbered weapons
+    if (obj.numbered) {
+      handItem.quantity--;
+      if (handItem.quantity <= 0) {
+        if (msg.hand === 'left') player.leftHand  = null;
+        else                     player.rightHand = null;
+      }
+      this.sendInventory(player);
+    }
 
     // Compute unit direction toward target
     const rawDx = msg.targetX - player.x;
@@ -381,17 +400,12 @@ export class GameSession {
     const room = this.world.rooms[player.room];
     if (!room) return;
 
-    // Trace projectile
-    let hitPlayer: Player | null = null;
-    let hitX = player.x;
-    let hitY = player.y;
-
+    // Compute full wall-stopped path tile by tile
+    const path: Array<{x: number, y: number}> = [];
     for (let i = 1; i <= range; i++) {
       const tx = player.x + dx * i;
       const ty = player.y + dy * i;
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) break;
-
-      // Stop at solid walls (skip check if map has no tile grid)
       const cell = room.spot?.[tx]?.[ty];
       if (cell) {
         const [flId, wlId] = cell;
@@ -400,35 +414,52 @@ export class GameSession {
         if (wallObj  && !wallObj.permeable)  break;
         if (floorObj && !floorObj.permeable) break;
       }
+      path.push({ x: tx, y: ty });
+    }
 
-      hitX = tx;
-      hitY = ty;
-
-      // Check for player collision
+    // Find first player hit along path
+    let hitPlayer: Player | null = null;
+    let hitAtStep = path.length;
+    outer: for (let i = 0; i < path.length; i++) {
+      const { x, y } = path[i];
       for (const other of this.players.values()) {
         if (other.id === playerId || other.room !== player.room) continue;
-        if (other.x === tx && other.y === ty) {
+        if (other.x === x && other.y === y) {
           hitPlayer = other;
-          break;
+          hitAtStep = i + 1;
+          break outer;
         }
       }
-      if (hitPlayer) break;
     }
 
-    // Broadcast missile to everyone in the room
+    const finalPath = path.slice(0, hitAtStep);
+    if (finalPath.length === 0) return;
+
+    const id = this.nextMissileId++;
+    const speed = bulletObj?.speed ?? obj.speed ?? 5;
+    // Match original formula: missile_wait = CLICKS_PER_MOVE*5 / speed / MISSILE_SPEED_FACTOR
+    // With CLICKS_PER_MOVE=500, MISSILE_SPEED_FACTOR=2.2 → msPerStep = 2500/(speed*2.2)
+    const msPerStep = Math.max(50, Math.round(2500 / (speed * 2.2)));
+
     this.broadcastToRoom(player.room, {
-      type: 'MISSILE',
-      room: player.room,
-      fromX: player.x, fromY: player.y,
-      toX: hitX, toY: hitY,
+      type: 'MISSILE_START',
+      id, room: player.room,
+      path: finalPath,
       objType: movingObjType,
+      msPerStep,
+      dx, dy,
     });
 
-    if (hitPlayer) {
-      this.dealDamage(hitPlayer, damage, player);
-    }
+    // Apply damage when missile arrives; also signal clients to clear the sprite
+    const travelMs = finalPath.length * msPerStep;
+    const timer = setTimeout(() => {
+      this.activeMissiles.delete(id);
+      this.broadcastToRoom(player.room, { type: 'MISSILE_END', id });
+      if (hitPlayer) this.dealDamage(hitPlayer, damage, player);
+    }, travelMs);
+    this.activeMissiles.set(id, timer);
 
-    console.log(`[combat] ${player.name} fired ${obj.name ?? '?'} → (${hitX},${hitY})${hitPlayer ? ` hit ${hitPlayer.name}` : ''}`);
+    console.log(`[combat] ${player.name} fired ${obj.name ?? '?'} (${finalPath.length} steps @ ${msPerStep}ms)${hitPlayer ? ` → hits ${hitPlayer.name}` : ''}`);
   }
 
   private dealDamage(victim: Player, damage: number, attacker: Player | null): void {

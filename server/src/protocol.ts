@@ -37,8 +37,11 @@ export type S2CMessage =
   | { type: 'YOUR_STATS';    hp: number; maxHp: number; power: number; maxPower: number;
                              xp: number; level: number }
   | { type: 'PLAYER_HEALTH'; id: number; hp: number; maxHp: number }
-  | { type: 'MISSILE';       room: number; fromX: number; fromY: number;
-                             toX: number; toY: number; objType: number }
+  | { type: 'MISSILE_START'; id: number; room: number;
+                             path: Array<{x: number, y: number}>;
+                             objType: number; msPerStep: number;
+                             dx: number; dy: number }
+  | { type: 'MISSILE_END';   id: number }
   | { type: 'REPORT';        text: string }
   | { type: 'YOU_DIED';      killedBy: number; killerName: string;
                              respawnRoom: number; respawnX: number; respawnY: number };

@@ -1,5 +1,5 @@
 import { MapFile, ObjectFile, ObjDef, RoomData, InventoryItem } from './types';
-import { loadMaskedSprite, setColorMode, ColorMode } from './assets';
+import { loadMaskedSprite, loadSprite, setColorMode, ColorMode } from './assets';
 import { preloadRoomSprites, buildRoomBackground, renderFrame, OtherPlayer } from './renderer';
 import { GameNetwork } from './network';
 
@@ -29,6 +29,15 @@ function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, ExitTile> 
     map.set(`${ro.x},${ro.y}`, { destRoom: ro.detail, landX, landY });
   }
   return map;
+}
+
+interface MissileAnim {
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+  objType: number;
+  timer: ReturnType<typeof setTimeout> | null;
 }
 
 interface RemotePlayer {
@@ -63,6 +72,11 @@ export class Game {
 
   // floor items: per-room map of "x,y" → item
   private floorItems = new Map<number, Map<string, InventoryItem>>();
+
+  // active missile animations
+  private missiles = new Map<number, MissileAnim>();
+  // cache: objType → ImageBitmap for missile sprites
+  private missileSpriteCache = new Map<number, ImageBitmap | null>();
 
   constructor(
     mapData: MapFile,
@@ -227,6 +241,45 @@ export class Game {
       if (msg.room === this.currentRoom) await this.render();
     };
 
+    net.onMissileStart = (msg) => {
+      if (msg.room !== this.currentRoom || msg.path.length === 0) return;
+      const anim: MissileAnim = {
+        x: msg.path[0].x, y: msg.path[0].y,
+        dx: msg.dx, dy: msg.dy,
+        objType: msg.objType, timer: null,
+      };
+      this.missiles.set(msg.id, anim);
+      void this.render();
+
+      let step = 0;
+      const advance = () => {
+        const current = this.missiles.get(msg.id);
+        if (!current) return; // cancelled by MISSILE_END
+        step++;
+        if (step < msg.path.length) {
+          current.x = msg.path[step].x;
+          current.y = msg.path[step].y;
+          void this.render();
+          current.timer = setTimeout(advance, msg.msPerStep);
+        } else {
+          // Animation finished — server will send MISSILE_END to finalize
+          // but remove locally after one extra step so sprite doesn't linger
+          current.timer = setTimeout(() => {
+            this.missiles.delete(msg.id);
+            void this.render();
+          }, msg.msPerStep);
+        }
+      };
+      anim.timer = setTimeout(advance, msg.msPerStep);
+    };
+
+    net.onMissileEnd = (msg) => {
+      const anim = this.missiles.get(msg.id);
+      if (anim?.timer) clearTimeout(anim.timer);
+      this.missiles.delete(msg.id);
+      void this.render();
+    };
+
     net.onYouDied = async (msg) => {
       await this.goToRoom(msg.respawnRoom, msg.respawnX, msg.respawnY);
     };
@@ -349,7 +402,56 @@ export class Game {
       this.canvas, this.roomBg, this.playerSprite, this.px, this.py,
       others, floorItems, this.objects, this.objset
     );
+    await this.drawMissiles();
     this.roomInfo.textContent =
       `Room ${this.currentRoom}: "${room.name}" — (${this.px}, ${this.py})`;
+  }
+
+  private async drawMissiles(): Promise<void> {
+    if (this.missiles.size === 0) return;
+    const TILE = 32;
+    const ctx = this.canvas.getContext('2d')!;
+    const base = `/data/objects/bitmaps/${this.objset}`;
+
+    for (const anim of this.missiles.values()) {
+      // Resolve sprite, using a local cache to avoid repeated createImageBitmap calls
+      let bm: ImageBitmap | null;
+      if (this.missileSpriteCache.has(anim.objType)) {
+        bm = this.missileSpriteCache.get(anim.objType)!;
+      } else {
+        const obj = this.objects[anim.objType];
+        let imgData: ImageData | null = null;
+        if (obj?.bitmap) {
+          if (obj.masked && obj.mask) {
+            imgData = await loadMaskedSprite(`${base}/${obj.bitmap}`, `${base}/${obj.mask}`);
+          } else {
+            imgData = await loadSprite(`${base}/${obj.bitmap}`);
+          }
+        }
+        bm = imgData ? await createImageBitmap(imgData) : null;
+        this.missileSpriteCache.set(anim.objType, bm);
+      }
+
+      const obj = this.objects[anim.objType];
+      const cx = anim.x * TILE + TILE / 2;
+      const cy = anim.y * TILE + TILE / 2;
+      if (bm) {
+        if (obj?.directional) {
+          // Base bitmap faces UP. Rotate clockwise by atan2(dx, -dy).
+          const angle = Math.atan2(anim.dx, -anim.dy);
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(angle);
+          ctx.drawImage(bm, -TILE / 2, -TILE / 2, TILE, TILE);
+          ctx.restore();
+        } else {
+          ctx.drawImage(bm, anim.x * TILE, anim.y * TILE, TILE, TILE);
+        }
+      } else {
+        // Fallback: yellow square
+        ctx.fillStyle = '#ffff00';
+        ctx.fillRect(anim.x * TILE + 12, anim.y * TILE + 12, 8, 8);
+      }
+    }
   }
 }

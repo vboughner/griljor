@@ -58,6 +58,7 @@ export interface ObjDef {
   weight?: number;
   numbered?: boolean;
   capacity?: number;
+  directional?: boolean;
 }
 
 export interface InventoryItem {
