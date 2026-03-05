@@ -1,6 +1,6 @@
 import { MapFile, ObjectFile, ObjDef, RoomData, InventoryItem } from './types';
-import { loadMaskedSprite, loadSprite, setColorMode, ColorMode } from './assets';
-import { preloadRoomSprites, buildRoomBackground, renderFrame, OtherPlayer } from './renderer';
+import { loadMaskedSprite, loadSprite, setColorMode, getColorMode, ColorMode } from './assets';
+import { preloadRoomSprites, buildRoomBackground, renderFrame, OtherPlayer, TILE, BORDER } from './renderer';
 import { GameNetwork } from './network';
 
 const GRID = 20;
@@ -139,8 +139,25 @@ export class Game {
     this.canvas.addEventListener('mousedown', (e) => {
       e.preventDefault();
       const rect = this.canvas.getBoundingClientRect();
-      const tx = Math.floor((e.clientX - rect.left) / 32);
-      const ty = Math.floor((e.clientY - rect.top)  / 32);
+      // Subtract BORDER so tile (0,0) starts at the inner map area
+      const tx = Math.floor((e.clientX - rect.left) / TILE) - 1;
+      const ty = Math.floor((e.clientY - rect.top)  / TILE) - 1;
+
+      // Border click → attempt room exit in that direction
+      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
+        const room = this.mapData.rooms[this.currentRoom];
+        const cx = Math.max(0, Math.min(GRID - 1, tx));
+        const cy = Math.max(0, Math.min(GRID - 1, ty));
+        if (tx < 0 && room.exit_west >= 0)
+          void this.goToRoom(room.exit_west, GRID - 1, cy);
+        else if (tx >= GRID && room.exit_east >= 0)
+          void this.goToRoom(room.exit_east, 0, cy);
+        else if (ty < 0 && room.exit_north >= 0)
+          void this.goToRoom(room.exit_north, cx, GRID - 1);
+        else if (ty >= GRID && room.exit_south >= 0)
+          void this.goToRoom(room.exit_south, cx, 0);
+        return;
+      }
 
       if (e.button === 0 || e.button === 1) {
         // Left-click → left hand, middle-click → right hand
@@ -402,14 +419,39 @@ export class Game {
       this.canvas, this.roomBg, this.playerSprite, this.px, this.py,
       others, floorItems, this.objects, this.objset
     );
+    this.drawBorderIndicators(room);
     await this.drawMissiles();
     this.roomInfo.textContent =
       `Room ${this.currentRoom}: "${room.name}" — (${this.px}, ${this.py})`;
   }
 
+  private drawBorderIndicators(room: RoomData): void {
+    const ctx = this.canvas.getContext('2d')!;
+    ctx.fillStyle = getColorMode() === 'dark' ? '#666' : '#888';
+
+    const mapPx = GRID * TILE; // 640 — width/height of inner map in pixels
+    const halfBorder = BORDER / 2;
+    const mapMid = BORDER + mapPx / 2; // center of map horizontally and vertically
+
+    const drawArrow = (cx: number, cy: number, dx: number, dy: number): void => {
+      const S = 9;
+      const px = -dy, py = dx; // perpendicular
+      ctx.beginPath();
+      ctx.moveTo(cx + dx * S, cy + dy * S);
+      ctx.lineTo(cx + px * S * 0.7 - dx * S * 0.7, cy + py * S * 0.7 - dy * S * 0.7);
+      ctx.lineTo(cx - px * S * 0.7 - dx * S * 0.7, cy - py * S * 0.7 - dy * S * 0.7);
+      ctx.closePath();
+      ctx.fill();
+    };
+
+    if (room.exit_north >= 0) drawArrow(mapMid, halfBorder,          0, -1);
+    if (room.exit_south >= 0) drawArrow(mapMid, BORDER + mapPx + halfBorder, 0,  1);
+    if (room.exit_west  >= 0) drawArrow(halfBorder,          mapMid, -1,  0);
+    if (room.exit_east  >= 0) drawArrow(BORDER + mapPx + halfBorder, mapMid,  1,  0);
+  }
+
   private async drawMissiles(): Promise<void> {
     if (this.missiles.size === 0) return;
-    const TILE = 32;
     const ctx = this.canvas.getContext('2d')!;
     const base = `/data/objects/bitmaps/${this.objset}`;
 
@@ -433,8 +475,10 @@ export class Game {
       }
 
       const obj = this.objects[anim.objType];
-      const cx = anim.x * TILE + TILE / 2;
-      const cy = anim.y * TILE + TILE / 2;
+      const ox = BORDER + anim.x * TILE;
+      const oy = BORDER + anim.y * TILE;
+      const cx = ox + TILE / 2;
+      const cy = oy + TILE / 2;
       if (bm) {
         if (obj?.directional) {
           // Base bitmap faces UP. Rotate clockwise by atan2(dx, -dy).
@@ -445,12 +489,12 @@ export class Game {
           ctx.drawImage(bm, -TILE / 2, -TILE / 2, TILE, TILE);
           ctx.restore();
         } else {
-          ctx.drawImage(bm, anim.x * TILE, anim.y * TILE, TILE, TILE);
+          ctx.drawImage(bm, ox, oy, TILE, TILE);
         }
       } else {
         // Fallback: yellow square
         ctx.fillStyle = '#ffff00';
-        ctx.fillRect(anim.x * TILE + 12, anim.y * TILE + 12, 8, 8);
+        ctx.fillRect(ox + 12, oy + 12, 8, 8);
       }
     }
   }

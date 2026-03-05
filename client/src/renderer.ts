@@ -1,9 +1,10 @@
 import { RoomData, ObjDef, InventoryItem } from './types';
 import { loadMaskedSprite, loadSprite, getColorMode } from './assets';
 
-const TILE = 32;
+export const TILE = 32;
 const GRID = 20;
-export const CANVAS_SIZE = TILE * GRID; // 640
+export const BORDER = TILE; // 1-tile blank border around the map
+export const CANVAS_SIZE = TILE * (GRID + 2); // 704 (20 tiles + 1 border each side)
 
 function bitmapUrl(objset: string, filename: string): string {
   return `/data/objects/bitmaps/${objset}/${filename}`;
@@ -71,9 +72,15 @@ export async function buildRoomBackground(
 ): Promise<OffscreenCanvas> {
   const oc = new OffscreenCanvas(CANVAS_SIZE, CANVAS_SIZE);
   const ctx = oc.getContext('2d')!;
+  const dark = getColorMode() === 'dark';
 
-  ctx.fillStyle = getColorMode() === 'dark' ? '#333' : '#e8e8e8';
+  // Border area (slightly darker than map background)
+  ctx.fillStyle = dark ? '#111' : '#c8c8c8';
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+  // Map area background
+  ctx.fillStyle = dark ? '#333' : '#e8e8e8';
+  ctx.fillRect(BORDER, BORDER, GRID * TILE, GRID * TILE);
 
   const spriteMap = new Map<number, ImageBitmap | null>();
   const getSprite = async (id: number): Promise<ImageBitmap | null> => {
@@ -92,7 +99,7 @@ export async function buildRoomBackground(
         const flId = room.spot[x][y][0];
         if (flId > 0) {
           const bm = await getSprite(flId);
-          if (bm) ctx.drawImage(bm, x * TILE, y * TILE, TILE, TILE);
+          if (bm) ctx.drawImage(bm, BORDER + x * TILE, BORDER + y * TILE, TILE, TILE);
         }
       }
     }
@@ -105,7 +112,7 @@ export async function buildRoomBackground(
         const wlId = room.spot[x][y][1];
         if (wlId > 0) {
           const bm = await getSprite(wlId);
-          if (bm) ctx.drawImage(bm, x * TILE, y * TILE, TILE, TILE);
+          if (bm) ctx.drawImage(bm, BORDER + x * TILE, BORDER + y * TILE, TILE, TILE);
         }
       }
     }
@@ -118,7 +125,7 @@ export async function buildRoomBackground(
     if (!obj?.bitmap) continue;
     if (obj.takeable) continue; // rendered dynamically
     const bm = await getSprite(ro.type);
-    if (bm) ctx.drawImage(bm, ro.x * TILE, ro.y * TILE, TILE, TILE);
+    if (bm) ctx.drawImage(bm, BORDER + ro.x * TILE, BORDER + ro.y * TILE, TILE, TILE);
   }
 
   return oc;
@@ -156,7 +163,7 @@ export async function renderFrame(
     const imgData = await spriteForObj(obj, objset);
     if (imgData) {
       const bm = await getBitmap(imgData);
-      ctx.drawImage(bm, ix * TILE, iy * TILE, TILE, TILE);
+      ctx.drawImage(bm, BORDER + ix * TILE, BORDER + iy * TILE, TILE, TILE);
     }
   }
 
@@ -164,19 +171,19 @@ export async function renderFrame(
   for (const other of others) {
     if (other.sprite) {
       const bm = await getBitmap(other.sprite);
-      ctx.drawImage(bm, other.px * TILE, other.py * TILE, TILE, TILE);
+      ctx.drawImage(bm, BORDER + other.px * TILE, BORDER + other.py * TILE, TILE, TILE);
     } else {
       ctx.fillStyle = getColorMode() === 'dark' ? '#aaa' : '#666';
-      ctx.fillRect(other.px * TILE + 8, other.py * TILE + 8, 16, 16);
+      ctx.fillRect(BORDER + other.px * TILE + 8, BORDER + other.py * TILE + 8, 16, 16);
     }
   }
 
   // Draw local player on top
   if (playerSprite) {
     const bm = await getBitmap(playerSprite);
-    ctx.drawImage(bm, px * TILE, py * TILE, TILE, TILE);
+    ctx.drawImage(bm, BORDER + px * TILE, BORDER + py * TILE, TILE, TILE);
   } else {
     ctx.fillStyle = getColorMode() === 'dark' ? '#fff' : '#000';
-    ctx.fillRect(px * TILE + 8, py * TILE + 8, 16, 16);
+    ctx.fillRect(BORDER + px * TILE + 8, BORDER + py * TILE + 8, 16, 16);
   }
 }
