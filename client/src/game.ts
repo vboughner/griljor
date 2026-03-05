@@ -157,8 +157,7 @@ export class Game {
       }
 
       if (e.button === 0 || e.button === 1) {
-        // Left/middle: cancel movement, then fire weapon or pick up
-        this.stopMoving();
+        // Left/middle: fire weapon or pick up without interrupting movement
         const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
         const key = `${tx},${ty}`;
         if (this.floorItems.get(this.currentRoom)?.has(key)) {
