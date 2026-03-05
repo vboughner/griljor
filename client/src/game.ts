@@ -557,11 +557,18 @@ export class Game {
     for (const ro of recHere) {
       const obj = this.objects[ro.type];
       const nm = obj?.name ?? `#${ro.type}`;
-      const tag = obj?.takeable ? ' <span class="tip-lbl">[pickup]</span>' : '';
+      const tag = obj?.takeable ? ' <span class="tip-lbl">[spawn]</span>' : '';
       rows.push(`<div class="tip-row">• ${nm}${tag}</div>`);
     }
 
-    if (!flObj && !wlObj && recHere.length === 0) {
+    const droppedItem = this.floorItems.get(this.currentRoom)?.get(`${tx},${ty}`);
+    if (droppedItem) {
+      const obj = this.objects[droppedItem.type];
+      const nm = obj?.name ?? `#${droppedItem.type}`;
+      rows.push(`<div class="tip-row">• ${nm} <span class="tip-lbl">[dropped]</span></div>`);
+    }
+
+    if (!flObj && !wlObj && recHere.length === 0 && !droppedItem) {
       rows.push(`<div class="tip-row tip-lbl">empty</div>`);
     }
     return rows.join('');
