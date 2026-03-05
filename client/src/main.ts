@@ -77,32 +77,40 @@ function buildInvGrid(): void {
     countSpan.className = 'inv-count';
     cell.appendChild(countSpan);
 
-    cell.addEventListener('click', (e) => {
+    cell.addEventListener('mousedown', (e) => {
       e.preventDefault();
       if (!invNetwork) return;
-      invNetwork.sendDrop(i);
+      if (e.button === 0) {
+        // Left click: swap slot with left hand
+        invNetwork.sendInvSwap(i, 'left');
+      } else if (e.button === 1) {
+        // Middle click: swap slot with right hand
+        invNetwork.sendInvSwap(i, 'right');
+      }
     });
     cell.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       if (!invNetwork) return;
-      // Right-click swaps with right hand
-      invNetwork.sendInvSwap(i, 'right');
+      // Right click: drop item in slot
+      invNetwork.sendDrop(i);
     });
 
     grid.appendChild(cell);
   }
 }
 
-async function drawItemOnCanvas(canvas: HTMLCanvasElement, item: InventoryItem): Promise<void> {
+async function getItemImgData(item: InventoryItem): Promise<ImageData | null> {
   const obj = invObjects[item.type];
-  if (!obj?.bitmap) return;
+  if (!obj?.bitmap) return null;
   const baseUrl = `/data/objects/bitmaps/${invObjset}/${obj.bitmap}`;
-  let imgData: ImageData | null = null;
   if (obj.masked && obj.mask) {
-    imgData = await loadMaskedSprite(baseUrl, `/data/objects/bitmaps/${invObjset}/${obj.mask}`);
-  } else {
-    imgData = await loadSprite(baseUrl);
+    return loadMaskedSprite(baseUrl, `/data/objects/bitmaps/${invObjset}/${obj.mask}`);
   }
+  return loadSprite(baseUrl);
+}
+
+async function drawItemOnCanvas(canvas: HTMLCanvasElement, item: InventoryItem): Promise<void> {
+  const imgData = await getItemImgData(item);
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!imgData) return;
@@ -122,10 +130,10 @@ async function updateInventoryPanel(msg: {
   const weightEl = document.getElementById('inv-weight');
   if (weightEl) weightEl.textContent = `${msg.currentWeight} / ${msg.maxWeight}`;
 
-  // Update hand slot labels
+  // Update hand slot icons
   setHandItems(
-    msg.leftHand  ? (invObjects[msg.leftHand.type]?.name  ?? '?') : null,
-    msg.rightHand ? (invObjects[msg.rightHand.type]?.name ?? '?') : null,
+    msg.leftHand  ? await getItemImgData(msg.leftHand)  : null,
+    msg.rightHand ? await getItemImgData(msg.rightHand) : null,
   );
 
   // Update hand slot click handlers (set once via data attr trick, easier to redo here)
@@ -560,7 +568,7 @@ async function main(): Promise<void> {
   showLobby();
 }
 
-export function setHandItems(left: string | null, right: string | null): void {
+export function setHandItems(left: ImageData | null, right: ImageData | null): void {
   setHandItem('left', left);
   setHandItem('right', right);
 }

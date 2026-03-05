@@ -143,8 +143,8 @@ export class Game {
       const ty = Math.floor((e.clientY - rect.top)  / 32);
 
       if (e.button === 0 || e.button === 1) {
-        // Left-click → right hand, middle-click → left hand
-        const hand: 'left' | 'right' = e.button === 1 ? 'left' : 'right';
+        // Left-click → left hand, middle-click → right hand
+        const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
         const key = `${tx},${ty}`;
         if (this.floorItems.get(this.currentRoom)?.has(key)) {
           // Pick up floor item

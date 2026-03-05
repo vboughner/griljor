@@ -61,17 +61,15 @@ export function initMouseWidget(): void {
   drawMovementSlot(document.getElementById('hand-right-canvas') as HTMLCanvasElement);
 }
 
-export function setHandItem(slot: 'left' | 'right', label: string | null): void {
+export function setHandItem(slot: 'left' | 'right', imgData: ImageData | null): void {
   const id = slot === 'left' ? 'hand-left-canvas' : 'hand-middle-canvas';
   const canvas = document.getElementById(id) as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, SLOT_W, SLOT_H);
-  if (label) {
-    ctx.fillStyle = '#aaa';
-    ctx.font = '10px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, SLOT_W / 2, SLOT_H / 2);
+  if (imgData) {
+    const tmp = new OffscreenCanvas(imgData.width, imgData.height);
+    tmp.getContext('2d')!.putImageData(imgData, 0, 0);
+    ctx.drawImage(tmp, 0, 0, SLOT_W, SLOT_H);
   }
 }
 
