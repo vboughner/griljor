@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Below we describe the original legacy game. But we are also working on a modern era web rewrite of this game in the server and client folders. That work is described in the web-rewrite.md file.
+Notes about how the implementation have gone so far, and that are in progress can be found in the implementation-notes.md file.
+
 ## Project Overview
 
 **Griljor: The War of Griljor** is a 1989-era multiplayer real-time game written in C with an X11 GUI. It has a client-server architecture where multiple players connect to a game driver (server) over TCP sockets.

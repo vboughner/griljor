@@ -83,7 +83,7 @@ export async function loadMaskedSprite(
   if (imageCache.has(cacheKey)) return imageCache.get(cacheKey)!;
   if (loadingPromises.has(cacheKey)) return loadingPromises.get(cacheKey)!;
 
-  const p = Promise.all([loadAndProcess(bitmapUrl, mode), loadRaw(maskUrl)]).then(
+  const p = Promise.all([loadRaw(bitmapUrl), loadRaw(maskUrl)]).then(
     ([bitmapData, maskData]) => {
       if (!bitmapData) return null;
 
@@ -93,9 +93,21 @@ export async function loadMaskedSprite(
         bitmapData.height
       );
 
-      if (maskData) {
-        for (let i = 0; i < result.data.length; i += 4) {
-          if (maskData.data[i] >= 200) result.data[i + 3] = 0;
+      for (let i = 0; i < result.data.length; i += 4) {
+        const outsideMask = !maskData || maskData.data[i] >= 200;
+        if (outsideMask) {
+          // Outside sprite silhouette → transparent
+          result.data[i + 3] = 0;
+        } else {
+          // Inside sprite silhouette: features (dark bits) vs interior (light bits)
+          const isFeature = result.data[i] < 200;
+          const v = mode === 'dark'
+            ? (isFeature ? 255 : 0)   // dark mode: white features, black interior
+            : (isFeature ? 0 : 255);  // light mode: black features, white interior
+          result.data[i] = v;
+          result.data[i + 1] = v;
+          result.data[i + 2] = v;
+          result.data[i + 3] = 255;
         }
       }
 
