@@ -8,15 +8,17 @@ const GRID = 20;
 
 interface ExitTile { destRoom: number; landX: number; landY: number; }
 
-/** Returns true if the tile at (x, y) cannot be entered. */
+/** Returns true if the tile at (x, y) cannot be entered by players.
+ *  movement>0 means walkable; movement=0/absent means blocked.
+ *  permeable controls missile passage only (not player movement). */
 function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[]): boolean {
   const cell = room.spot?.[x]?.[y];
   if (!cell) return false;
   const [flId, wlId] = cell;
-  // Wall objects block by default; only passable if explicitly permeable:true
-  if (wlId > 0 && !objects[wlId]?.permeable) return true;
-  // Floor objects are walkable by default; only block if explicitly permeable:false
-  if (flId > 0 && objects[flId]?.permeable === false) return true;
+  // Wall layer: blocks unless movement > 0
+  if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
+  // Floor layer: blocks only if movement is explicitly 0
+  if (flId > 0 && objects[flId]?.movement === 0) return true;
   return false;
 }
 
@@ -549,7 +551,7 @@ export class Game {
       rows.push(`<div class="tip-row"><span class="tip-lbl">speed</span> ${speedLabel} (${delay} ms/step)</div>`);
     }
     if (wlObj) {
-      const passable = wlObj.permeable ? ' <span class="tip-lbl">[passable]</span>' : ' <span class="tip-lbl">[blocks]</span>';
+      const passable = (wlObj.movement ?? 0) > 0 ? ' <span class="tip-lbl">[passable]</span>' : ' <span class="tip-lbl">[blocks]</span>';
       rows.push(`<div class="tip-row"><span class="tip-lbl">wall&nbsp;</span> ${wlObj.name ?? `#${wlId}`}${passable}</div>`);
     }
 
