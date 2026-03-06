@@ -3,15 +3,15 @@ export interface GameInfo {
   title: string;
   teams: number;
   rooms: number;
-  host: string;
-  port: number;
+  wsUrl: string;
   players: number;
   maxPlayers: number;
   avatars: Array<{ avatar: string; name: string }>;
 }
 
-const LOBBY_HTTP = 'http://localhost:3000';
-const LOBBY_WS   = 'ws://localhost:3000/watch';
+const LOBBY_HTTP = (import.meta.env.VITE_LOBBY_URL as string | undefined) ?? 'http://localhost:3000';
+// Derive WebSocket URL from HTTP URL (http→ws, https→wss)
+const LOBBY_WS = LOBBY_HTTP.replace(/^http/, 'ws') + '/watch';
 
 export async function fetchGames(): Promise<GameInfo[]> {
   const res = await fetch(`${LOBBY_HTTP}/games`);

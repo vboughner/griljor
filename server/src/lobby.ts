@@ -6,8 +6,7 @@ interface GameEntry {
   title: string;
   teams: number;
   rooms: number;
-  host: string;
-  port: number;
+  wsUrl: string;
   players: number;
   maxPlayers: number;
   avatars: Array<{ avatar: string; name: string }>;
@@ -24,10 +23,6 @@ function broadcast(): void {
   for (const ws of watchers) {
     if (ws.readyState === WebSocket.OPEN) ws.send(payload);
   }
-}
-
-function key(host: string, port: number): string {
-  return `${host}:${port}`;
 }
 
 function purgeStale(): void {
@@ -49,24 +44,21 @@ async function readBody(req: http.IncomingMessage): Promise<unknown> {
   });
 }
 
-function isRegisterBody(b: unknown): b is { mapName: string; title?: string; teams?: number; rooms?: number; host: string; port: number; maxPlayers?: number } {
+function isRegisterBody(b: unknown): b is { mapName: string; title?: string; teams?: number; rooms?: number; wsUrl: string; maxPlayers?: number } {
   return typeof b === 'object' && b !== null &&
     typeof (b as Record<string, unknown>).mapName === 'string' &&
-    typeof (b as Record<string, unknown>).host === 'string' &&
-    typeof (b as Record<string, unknown>).port === 'number';
+    typeof (b as Record<string, unknown>).wsUrl === 'string';
 }
 
-function isHeartbeatBody(b: unknown): b is { host: string; port: number; players: number; avatars?: Array<{ avatar: string; name: string }> } {
+function isHeartbeatBody(b: unknown): b is { wsUrl: string; players: number; avatars?: Array<{ avatar: string; name: string }> } {
   return typeof b === 'object' && b !== null &&
-    typeof (b as Record<string, unknown>).host === 'string' &&
-    typeof (b as Record<string, unknown>).port === 'number' &&
+    typeof (b as Record<string, unknown>).wsUrl === 'string' &&
     typeof (b as Record<string, unknown>).players === 'number';
 }
 
-function isUnregisterBody(b: unknown): b is { host: string; port: number } {
+function isUnregisterBody(b: unknown): b is { wsUrl: string } {
   return typeof b === 'object' && b !== null &&
-    typeof (b as Record<string, unknown>).host === 'string' &&
-    typeof (b as Record<string, unknown>).port === 'number';
+    typeof (b as Record<string, unknown>).wsUrl === 'string';
 }
 
 const CORS = {
@@ -95,20 +87,18 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readBody(req);
       if (!isRegisterBody(body)) { send(400, { error: 'Bad body' }); return; }
-      const k = key(body.host, body.port);
-      games.set(k, {
+      games.set(body.wsUrl, {
         mapName: body.mapName,
         title: body.title ?? body.mapName,
         teams: body.teams ?? 0,
         rooms: body.rooms ?? 0,
-        host: body.host,
-        port: body.port,
+        wsUrl: body.wsUrl,
         players: 0,
         maxPlayers: body.maxPlayers ?? 16,
         avatars: [],
         lastSeen: Date.now(),
       });
-      console.log(`[lobby] registered ${k} (${body.mapName})`);
+      console.log(`[lobby] registered ${body.wsUrl} (${body.mapName})`);
       broadcast();
       send(200, { ok: true });
     } catch { send(400, { error: 'Bad request' }); }
@@ -119,8 +109,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readBody(req);
       if (!isHeartbeatBody(body)) { send(400, { error: 'Bad body' }); return; }
-      const k = key(body.host, body.port);
-      const entry = games.get(k);
+      const entry = games.get(body.wsUrl);
       if (entry) {
         entry.players = body.players;
         entry.avatars = body.avatars ?? [];
@@ -136,9 +125,8 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readBody(req);
       if (!isUnregisterBody(body)) { send(400, { error: 'Bad body' }); return; }
-      const k = key(body.host, body.port);
-      games.delete(k);
-      console.log(`[lobby] unregistered ${k}`);
+      games.delete(body.wsUrl);
+      console.log(`[lobby] unregistered ${body.wsUrl}`);
       broadcast();
       send(200, { ok: true });
     } catch { send(400, { error: 'Bad request' }); }
@@ -165,6 +153,7 @@ wss.on('connection', (ws) => {
   ws.on('error', () => watchers.delete(ws));
 });
 
-server.listen(3000, () => {
-  console.log('Griljor lobby on :3000');
+const PORT = parseInt(process.env.PORT ?? '3000', 10);
+server.listen(PORT, () => {
+  console.log(`Griljor lobby on :${PORT}`);
 });

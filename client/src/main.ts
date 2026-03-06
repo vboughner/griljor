@@ -540,7 +540,7 @@ async function main(): Promise<void> {
         <span class="server-players">${game.players}/${game.maxPlayers}</span>
         <span class="server-teams">${teamsVal}</span>
         <span class="server-rooms">${game.rooms ?? '?'}</span>
-        <button class="join-btn" data-host="${game.host}" data-port="${game.port}" data-avatars="${avatarKeys}" data-full="${full}">Join</button>
+        <button class="join-btn" data-wsurl="${game.wsUrl}" data-avatars="${avatarKeys}" data-full="${full}">Join</button>
       `;
       const avatarStrip = row.querySelector<HTMLElement>('.server-avatars')!;
       for (const entry of (game.avatars ?? [])) {
@@ -585,7 +585,7 @@ async function main(): Promise<void> {
       invObjects = objFile.objects;
       invObjset = mapData.map.objfilename.replace(/\.obj$/, '');
 
-      const network = new GameNetwork(`ws://${gameInfo.host}:${gameInfo.port}/ws`);
+      const network = new GameNetwork(gameInfo.wsUrl);
       currentNetwork = network;
       invNetwork = network;
 

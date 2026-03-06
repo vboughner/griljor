@@ -4,9 +4,8 @@ import { WebSocketServer } from 'ws';
 import { loadWorld } from './world';
 import { GameSession } from './session';
 
-const mapName = process.argv[2] ?? 'battle';
-const LOBBY_URL = 'http://localhost:3000';
-const LOBBY_HOST = 'localhost';
+const mapName = process.env.MAP ?? process.argv[2] ?? 'battle';
+const LOBBY_URL = process.env.LOBBY_URL ?? 'http://localhost:3000';
 
 function postJson(url: string, body: unknown): void {
   const data = JSON.stringify(body);
@@ -52,8 +51,14 @@ async function main(): Promise<void> {
 
   const wss = new WebSocketServer({ server, path: '/ws' });
 
+  const startPort = parseInt(process.env.PORT ?? process.argv[3] ?? '3001', 10);
+  const PORT = await findFreePort(startPort);
+  await new Promise<void>((resolve) => server.listen(PORT, resolve));
+
+  const wsUrl = process.env.PUBLIC_WS_URL ?? `ws://localhost:${PORT}/ws`;
+
   function sendHeartbeat(): void {
-    postJson(`${LOBBY_URL}/heartbeat`, { host: LOBBY_HOST, port: PORT, players: game.playerCount, avatars: game.playerAvatars });
+    postJson(`${LOBBY_URL}/heartbeat`, { wsUrl, players: game.playerCount, avatars: game.playerAvatars });
   }
 
   const game = new GameSession(world, { onPlayerCountChange: sendHeartbeat });
@@ -62,24 +67,20 @@ async function main(): Promise<void> {
     game.handleConnection(ws);
   });
 
-  const startPort = parseInt(process.argv[3] ?? '3001', 10);
-  const PORT = await findFreePort(startPort);
-  await new Promise<void>((resolve) => server.listen(PORT, resolve));
-
   if (PORT !== startPort) {
     console.log(`Port ${startPort} in use, using :${PORT}`);
   }
   console.log(`Griljor server on :${PORT}, map: ${world.mapName} (${world.roomCount} rooms)`);
 
   // Register with lobby
-  postJson(`${LOBBY_URL}/register`, { mapName, title: world.title, teams: world.teams, rooms: world.roomCount, host: LOBBY_HOST, port: PORT, maxPlayers: world.maxPlayers });
+  postJson(`${LOBBY_URL}/register`, { mapName, title: world.title, teams: world.teams, rooms: world.roomCount, wsUrl, maxPlayers: world.maxPlayers });
 
   // Heartbeat every 5s (safety net; immediate heartbeats are sent on join/leave)
   setInterval(sendHeartbeat, 5_000);
 
   // Graceful shutdown
   const shutdown = () => {
-    postJson(`${LOBBY_URL}/unregister`, { host: LOBBY_HOST, port: PORT });
+    postJson(`${LOBBY_URL}/unregister`, { wsUrl });
     setTimeout(() => process.exit(0), 200);
   };
   process.on('SIGINT', shutdown);
