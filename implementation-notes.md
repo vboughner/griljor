@@ -721,3 +721,47 @@ The table uses fixed-width columns aligned between header and data rows:
 The `#lobby-screen` was widened to `max-width: 780px`. Row height is
 content-driven (no fixed `min-height`) so empty rows are compact and
 rows with many players expand naturally.
+
+Note: the old `avatarSelect.value` reference in `updateJoinButtons` and
+elsewhere was replaced by a `selectedAvatar` variable once the native
+`<select>` was removed.
+
+### GRILJOR Letter Logo
+
+The `<h1>GRILJOR</h1>` text heading in the lobby was replaced with a
+canvas that renders the same letter bitmaps used on the title screen
+(`/sprites/bitmaps/g.png`, `r1.png`, `i.png`, `l.png`, `j.png`, `o1.png`,
+`r2.png`).
+
+`drawLogo(canvas)` was exported from `title.ts`. It reuses the same scale
+calculation as the title screen (fit letters to canvas height, then
+constrain total width to canvas width minus padding). The `j` letter
+retains its 20% vertical drop. The canvas is sized in `main.ts` to
+`Math.max(60, Math.floor(window.innerHeight / 4) - 30)` px tall × 780px
+wide, matching the approximate letter size from the title screen's top band.
+
+### Custom Avatar Picker
+
+The native `<select id="avatar-select">` was replaced with a custom
+dropdown built from canvas elements:
+
+- `#avatar-picker` wraps `#avatar-preview` (the 32×32 trigger canvas)
+  and `#avatar-dropdown` (an absolute-positioned CSS grid, 5 columns,
+  hidden by default).
+- A `▾` caret below the preview signals it is clickable.
+- Clicking the preview toggles the dropdown; clicking outside closes it
+  via a `document` click listener with `stopPropagation` on internal clicks.
+- Each dropdown cell is a 32×32 canvas drawn via `drawAvatarOnCanvas`,
+  with a `title` showing the avatar name.
+- A `↻` random avatar button picks a different avatar at random.
+
+**Name field sync**: `nameManuallyEdited: boolean` tracks whether the
+player has typed in the name field. `setSelectedAvatar(name)` only
+overwrites `playerNameInput.value` when `nameManuallyEdited` is false.
+Once the player types anything, the name is left alone for the rest of
+the session regardless of avatar changes.
+
+**Ordering fix**: `currentGame` was declared after the avatar picker
+setup, causing a temporal dead zone error. The state variable block
+(`currentGame`, `currentNetwork`, `currentMode`, etc.) was moved to
+immediately after the DOM refs, before the avatar picker setup.

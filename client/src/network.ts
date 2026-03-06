@@ -9,7 +9,8 @@ type C2SMessage =
   | { type: 'DROP';         source: 'left' | 'right' | number }
   | { type: 'INV_SWAP';     slot: number; hand: 'left' | 'right' }
   | { type: 'FIRE_WEAPON';  hand: 'left' | 'right'; targetX: number; targetY: number }
-  | { type: 'USE_ITEM';     hand: 'left' | 'right'; targetX: number; targetY: number };
+  | { type: 'USE_ITEM';     hand: 'left' | 'right'; targetX: number; targetY: number }
+  | { type: 'PING' };
 
 type S2CMessage =
   | { type: 'ACCEPTED';      id: number; msg: string; mapName: string; rooms: number }
@@ -45,6 +46,7 @@ type S2CMessage =
 
 export class GameNetwork {
   private ws: WebSocket;
+  private pingTimer: ReturnType<typeof setInterval> | null = null;
 
   onAccepted:    (msg: Extract<S2CMessage, { type: 'ACCEPTED' }>) => void       = () => {};
   onRejected:    (msg: Extract<S2CMessage, { type: 'REJECTED' }>) => void       = () => {};
@@ -69,8 +71,15 @@ export class GameNetwork {
   constructor(url: string) {
     this.ws = new WebSocket(url);
     console.log(`[network] connecting to ${url}`);
-    this.ws.addEventListener('open',  () => console.log('[network] connected'));
-    this.ws.addEventListener('close', (ev) => { console.log(`[network] disconnected (code=${ev.code})`); this.onClose(); });
+    this.ws.addEventListener('open',  () => {
+      console.log('[network] connected');
+      this.pingTimer = setInterval(() => this.send({ type: 'PING' }), 60_000);
+    });
+    this.ws.addEventListener('close', (ev) => {
+      console.log(`[network] disconnected (code=${ev.code})`);
+      if (this.pingTimer !== null) { clearInterval(this.pingTimer); this.pingTimer = null; }
+      this.onClose();
+    });
     this.ws.addEventListener('error', () => console.log('[network] connection error'));
     this.ws.addEventListener('message', (ev) => {
       let msg: S2CMessage;

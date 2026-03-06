@@ -2,12 +2,12 @@
 
 ## Client / Server
 
-- [ ] Keep-alive pings — client sends a ping every 60 seconds while idle so a player can remain in-game with browser open; server uses this to avoid disconnecting motionless players
+- [x] Keep-alive pings — client sends a ping every 60 seconds while idle so a player can remain in-game with browser open; server uses this to avoid disconnecting motionless players
 - [ ] Consumables — items with health/power effects beyond the door mechanism
 - [ ] Teams — lobby team selection + server-side enforcement (friendly fire, spawn zones)
 - [ ] 8-direction movement — currently 4-directional only
-- [ ] Fix `nearbyFreeTile` in `session.ts` — currently uses `permeable` instead of `movement` for free-tile checks
-- [ ] When everyone leaves a map, it should respawn and reset to original state
+- [x] Fix `nearbyFreeTile` in `session.ts` — currently uses `permeable` instead of `movement` for free-tile checks
+- [x] When everyone leaves a map, it should respawn and reset to original state
 - [ ] Research how the original screen was laid out so the UI matches better
 - [ ] Make the frontend much nicer to look at (consider a frontend design pass / design tool)
 - [ ] Figure out how to use ammo — numbered weapon items should consume charges on fire

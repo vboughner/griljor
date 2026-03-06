@@ -156,6 +156,8 @@ export class GameSession {
           this.onInvSwap(playerId, msg);
         } else if (msg.type === 'FIRE_WEAPON') {
           this.onFireWeapon(playerId, msg);
+        } else if (msg.type === 'PING') {
+          // no-op: keeps the connection alive
         } else if (msg.type === 'USE_ITEM') {
           this.onUseItem(playerId, msg);
         }
@@ -736,8 +738,8 @@ export class GameSession {
             const [flId, wlId] = cell;
             const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
             const floorObj = flId > 0 ? this.world.objects[flId] : null;
-            if (wallObj  && !wallObj.permeable)  continue;
-            if (floorObj && !floorObj.permeable) continue;
+            if (wallObj  && !wallObj.movement)  continue;
+            if (floorObj && !floorObj.movement) continue;
           }
           // Also skip tiles occupied by other players
           const occupied = [...this.players.values()].some(
