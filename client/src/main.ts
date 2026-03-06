@@ -227,8 +227,8 @@ async function main(): Promise<void> {
   const lobbyScreen     = document.getElementById('lobby-screen') as HTMLElement;
   const gameScreen      = document.getElementById('game-screen') as HTMLElement;
   const playerNameInput = document.getElementById('player-name') as HTMLInputElement;
-  const avatarSelect    = document.getElementById('avatar-select') as HTMLSelectElement;
   const avatarPreview   = document.getElementById('avatar-preview') as HTMLCanvasElement;
+  const avatarDropdown  = document.getElementById('avatar-dropdown') as HTMLElement;
   const serverList      = document.getElementById('server-list') as HTMLElement;
   const lobbyStatus     = document.getElementById('lobby-status') as HTMLElement;
   const lobbyUpdated    = document.getElementById('lobby-updated') as HTMLElement;
@@ -250,17 +250,56 @@ async function main(): Promise<void> {
     west:  document.getElementById('btn-west')  as HTMLButtonElement,
   };
 
-  // ── Avatar selector ──────────────────────────────────────────────
-  for (const name of AVATARS) {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    avatarSelect.appendChild(opt);
+  // ── State ─────────────────────────────────────────────────────────
+  let currentGame: Game | null = null;
+  let currentNetwork: GameNetwork | null = null;
+  let currentMode: ColorMode = 'dark';
+  let isJoining = false;
+  let lobbyRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  let lobbyWatcher: WebSocket | null = null;
+
+  // ── Avatar picker ─────────────────────────────────────────────────
+  let selectedAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
+  let nameManuallyEdited = false;
+
+  function setSelectedAvatar(name: string): void {
+    selectedAvatar = name;
+    void drawAvatarOnCanvas(avatarPreview, name);
+    if (!nameManuallyEdited) playerNameInput.value = name;
+    currentGame?.setAvatar(name);
+    updateJoinButtons();
   }
-  const randomAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
-  avatarSelect.value = randomAvatar;
-  playerNameInput.value = randomAvatar;
-  void drawAvatarOnCanvas(avatarPreview, randomAvatar);
+
+  for (const name of AVATARS) {
+    const c = document.createElement('canvas');
+    c.width = 32;
+    c.height = 32;
+    c.title = name;
+    void drawAvatarOnCanvas(c, name);
+    c.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setSelectedAvatar(name);
+      avatarDropdown.style.display = 'none';
+    });
+    avatarDropdown.appendChild(c);
+  }
+
+  avatarPreview.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = avatarDropdown.style.display === 'grid';
+    avatarDropdown.style.display = isOpen ? 'none' : 'grid';
+  });
+
+  document.addEventListener('click', () => {
+    avatarDropdown.style.display = 'none';
+  });
+
+  playerNameInput.addEventListener('input', () => {
+    nameManuallyEdited = true;
+  });
+
+  setSelectedAvatar(selectedAvatar);
+  playerNameInput.value = selectedAvatar;
 
   // ── Player list state ────────────────────────────────────────────
   interface PlayerEntry {
@@ -399,14 +438,6 @@ async function main(): Promise<void> {
     if (e.key === 't') { e.preventDefault(); chatInput.focus(); }
   });
 
-  // ── State ─────────────────────────────────────────────────────────
-  let currentGame: Game | null = null;
-  let currentNetwork: GameNetwork | null = null;
-  let currentMode: ColorMode = 'dark';
-  let isJoining = false;
-  let lobbyRefreshTimer: ReturnType<typeof setInterval> | null = null;
-  let lobbyWatcher: WebSocket | null = null;
-
   function showTitle(): void {
     titleScreen.style.display = 'flex';
     lobbyScreen.style.display = 'none';
@@ -453,7 +484,7 @@ async function main(): Promise<void> {
 
   function setInputsDisabled(disabled: boolean): void {
     playerNameInput.disabled = disabled;
-    avatarSelect.disabled = disabled;
+    avatarPreview.style.pointerEvents = disabled ? 'none' : '';
     serverList.querySelectorAll<HTMLButtonElement>('.join-btn').forEach((btn) => {
       btn.disabled = disabled;
     });
@@ -463,7 +494,7 @@ async function main(): Promise<void> {
   let lastGames: GameInfo[] = [];
 
   function updateJoinButtons(): void {
-    const selected = avatarSelect.value;
+    const selected = selectedAvatar;
     for (const btn of serverList.querySelectorAll<HTMLButtonElement>('.join-btn')) {
       const taken = (btn.dataset.avatars ?? '').split(',');
       const full = btn.dataset.full === 'true';
@@ -631,12 +662,12 @@ async function main(): Promise<void> {
         status.textContent = `Connected as ${playerName} (id=${msg.id})`;
         game.setMyId(msg.id);
         // Server doesn't send PLAYER_INFO for the local player back to themselves
-        void addPlayerRow(msg.id, playerName, avatarSelect.value, 0, 0, Date.now());
+        void addPlayerRow(msg.id, playerName, selectedAvatar, 0, 0, Date.now());
       };
 
-      await game.setAvatar(avatarSelect.value);
+      await game.setAvatar(selectedAvatar);
       await game.goToRoom(0);
-      network.join(playerName, avatarSelect.value);
+      network.join(playerName, selectedAvatar);
     } catch (err) {
       lobbyStatus.textContent = `Error: ${err}`;
       setInputsDisabled(false);
@@ -666,12 +697,6 @@ async function main(): Promise<void> {
     refreshServerList();
   });
 
-  avatarSelect.addEventListener('change', () => {
-    playerNameInput.value = avatarSelect.value;
-    void drawAvatarOnCanvas(avatarPreview, avatarSelect.value);
-    currentGame?.setAvatar(avatarSelect.value);
-    updateJoinButtons();
-  });
 
 
   showTitle();

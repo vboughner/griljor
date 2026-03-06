@@ -29,6 +29,17 @@
     /* ── Lobby ── */
     #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 780px; }
     #lobby-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+    #avatar-picker { position: relative; display: inline-block; }
+    #avatar-preview { cursor: pointer; }
+    #avatar-preview:hover { border-color: #888; }
+    #avatar-dropdown {
+      display: none; position: absolute; z-index: 100;
+      left: 0; top: 36px;
+      background: #1a1a1a; border: 1px solid #555; padding: 4px;
+      grid-template-columns: repeat(5, 32px); gap: 3px;
+    }
+    #avatar-dropdown canvas { display: block; cursor: pointer; }
+    #avatar-dropdown canvas:hover { outline: 1px solid #aaa; }
     #avatar-preview {
       width: 32px; height: 32px;
       image-rendering: pixelated;
@@ -314,8 +325,10 @@
   <div id="lobby-screen" style="display:none">
     <h1>GRILJOR</h1>
     <div id="lobby-controls">
-      <canvas id="avatar-preview" width="32" height="32"></canvas>
-      <select id="avatar-select"></select>
+      <div id="avatar-picker">
+        <canvas id="avatar-preview" width="32" height="32" title="Choose avatar"></canvas>
+        <div id="avatar-dropdown"></div>
+      </div>
       <input id="player-name" maxlength="24" placeholder="name" />
     </div>
     <div id="server-list"></div>

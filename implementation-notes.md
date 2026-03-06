@@ -627,3 +627,97 @@ arrives during the countdown prevents the reset.
 1. Restores each room's `recorded_objects` from the deep-copied snapshot (fresh `{ ...ro }` spread per object so subsequent mutations don't corrupt the snapshot).
 2. Clears and re-runs `initRoomItems()` to rebuild floor item maps from the restored objects.
 3. Clears `chatHistory`.
+
+---
+
+## Phase 10 — Lobby Redesign
+
+**Goal**: Replace the lobby's polling model with WebSocket push, enrich each
+server row with live player avatars and map metadata, and tighten the UI.
+
+### Design Decisions
+
+- **No player profile persistence** — every game session starts fresh at
+  level 1. Stats are in-memory only and lost on disconnect or server restart.
+- **No item-level requirements** — all items are usable at any level.
+- **AI monsters deferred** — unfinished in the original; excluded from the
+  rewrite scope and tracked as a separate future project if desired.
+
+### WebSocket Push (`server/src/lobby.ts`)
+
+The lobby server previously served only HTTP (`GET /games`, `POST /register`,
+etc.). It now also accepts WebSocket connections on path `/watch`, sharing the
+existing `http.Server` instance via `new WebSocketServer({ server, path: '/watch' })`.
+
+- `watchers: Set<WebSocket>` tracks connected lobby clients.
+- `broadcast()` purges stale entries then sends the full games list as JSON to
+  every open watcher socket.
+- Called after every `/register`, `/heartbeat`, and `/unregister` mutation.
+- On connect, the current list is sent immediately so the client doesn't wait
+  for the next mutation.
+
+**Client (`client/src/lobby.ts`)**: `watchGames(onUpdate, onError)` opens a
+WebSocket to `ws://localhost:3000/watch`, calls `onUpdate` on each push,
+and returns the socket for lifecycle management.
+
+**Client (`client/src/main.ts`)**:
+- `startLobbyWatcher()` / `stopLobbyWatcher()` called from `showLobby()` /
+  `showGame()`.
+- On WebSocket error, automatically falls back to a 20-second HTTP poll so
+  the lobby still works if the server doesn't support WebSockets.
+- The manual Refresh button was removed; a subtle `updated H:MM AM/PM`
+  timestamp under the table updates on every render.
+
+### Avatar Strip in Server Rows
+
+The game server's heartbeat now includes `avatars: Array<{ avatar, name }>`
+(from `GameSession.playerAvatars`). The lobby stores and broadcasts these
+with each push.
+
+Each server row renders a 32×32 canvas per player, drawn via the same
+`loadMaskedSprite` pipeline used in-game. Hovering shows the player's chosen
+name via the shared `showTooltip` / `moveTooltip` / `hideTooltip` system
+from `tooltip.ts`.
+
+The avatar strip uses `flex-wrap: wrap` with `width: 300px`, fitting 8
+avatars per row and expanding naturally for larger player counts.
+
+**Join button disabled** when:
+- The selected avatar matches one already in the game (`data-avatars` CSV
+  checked against `avatarSelect.value`); or
+- The game is full (`players >= maxPlayers`, stored as `data-full`).
+
+Both conditions are re-evaluated whenever the avatar select changes
+(`updateJoinButtons()`).
+
+### Map Metadata in Lobby
+
+`World` gains `title`, `teams`, and `maxPlayers` fields read from the map JSON:
+
+| Field | Source | Default |
+|-------|--------|---------|
+| `title` | `map.name` | map filename |
+| `teams` | `map.teams_supported` | `0` (FFA) |
+| `maxPlayers` | `map.maxPlayers` | `16` |
+| `rooms` | `rooms.length` | — |
+
+These are sent in the `/register` call and displayed as separate fixed-width
+columns in the lobby table. Teams shows as `"FFA"` when 0, otherwise the raw
+number. Rooms shows the room count.
+
+### Lobby Table Layout
+
+The table uses fixed-width columns aligned between header and data rows:
+
+| Column | Class | Width |
+|--------|-------|-------|
+| Map title | `.server-map` | 160px, wraps |
+| Player avatars | `.server-avatars` | 300px, flex-wrap |
+| Count | `.server-players` | 55px |
+| Teams | `.server-teams` | 50px |
+| Rooms | `.server-rooms` | 50px |
+| Join | `.join-btn` | — |
+
+The `#lobby-screen` was widened to `max-width: 780px`. Row height is
+content-driven (no fixed `min-height`) so empty rows are compact and
+rows with many players expand naturally.
