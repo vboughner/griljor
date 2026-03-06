@@ -61,9 +61,9 @@ export function buildItemHtml(obj: ObjDef, item: InventoryItem): string {
     rows.push(`<div class="tip-row"><span class="tip-lbl">Capacity</span> ${obj.capacity}</div>`);
   }
 
-  if (obj.movement != null && obj.movement !== 0) {
-    const sign = obj.movement > 0 ? '+' : '';
-    rows.push(`<div class="tip-row"><span class="tip-lbl">Move</span> ${sign}${obj.movement}</div>`);
+  if (obj.movement != null && obj.movement > 0 && obj.movement !== 9) {
+    const delay = Math.max(50, Math.round(150 * 9 / obj.movement));
+    rows.push(`<div class="tip-row"><span class="tip-lbl">Move</span> ${delay} ms/step</div>`);
   }
 
   if (item.quantity > 1 || obj.numbered) {
