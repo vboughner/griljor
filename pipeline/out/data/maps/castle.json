@@ -13,7 +13,9 @@
     "execute_file": "none",
     "startup_file": "none",
     "placement_file": "castle.pla",
-    "neutrals_allowed": false
+    "neutrals_allowed": false,
+    "resetOnEmpty": true,
+    "resetAfterSeconds": 10
   },
   "rooms": [
     {

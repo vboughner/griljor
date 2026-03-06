@@ -2,7 +2,7 @@ import { MapFile, ObjectFile, ObjDef, InventoryItem } from './types';
 import { Game } from './game';
 import { ColorMode } from './assets';
 import { GameNetwork } from './network';
-import { fetchGames, GameInfo } from './lobby';
+import { fetchGames, watchGames, GameInfo } from './lobby';
 import { loadMaskedSprite, loadSprite } from './assets';
 import { initMouseWidget, setHandItem } from './mouse-widget';
 import { runTitleScreen } from './title';
@@ -230,8 +230,8 @@ async function main(): Promise<void> {
   const avatarSelect    = document.getElementById('avatar-select') as HTMLSelectElement;
   const avatarPreview   = document.getElementById('avatar-preview') as HTMLCanvasElement;
   const serverList      = document.getElementById('server-list') as HTMLElement;
-  const refreshBtn      = document.getElementById('refresh-btn') as HTMLButtonElement;
   const lobbyStatus     = document.getElementById('lobby-status') as HTMLElement;
+  const lobbyUpdated    = document.getElementById('lobby-updated') as HTMLElement;
 
   // DOM refs — game
   const canvas     = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -404,6 +404,8 @@ async function main(): Promise<void> {
   let currentNetwork: GameNetwork | null = null;
   let currentMode: ColorMode = 'dark';
   let isJoining = false;
+  let lobbyRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  let lobbyWatcher: WebSocket | null = null;
 
   function showTitle(): void {
     titleScreen.style.display = 'flex';
@@ -415,14 +417,38 @@ async function main(): Promise<void> {
     titleScreen.style.display = 'none';
   }
 
+  function startLobbyWatcher(): void {
+    if (lobbyWatcher) return;
+    lobbyWatcher = watchGames(
+      (games) => renderServerList(games),
+      () => {
+        // WebSocket failed — fall back to polling
+        lobbyWatcher = null;
+        if (!lobbyRefreshTimer) {
+          lobbyRefreshTimer = setInterval(() => { void refreshServerList(); }, 20000);
+        }
+      },
+    );
+    lobbyWatcher.addEventListener('close', () => {
+      lobbyWatcher = null;
+    });
+  }
+
+  function stopLobbyWatcher(): void {
+    if (lobbyWatcher) { lobbyWatcher.close(); lobbyWatcher = null; }
+    if (lobbyRefreshTimer) { clearInterval(lobbyRefreshTimer); lobbyRefreshTimer = null; }
+  }
+
   function showLobby(): void {
     lobbyScreen.style.display = 'flex';
     gameScreen.style.display = 'none';
+    startLobbyWatcher();
   }
 
   function showGame(): void {
     lobbyScreen.style.display = 'none';
     gameScreen.style.display = 'flex';
+    stopLobbyWatcher();
   }
 
   function setInputsDisabled(disabled: boolean): void {
@@ -434,22 +460,14 @@ async function main(): Promise<void> {
   }
 
   // ── Lobby ─────────────────────────────────────────────────────────
-  async function refreshServerList(): Promise<void> {
-    lobbyStatus.textContent = 'Loading\u2026';
+  function renderServerList(games: GameInfo[]): void {
     serverList.innerHTML = '';
-    let games: GameInfo[];
-    try {
-      games = await fetchGames();
-    } catch (err) {
-      lobbyStatus.textContent = `Error: ${err}`;
-      return;
-    }
-
+    const time = new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    lobbyUpdated.textContent = `updated ${time}`;
     if (games.length === 0) {
       lobbyStatus.textContent = 'No active servers found.';
       return;
     }
-
     lobbyStatus.textContent = '';
     for (const game of games) {
       const row = document.createElement('div');
@@ -462,6 +480,17 @@ async function main(): Promise<void> {
       row.querySelector<HTMLButtonElement>('.join-btn')!.addEventListener('click', () => joinServer(game));
       serverList.appendChild(row);
     }
+  }
+
+  async function refreshServerList(): Promise<void> {
+    let games: GameInfo[];
+    try {
+      games = await fetchGames();
+    } catch (err) {
+      lobbyStatus.textContent = `Error: ${err}`;
+      return;
+    }
+    renderServerList(games);
   }
 
   async function joinServer(gameInfo: GameInfo): Promise<void> {
@@ -602,7 +631,6 @@ async function main(): Promise<void> {
     currentGame?.setAvatar(avatarSelect.value);
   });
 
-  refreshBtn.addEventListener('click', () => refreshServerList());
 
   showTitle();
   void refreshServerList(); // start fetching in background during title

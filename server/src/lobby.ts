@@ -1,4 +1,5 @@
 import * as http from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
 
 interface GameEntry {
   mapName: string;
@@ -11,6 +12,15 @@ interface GameEntry {
 
 const TTL_MS = 15_000;
 const games = new Map<string, GameEntry>();
+const watchers = new Set<WebSocket>();
+
+function broadcast(): void {
+  purgeStale();
+  const payload = JSON.stringify([...games.values()]);
+  for (const ws of watchers) {
+    if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+  }
+}
 
 function key(host: string, port: number): string {
   return `${host}:${port}`;
@@ -91,6 +101,7 @@ const server = http.createServer(async (req, res) => {
         lastSeen: Date.now(),
       });
       console.log(`[lobby] registered ${k} (${body.mapName})`);
+      broadcast();
       send(200, { ok: true });
     } catch { send(400, { error: 'Bad request' }); }
     return;
@@ -105,6 +116,7 @@ const server = http.createServer(async (req, res) => {
       if (entry) {
         entry.players = body.players;
         entry.lastSeen = Date.now();
+        broadcast();
       }
       send(200, { ok: true });
     } catch { send(400, { error: 'Bad request' }); }
@@ -118,6 +130,7 @@ const server = http.createServer(async (req, res) => {
       const k = key(body.host, body.port);
       games.delete(k);
       console.log(`[lobby] unregistered ${k}`);
+      broadcast();
       send(200, { ok: true });
     } catch { send(400, { error: 'Bad request' }); }
     return;
@@ -130,6 +143,17 @@ const server = http.createServer(async (req, res) => {
   }
 
   send(404, { error: 'Not found' });
+});
+
+const wss = new WebSocketServer({ server, path: '/watch' });
+
+wss.on('connection', (ws) => {
+  watchers.add(ws);
+  // Send current list immediately on connect
+  purgeStale();
+  ws.send(JSON.stringify([...games.values()]));
+  ws.on('close', () => watchers.delete(ws));
+  ws.on('error', () => watchers.delete(ws));
 });
 
 server.listen(3000, () => {

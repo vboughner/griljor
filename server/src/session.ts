@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import { C2SMessage, S2CMessage, InventoryItem } from './protocol';
-import { World, ObjDef } from './world';
+import { World, ObjDef, RecObj } from './world';
 import { filterText, randomScold } from './filter';
 
 const INV_SIZE = 35;
@@ -81,12 +81,21 @@ export class GameSession {
   // roomItems: Map<roomIndex, Map<"x,y", InventoryItem>>
   private roomItems = new Map<number, Map<string, InventoryItem>>();
 
+  // snapshot of original recorded_objects for reset (deep copy taken at construction)
+  private originalRecordedObjects: RecObj[][] = [];
+
+  // pending reset timer (cancelled if a player joins before it fires)
+  private resetTimer: ReturnType<typeof setTimeout> | null = null;
+
   // active missiles: id → pending damage/end timer
   private nextMissileId = 1;
   private activeMissiles = new Map<number, ReturnType<typeof setTimeout>>();
 
   constructor(world: World) {
     this.world = world;
+    this.originalRecordedObjects = world.rooms.map((r) =>
+      r.recorded_objects.map((ro) => ({ ...ro }))
+    );
     this.initRoomItems();
   }
 
@@ -103,6 +112,15 @@ export class GameSession {
       }
       this.roomItems.set(roomIdx, itemMap);
     }
+  }
+
+  private resetWorldState(): void {
+    for (let i = 0; i < this.world.rooms.length; i++) {
+      this.world.rooms[i].recorded_objects = this.originalRecordedObjects[i].map((ro) => ({ ...ro }));
+    }
+    this.roomItems.clear();
+    this.initRoomItems();
+    this.chatHistory = [];
   }
 
   get playerCount(): number { return this.players.size; }
@@ -153,6 +171,12 @@ export class GameSession {
   }
 
   private onJoin(ws: WebSocket, msg: Extract<C2SMessage, { type: 'JOIN' }>): void {
+    if (this.resetTimer !== null) {
+      clearTimeout(this.resetTimer);
+      this.resetTimer = null;
+      console.log(`[reset] cancelled (${this.world.mapName} has a new player)`);
+    }
+
     const nameTaken = [...this.players.values()].some((p) => p.name === msg.name);
     if (nameTaken) {
       this.send(ws, { type: 'REJECTED', msg: `Name "${msg.name}" is already taken.` });
@@ -652,8 +676,18 @@ export class GameSession {
     this.wsToId.delete(player.ws);
     this.broadcast({ type: 'LEAVING_GAME', id: playerId });
     if (this.players.size === 0) {
-      this.chatHistory = [];
-      console.log('[chat] history cleared (server empty)');
+      if (this.world.resetOnEmpty) {
+        const delay = this.world.resetAfterSeconds * 1000;
+        console.log(`[reset] scheduled in ${this.world.resetAfterSeconds}s (${this.world.mapName} is empty)`);
+        this.resetTimer = setTimeout(() => {
+          this.resetTimer = null;
+          this.resetWorldState();
+          console.log(`[reset] map state reset (${this.world.mapName})`);
+        }, delay);
+      } else {
+        this.chatHistory = [];
+        console.log('[chat] history cleared (server empty)');
+      }
     }
     console.log(`[-] ${player.name} (id=${playerId}) left. Players: ${this.players.size}`);
   }
