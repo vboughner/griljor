@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Overall plan and feature roadmap**: see [`web-rewrite.md`](web-rewrite.md)
 - **What has already been implemented**: see [`implementation-notes.md`](implementation-notes.md)
+- **What still needs to be done**: see [`todo.md`](todo.md)
 - **Deployment and hosting plan**: see [`deployment-plan.md`](deployment-plan.md)
 
 When asked to work on the game, assume the target is the modern web rewrite unless the user explicitly asks about the legacy C codebase.
