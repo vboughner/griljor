@@ -660,6 +660,16 @@ existing `http.Server` instance via `new WebSocketServer({ server, path: '/watch
 WebSocket to `ws://localhost:3000/watch`, calls `onUpdate` on each push,
 and returns the socket for lifecycle management.
 
+**Immediate heartbeat on join/leave**: Previously the game server notified
+the registry only via a 5-second `setInterval`, so lobby player counts
+lagged by up to 5 seconds. The heartbeat call was extracted into a
+`sendHeartbeat()` function in `server/src/main.ts` and passed into
+`GameSession` as `opts.onPlayerCountChange`. `GameSession` stores it as
+`private onPlayerCountChange?: () => void` and calls it immediately after
+`this.players.set()` in `onJoin` and after `this.players.delete()` in
+`onLeave`. The 5-second interval is kept as a safety net. Lobby now
+reflects join/leave within ~100–200 ms.
+
 **Client (`client/src/main.ts`)**:
 - `startLobbyWatcher()` / `stopLobbyWatcher()` called from `showLobby()` /
   `showGame()`.

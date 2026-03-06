@@ -1,5 +1,5 @@
 import { RoomData, ObjDef, InventoryItem } from './types';
-import { loadMaskedSprite, loadSprite, getColorMode } from './assets';
+import { loadMaskedSprite, loadSprite, loadOpaqueTile, getColorMode } from './assets';
 
 export const TILE = 32;
 const GRID = 20;
@@ -10,13 +10,13 @@ function bitmapUrl(objset: string, filename: string): string {
   return `/data/objects/bitmaps/${objset}/${filename}`;
 }
 
-async function spriteForObj(obj: ObjDef, objset: string): Promise<ImageData | null> {
+async function spriteForObj(obj: ObjDef, objset: string, opaque = false): Promise<ImageData | null> {
   if (!obj.bitmap) return null;
   const burl = bitmapUrl(objset, obj.bitmap);
   if (obj.masked && obj.mask) {
     return loadMaskedSprite(burl, bitmapUrl(objset, obj.mask));
   }
-  return loadSprite(burl);
+  return opaque ? loadOpaqueTile(burl) : loadSprite(burl);
 }
 
 /** Preload all sprites referenced by tiles in the given room. */
@@ -82,36 +82,37 @@ export async function buildRoomBackground(
   ctx.fillStyle = dark ? '#333' : '#e8e8e8';
   ctx.fillRect(BORDER, BORDER, GRID * TILE, GRID * TILE);
 
-  const spriteMap = new Map<number, ImageBitmap | null>();
-  const getSprite = async (id: number): Promise<ImageBitmap | null> => {
-    if (spriteMap.has(id)) return spriteMap.get(id)!;
+  const spriteMap = new Map<string, ImageBitmap | null>();
+  const getSprite = async (id: number, opaque = false): Promise<ImageBitmap | null> => {
+    const cacheKey = opaque ? `opaque:${id}` : `${id}`;
+    if (spriteMap.has(cacheKey)) return spriteMap.get(cacheKey)!;
     const obj = objects[id];
-    const imgData = obj ? await spriteForObj(obj, objset) : null;
+    const imgData = obj ? await spriteForObj(obj, objset, opaque) : null;
     const bm = imgData ? await getBitmap(imgData) : null;
-    spriteMap.set(id, bm);
+    spriteMap.set(cacheKey, bm);
     return bm;
   };
 
-  // Floor layer
+  // Floor layer — unmasked tiles are opaque (white → background color)
   if (room.spot) {
     for (let x = 0; x < GRID; x++) {
       for (let y = 0; y < GRID; y++) {
         const flId = room.spot[x][y][0];
         if (flId > 0) {
-          const bm = await getSprite(flId);
+          const bm = await getSprite(flId, true);
           if (bm) ctx.drawImage(bm, BORDER + x * TILE, BORDER + y * TILE, TILE, TILE);
         }
       }
     }
   }
 
-  // Wall layer
+  // Wall layer — unmasked tiles are opaque (white → background color)
   if (room.spot) {
     for (let x = 0; x < GRID; x++) {
       for (let y = 0; y < GRID; y++) {
         const wlId = room.spot[x][y][1];
         if (wlId > 0) {
-          const bm = await getSprite(wlId);
+          const bm = await getSprite(wlId, true);
           if (bm) ctx.drawImage(bm, BORDER + x * TILE, BORDER + y * TILE, TILE, TILE);
         }
       }

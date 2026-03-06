@@ -123,3 +123,42 @@ export async function loadMaskedSprite(
 export async function loadSprite(url: string): Promise<ImageData | null> {
   return loadAndProcess(url, colorMode);
 }
+
+/**
+ * Load a bitmap tile for room rendering (floor/wall layers) with no mask.
+ * Unlike loadSprite, white pixels are rendered as the map background color
+ * (opaque), matching the original X11 XCopyPlane behavior where both bit
+ * values always drew an opaque pixel.
+ */
+export async function loadOpaqueTile(url: string): Promise<ImageData | null> {
+  const mode = colorMode;
+  const key = `${mode}:opaque:${url}`;
+  if (imageCache.has(key)) return imageCache.get(key)!;
+  if (loadingPromises.has(key)) return loadingPromises.get(key)!;
+
+  const bgR = mode === 'dark' ? 51 : 232;   // #333 vs #e8e8e8
+  const p = loadRaw(url).then((raw) => {
+    if (!raw) return null;
+    const result = new ImageData(new Uint8ClampedArray(raw.data), raw.width, raw.height);
+    for (let i = 0; i < result.data.length; i += 4) {
+      const isLight = raw.data[i] >= 200 && raw.data[i + 1] >= 200 && raw.data[i + 2] >= 200;
+      if (isLight) {
+        result.data[i] = bgR;
+        result.data[i + 1] = bgR;
+        result.data[i + 2] = bgR;
+        result.data[i + 3] = 255;
+      } else {
+        const v = mode === 'dark' ? 255 - raw.data[i] : raw.data[i];
+        result.data[i] = v;
+        result.data[i + 1] = v;
+        result.data[i + 2] = v;
+        result.data[i + 3] = 255;
+      }
+    }
+    imageCache.set(key, result);
+    return result;
+  });
+
+  loadingPromises.set(key, p);
+  return p;
+}
