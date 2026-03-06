@@ -39,7 +39,7 @@
     #server-list { width: 100%; border: 1px solid #444; min-height: 60px; }
     .server-row {
       display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-bottom: 1px solid #333; min-height: 88px;
+      padding: 10px 12px; border-bottom: 1px solid #333;
     }
     .server-row:last-child { border-bottom: none; }
     .server-header {
@@ -51,11 +51,18 @@
     .server-avatars    { display: flex; flex-wrap: wrap; gap: 4px; width: 300px; flex-shrink: 0; }
     .server-avatars-hdr{ width: 300px; flex-shrink: 0; }
     .server-players    { color: #888; white-space: nowrap; width: 55px; text-align: center; flex-shrink: 0; }
+    .server-count-hdr  { width: 55px; text-align: center; flex-shrink: 0; }
     .server-teams      { color: #888; white-space: nowrap; width: 50px; text-align: center; flex-shrink: 0; }
     .server-teams-hdr  { width: 50px; text-align: center; flex-shrink: 0; }
     .server-rooms      { color: #888; white-space: nowrap; width: 50px; text-align: center; flex-shrink: 0; }
     .server-rooms-hdr  { width: 50px; text-align: center; flex-shrink: 0; }
     .server-join-hdr   { width: 50px; flex-shrink: 0; }
+    .join-btn {
+      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      padding: 5px 6px 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.9em;
+    }
+    .join-btn:hover:not(:disabled) { background: #3a3a3a; }
+    .join-btn:disabled { opacity: 0.4; cursor: default; }
     #lobby-status { font-size: 0.85em; color: #666; min-height: 1.2em; }
     #lobby-updated { font-size: 0.75em; color: #555; margin-top: 4px; }
 

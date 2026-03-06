@@ -486,7 +486,7 @@ async function main(): Promise<void> {
     header.innerHTML = `
       <span class="server-map">Map</span>
       <span class="server-avatars-hdr">Players</span>
-      <span class="server-players">Count</span>
+      <span class="server-count-hdr">Count</span>
       <span class="server-teams-hdr">Teams</span>
       <span class="server-rooms-hdr">Rooms</span>
       <span class="server-join-hdr"></span>
@@ -501,7 +501,7 @@ async function main(): Promise<void> {
       row.innerHTML = `
         <span class="server-map">${game.title ?? game.mapName}</span>
         <span class="server-avatars"></span>
-        <span class="server-players">${game.players} / ${game.maxPlayers}</span>
+        <span class="server-players">${game.players}/${game.maxPlayers}</span>
         <span class="server-teams">${teamsVal}</span>
         <span class="server-rooms">${game.rooms ?? '?'}</span>
         <button class="join-btn" data-host="${game.host}" data-port="${game.port}" data-avatars="${avatarKeys}" data-full="${full}">Join</button>
