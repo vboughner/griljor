@@ -66,6 +66,13 @@ export function buildItemHtml(obj: ObjDef, item: InventoryItem): string {
     rows.push(`<div class="tip-row"><span class="tip-lbl">Move</span> ${delay} ms/step</div>`);
   }
 
+  if ((obj.health ?? 0) < 0) {
+    rows.push(`<div class="tip-row"><span class="tip-lbl">Heals</span> ${-(obj.health!)} HP</div>`);
+  }
+  if ((obj.mana ?? 0) < 0) {
+    rows.push(`<div class="tip-row"><span class="tip-lbl">Restores</span> ${-(obj.mana!)} Power</div>`);
+  }
+
   if (item.quantity > 1 || obj.numbered) {
     rows.push(`<div class="tip-row"><span class="tip-lbl">Qty</span> ${item.quantity}</div>`);
   }

@@ -515,7 +515,39 @@ export class GameSession {
     if (!handItem) return;
 
     const obj = this.world.objects[handItem.type];
-    if (!obj?.opens) return;
+    if (!obj) return;
+
+    // --- Consumable branch (same-tile use) ---
+    if ((obj.health ?? 0) < 0 || (obj.mana ?? 0) < 0) {
+      const healsHp    = (obj.health ?? 0) < 0;
+      const restoresMp = (obj.mana   ?? 0) < 0;
+      // Block if the relevant stat(s) are already full
+      const hpFull  = player.hp    >= player.maxHp;
+      const mpFull  = player.power >= player.maxPower;
+      if (healsHp && restoresMp && hpFull && mpFull) return;
+      if (healsHp && !restoresMp && hpFull) return;
+      if (!healsHp && restoresMp && mpFull) return;
+
+      if (healsHp)    player.hp    = Math.min(player.maxHp,    player.hp    - (obj.health ?? 0));
+      if (restoresMp) player.power = Math.min(player.maxPower, player.power - (obj.mana   ?? 0));
+
+      if (obj.numbered) {
+        handItem.quantity--;
+        if (handItem.quantity <= 0) {
+          if (msg.hand === 'left') player.leftHand  = null;
+          else                     player.rightHand = null;
+        }
+        this.sendInventory(player);
+      }
+
+      this.sendStats(player);
+      this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
+      console.log(`[use] ${player.name} consumed ${obj.name ?? '?'}`);
+      return;
+    }
+
+    // --- Opener branch (adjacent-tile use) ---
+    if (!obj.opens) return;
 
     // Must be adjacent (Chebyshev distance = 1) — not on the same tile
     const adx = Math.abs(msg.targetX - player.x);

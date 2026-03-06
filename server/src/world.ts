@@ -18,6 +18,9 @@ export interface ObjDef {
   opens?: number;       // non-zero: item can open swinging objects (bitmask)
   swings?: boolean;     // true: this object can be toggled open/closed
   alternate?: number;   // object type this becomes when toggled
+  health?: number;      // negative = restores HP on use
+  mana?: number;        // negative = restores power on use
+  lost?: boolean;       // consumed on use (remove from inventory)
 }
 
 export interface RecObj {

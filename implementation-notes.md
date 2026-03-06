@@ -740,6 +740,63 @@ retains its 20% vertical drop. The canvas is sized in `main.ts` to
 `Math.max(60, Math.floor(window.innerHeight / 4) - 30)` px tall × 780px
 wide, matching the approximate letter size from the title screen's top band.
 
+---
+
+## Phase 11 — Consumables
+
+**Goal**: Allow players to use held items that restore HP or Power by clicking their own tile.
+
+### Object Data Fields
+
+Two new fields on `ObjDef` (both server `world.ts` and client `types.ts`):
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `health` | `number` | Negative = restores that many HP on use. Positive = costs HP (not enforced per design). |
+| `mana` | `number` | Negative = restores that many Power on use. Positive = costs Power (not enforced). |
+| `lost` | `boolean` | Already present in JSON; declared explicitly now. Consumed on use when combined with `numbered`. |
+
+### Consumable Objects (standard.json)
+
+| Index | Name | Effect |
+|-------|------|--------|
+| 236 | potion | `health: -50` — restores 50 HP |
+| 237 | jug | `health: -25` — restores 25 HP |
+
+Both are `numbered: true` + `lost: true`, meaning each use decrements quantity and the item disappears from the hand slot when charges reach 0.
+
+No mana-restoring items exist in the current object set. The scroll (index 232) has `mana: 20` which is a positive value — a cost-to-fire field for its weapon behaviour, not a restore.
+
+### Server (`session.ts :: onUseItem`)
+
+The consumable branch runs before the door-opener branch. Guard conditions:
+- If item only heals HP: blocked when `player.hp >= player.maxHp`
+- If item only restores Power: blocked when `player.power >= player.maxPower`
+- If item restores both: blocked only when both are already full
+
+On success:
+- `player.hp = clamp(hp - obj.health, 0, maxHp)` (subtracting a negative = addition)
+- `player.power = clamp(power - obj.mana, 0, maxPower)`
+- Decrement `handItem.quantity`; clear hand slot at 0; call `sendInventory`
+- Send `YOUR_STATS` to self (updates HP/MP bars)
+- Broadcast `PLAYER_HEALTH` to room (updates other players' HP bar displays)
+
+### Client (`game.ts`)
+
+Click routing priority (updated):
+1. Floor item at tile → `sendPickup`
+2. Hand has `opens > 0` AND target is Chebyshev-adjacent → `sendUseItem` (door)
+3. **Hand has `health < 0` or `mana < 0` AND click is on own tile → `sendUseItem` (consume)**
+4. Target tile differs from player tile → `sendFireWeapon`
+
+### Tooltip (`tooltip.ts`)
+
+`buildItemHtml` shows heal/restore lines after the weapon stats block:
+- `health < 0` → `Heals N HP`
+- `mana < 0` → `Restores N Power`
+
+---
+
 ### Custom Avatar Picker
 
 The native `<select id="avatar-select">` was replaced with a custom
