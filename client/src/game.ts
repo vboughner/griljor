@@ -694,7 +694,8 @@ export class Game {
     }
 
     if (!flObj && !wlObj && recHere.length === 0 && !droppedItem) {
-      rows.push(`<div class="tip-row tip-lbl">empty</div>`);
+      rows.push(`<div class="tip-row"><span class="tip-lbl">floor</span> empty</div>`);
+      rows.push(`<div class="tip-row"><span class="tip-lbl">speed</span> ${stepDelay(9)} ms/step</div>`);
     }
     return rows.join('');
   }
