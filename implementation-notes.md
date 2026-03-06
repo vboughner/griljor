@@ -423,3 +423,163 @@ tooltip with:
 The spawn/dropped distinction: `recorded_objects` with `takeable: true`
 are item spawn points ([spawn]); items dropped by players appear via the
 live `floorItems` map ([dropped]).
+
+**Empty tile display**: bare tiles (no floor, wall, or recorded object)
+show `floor: empty` and `speed: 150 ms/step` (speed 9, the open-air
+default), formatted identically to tiles with named objects.
+
+**Inventory item tooltips**: the `Move` line is omitted when movement = 9
+(the default; not informative). Non-default walkable speeds are shown as
+`N ms/step` (same formula as tile tooltips), not as a raw number.
+
+### Border Click Bug Fix
+
+The original border-click handler always passed `this.px` or `this.py`
+as the fixed axis, ignoring where on the border the player actually
+clicked. Clicking the top border at column 15 while standing at column 5
+would walk straight up instead of diagonally. Fixed by passing the actual
+`(tx, ty)` coordinates directly to `startMovingTo`, which clamps them to
+the nearest edge tile and computes a Bresenham path there first.
+
+---
+
+## Phase 7 — Combat System
+
+**Goal**: Weapon firing, tick-based projectile animation, damage,
+death/respawn, and XP/level progression.
+
+### Protocol Messages
+
+**C→S**: `FIRE_WEAPON { hand, targetX, targetY }`
+
+**S→C**: `YOUR_STATS { hp, maxHp, power, maxPower, xp, level }`,
+`PLAYER_HEALTH { id, hp, maxHp }`,
+`MISSILE_START { id, room, path[], objType, msPerStep, dx, dy }`,
+`MISSILE_END { id }`,
+`REPORT { text }`,
+`YOU_DIED { killedBy, killerName, respawnRoom, respawnX, respawnY }`
+
+### Weapon Firing (`session.ts :: onFireWeapon`)
+
+Left/middle canvas click sends `FIRE_WEAPON` with the target tile. The
+server:
+1. Checks the hand item exists and has `weapon: true`.
+2. For `numbered` items (guns, staves), requires `quantity > 0` and
+   decrements it; clears the hand slot if it hits 0.
+3. Looks up damage: `obj.damage ?? bulletObj?.damage ?? 10` where
+   `bulletObj = objects[obj.movingobj]`. Guns (hand gun 180, machine gun
+   182) carry no `damage` field — damage lives on the bullet object
+   (184/185). Without this fallback they would always deal 10.
+4. Computes a Bresenham path from the player to the target tile, capped
+   at `obj.range` steps, stopping at the first non-`permeable` wall/floor
+   cell or the grid boundary.
+5. Finds the first player occupying a cell along the path (`hitPlayer`).
+6. Broadcasts `MISSILE_START` to all players in the room, then schedules
+   `MISSILE_END` + damage application via `setTimeout(travelMs)`.
+
+### Missile Speed Formula
+
+Derived from the original C source constants:
+`CLICKS_PER_MOVE = 500`, `MISSILE_SPEED_FACTOR = 2.2`
+
+```
+msPerStep = Math.max(50, Math.round(2500 / (speed * 2.2)))
+```
+
+`speed` comes from `bulletObj.speed ?? obj.speed ?? 5`.
+
+### Tick-Based Missile Animation (client)
+
+`MISSILE_START` carries the full pre-computed path array plus `msPerStep`,
+`objType`, and the unit direction vector `(dx, dy)`. The client:
+- Stores a `MissileAnim` entry in a `missiles: Map<id, MissileAnim>`.
+- Steps through path positions via a `setTimeout` chain at `msPerStep`
+  intervals, re-rendering each step.
+- `MISSILE_END` cancels any pending timer and deletes the entry.
+
+**Directional sprites**: objects with `directional: true` are rotated on
+the canvas. The base bitmap faces UP; rotation angle is
+`Math.atan2(dx, -dy)` radians clockwise. `ctx.save / rotate / restore`
+wraps a centered `drawImage` call.
+
+### Damage, Death, and Respawn
+
+`dealDamage(victim, damage, attacker)` clamps HP to 0 and broadcasts
+`PLAYER_HEALTH`. `REPORT` messages are sent privately to attacker and
+victim ("You hit X for N." / "X hits you for N!").
+
+On death (`hp === 0`), `killPlayer`:
+- Increments victim's `deaths`, attacker's `kills`; broadcasts `PLAYER_STATS`.
+- Awards XP to attacker: `10 + victim.level * 10`; triggers level-up if
+  threshold crossed (`level * 100` XP needed per level).
+- Each level up increases `maxHp` (+20) and `maxPower` (+10).
+- Drops all victim inventory to the floor (`onLeave`-style drop loop).
+- Sends `YOU_DIED` to victim; victim is teleported to room 0 at (10,10).
+- GM chat broadcast: "X was slain by Y."
+
+### Stats UI
+
+Right sidebar above the inventory panel shows HP/MP bars and XP/Level.
+`YOUR_STATS` is sent on join and after any stat change. `PLAYER_HEALTH`
+updates other players' visible HP bars (in the player list).
+
+---
+
+## Phase 8 — Door / Key Mechanism
+
+**Goal**: Players can use held openers (keys, repair kits) to toggle
+swinging objects (doors) on adjacent tiles.
+
+### How the Original Game Worked
+
+From `src/play.c :: use_opener` and `open_something_on_square`:
+- Left/middle click on an adjacent tile calls `use_object`, which
+  detects `obj.opens > 0` and calls `use_opener`.
+- `use_opener` iterates `recorded_objects` at the target tile, looking
+  for any with `swings: true`.
+- Match condition: `(opener.opens & door.type) != 0` (bitwise AND) AND
+  compatible `id` fields (0 = universal).
+- If matched: `door.type = door.alternate` (swap in-place).
+- Key (`opens: 8`) is NOT consumed — not `numbered`, not `lost`.
+- Repair kit (`opens: 128`, `numbered: true`) consumes one charge.
+
+### Standard Object Data
+
+The `standard.obj` binary does not encode the `type` bitmask field for
+door objects (absent = 0 by default in C). Since `opens & 0 = 0` would
+never match, the web rewrite skips the bitmask check and allows any
+held item with `opens > 0` to toggle any adjacent `swings: true` object.
+In practice only keys and repair kits are takeable openers, so this
+simplification is safe for the current map set.
+
+### Protocol
+
+**C→S**: `USE_ITEM { hand, targetX, targetY }`
+
+**S→C**: `ROOM_OBJECT_CHANGED { room, x, y, newType }`
+
+### Server Handler (`session.ts :: onUseItem`)
+
+1. Verify hand item exists and `obj.opens > 0`.
+2. Chebyshev distance check: target must be adjacent (distance = 1).
+3. Iterate `room.recorded_objects` at `(targetX, targetY)`. For each with
+   `swings: true` and a defined `alternate`: swap `ro.type = doorDef.alternate`.
+4. Broadcast `ROOM_OBJECT_CHANGED` for each toggled object.
+5. If opener is `numbered`, decrement charge; clear hand slot at 0.
+
+### Client Handler
+
+`onRoomObjectChanged`: finds the first `recorded_object` at `(x, y)`
+whose current type has `swings: true`, updates its `type` to `newType`,
+invalidates `roomBg`, and re-renders. Door appearance updates for all
+players in the room immediately.
+
+### Click Routing
+
+Left/middle canvas click priority order:
+1. Floor item present at tile → `sendPickup`
+2. Hand item has `opens > 0` AND target is Chebyshev-adjacent → `sendUseItem`
+3. Otherwise → `sendFireWeapon`
+
+Hand item state is tracked in `Game` via `setHands(left, right)`, called
+from `main.ts` whenever `YOUR_INVENTORY` is received.
