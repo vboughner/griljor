@@ -176,6 +176,18 @@ async function updateInventoryPanel(msg: {
     msg.rightHand ? await getItemImgData(msg.rightHand) : null,
   );
 
+  // Update hand slot charge counts for numbered weapons
+  const handLeftCount  = document.getElementById('hand-left-count');
+  const handMidCount   = document.getElementById('hand-middle-count');
+  if (handLeftCount) {
+    const obj = msg.leftHand ? invObjects[msg.leftHand.type] : null;
+    handLeftCount.textContent = (obj?.numbered && msg.leftHand) ? String(msg.leftHand.quantity) : '';
+  }
+  if (handMidCount) {
+    const obj = msg.rightHand ? invObjects[msg.rightHand.type] : null;
+    handMidCount.textContent = (obj?.numbered && msg.rightHand) ? String(msg.rightHand.quantity) : '';
+  }
+
   // Update hand slot click handlers (set once via data attr trick, easier to redo here)
   const handLeftCanvas = document.getElementById('hand-left-canvas') as HTMLCanvasElement;
   const handMiddleCanvas = document.getElementById('hand-middle-canvas') as HTMLCanvasElement;

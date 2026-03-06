@@ -166,6 +166,16 @@
     #hand-left-canvas   { left:  8px; }
     #hand-middle-canvas { left: 48px; }
     #hand-right-canvas  { left: 88px; }
+    .hand-count {
+      position: absolute;
+      top: 40px;
+      font-size: 9px;
+      color: #ff0;
+      pointer-events: none;
+      line-height: 1;
+    }
+    #hand-left-count   { right: 90px; }
+    #hand-middle-count { right: 50px; }
 
     /* ── Player list ── */
     #player-list-panel {
@@ -382,6 +392,8 @@
             <canvas id="hand-left-canvas"   width="32" height="32"></canvas>
             <canvas id="hand-middle-canvas" width="32" height="32"></canvas>
             <canvas id="hand-right-canvas"  width="32" height="32"></canvas>
+            <span id="hand-left-count"   class="hand-count"></span>
+            <span id="hand-middle-count" class="hand-count"></span>
           </div>
         </div>
         <div id="stats-panel">

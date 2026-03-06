@@ -907,3 +907,49 @@ optional `exitKeys?: Set<string>` parameter. When a tile key is in
 Bresenham blocked check and the BFS fallback, making exit tiles
 transparent to pathfinding while the movement system still triggers the
 room transition when the player steps onto them.
+
+---
+
+## Phase 13 — Numbered Weapon Charges (Ammo)
+
+**Goal**: Numbered weapon items (guns, staves) consume one charge per shot
+and disappear from the hand slot when exhausted. The charge count is visible
+on the hand slot UI.
+
+### Data Model
+
+`numbered: true` items use `quantity` to track remaining charges.
+`capacity` in the object definition is the maximum (e.g. hand gun:
+`capacity: 13`). Floor items pick up their initial charge count from
+`ro.detail` in the map's `recorded_objects` array; if `detail` is 0 the
+fallback is 1. Maps with pre-placed guns carry the correct detail value
+(e.g. castle.json: `"detail": 20` for object 64, a gun with `capacity: 40`).
+
+### Server (already implemented in Phase 7)
+
+`onFireWeapon` in `session.ts`:
+1. Guards: `if (obj.numbered && handItem.quantity <= 0) return` — prevents
+   firing an empty weapon.
+2. Decrement: `handItem.quantity--` on each successful shot.
+3. Removal: when `quantity` hits 0, the hand slot is set to `null`.
+4. Sync: `sendInventory(player)` is called after every decrement so the
+   client immediately sees the updated count.
+
+### Client — Hand Slot Charge Badges
+
+**Previously missing**: inventory grid cells already showed a yellow
+charge count badge (`inv-count` span) for numbered items, but the hand
+slot canvases in the mouse widget had no equivalent display.
+
+**Added** (`index.html` + `main.ts`):
+- Two `<span>` elements (`#hand-left-count`, `#hand-middle-count`) added
+  inside `#mouse-bitmap-wrap`, positioned absolutely at the bottom of each
+  hand slot canvas (same position logic as `inv-count`).
+- `.hand-count` CSS class: `position: absolute; top: 40px; font-size: 9px;
+  color: #ff0; pointer-events: none; line-height: 1`. Specific slots are
+  right-aligned within their canvas via `right: 90px` (left slot) and
+  `right: 50px` (middle slot) — these values place the text flush with the
+  right edge of each 32×32 canvas inside the 128-wide wrapper.
+- `updateInventoryPanel` sets `textContent` to the quantity string when
+  `obj.numbered` is true for the hand item, or `''` when the slot is empty
+  or holds a non-numbered item. Clears automatically on item removal.
