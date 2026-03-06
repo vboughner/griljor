@@ -9,6 +9,7 @@ export interface ObjDef {
   weight?: number;
   numbered?: boolean;
   permeable?: boolean;
+  movement?: number;    // player walkability: absent/0 = blocked, 1–9 = walkable (9=fastest)
   weapon?: boolean;
   damage?: number;
   range?: number;
