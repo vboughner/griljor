@@ -51,7 +51,12 @@ async function main(): Promise<void> {
   });
 
   const wss = new WebSocketServer({ server, path: '/ws' });
-  const game = new GameSession(world);
+
+  function sendHeartbeat(): void {
+    postJson(`${LOBBY_URL}/heartbeat`, { host: LOBBY_HOST, port: PORT, players: game.playerCount, avatars: game.playerAvatars });
+  }
+
+  const game = new GameSession(world, { onPlayerCountChange: sendHeartbeat });
 
   wss.on('connection', (ws) => {
     game.handleConnection(ws);
@@ -69,10 +74,8 @@ async function main(): Promise<void> {
   // Register with lobby
   postJson(`${LOBBY_URL}/register`, { mapName, title: world.title, teams: world.teams, rooms: world.roomCount, host: LOBBY_HOST, port: PORT, maxPlayers: world.maxPlayers });
 
-  // Heartbeat every 5s
-  setInterval(() => {
-    postJson(`${LOBBY_URL}/heartbeat`, { host: LOBBY_HOST, port: PORT, players: game.playerCount, avatars: game.playerAvatars });
-  }, 5_000);
+  // Heartbeat every 5s (safety net; immediate heartbeats are sent on join/leave)
+  setInterval(sendHeartbeat, 5_000);
 
   // Graceful shutdown
   const shutdown = () => {

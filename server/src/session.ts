@@ -91,7 +91,10 @@ export class GameSession {
   private nextMissileId = 1;
   private activeMissiles = new Map<number, ReturnType<typeof setTimeout>>();
 
-  constructor(world: World) {
+  private onPlayerCountChange?: () => void;
+
+  constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
+    this.onPlayerCountChange = opts?.onPlayerCountChange;
     this.world = world;
     this.originalRecordedObjects = world.rooms.map((r) =>
       r.recorded_objects.map((ro) => ({ ...ro }))
@@ -201,6 +204,7 @@ export class GameSession {
     };
     this.players.set(id, player);
     this.wsToId.set(ws, id);
+    this.onPlayerCountChange?.();
 
     // Tell the new player they're accepted and send existing players' info
     this.send(ws, {
@@ -694,6 +698,7 @@ export class GameSession {
         console.log('[chat] history cleared (server empty)');
       }
     }
+    this.onPlayerCountChange?.();
     console.log(`[-] ${player.name} (id=${playerId}) left. Players: ${this.players.size}`);
   }
 
