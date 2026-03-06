@@ -540,6 +540,7 @@ async function main(): Promise<void> {
 
       network.onInventory = (msg) => {
         void updateInventoryPanel(msg);
+        game.setHands(msg.leftHand, msg.rightHand);
       };
 
       network.onYourStats = (msg) => {

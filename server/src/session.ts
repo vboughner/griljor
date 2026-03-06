@@ -135,6 +135,8 @@ export class GameSession {
           this.onInvSwap(playerId, msg);
         } else if (msg.type === 'FIRE_WEAPON') {
           this.onFireWeapon(playerId, msg);
+        } else if (msg.type === 'USE_ITEM') {
+          this.onUseItem(playerId, msg);
         }
       }
     });
@@ -470,6 +472,60 @@ export class GameSession {
     this.activeMissiles.set(id, timer);
 
     console.log(`[combat] ${player.name} fired ${obj.name ?? '?'} (${finalPath.length} steps @ ${msPerStep}ms)${hitPlayer ? ` → hits ${hitPlayer.name}` : ''}`);
+  }
+
+  private onUseItem(playerId: number, msg: Extract<C2SMessage, { type: 'USE_ITEM' }>): void {
+    const player = this.players.get(playerId);
+    if (!player) return;
+
+    const handItem = msg.hand === 'left' ? player.leftHand : player.rightHand;
+    if (!handItem) return;
+
+    const obj = this.world.objects[handItem.type];
+    if (!obj?.opens) return;
+
+    // Must be adjacent (Chebyshev distance = 1) — not on the same tile
+    const adx = Math.abs(msg.targetX - player.x);
+    const ady = Math.abs(msg.targetY - player.y);
+    if (adx === 0 && ady === 0) return;
+    if (adx > 1 || ady > 1) return;
+
+    const room = this.world.rooms[player.room];
+    if (!room) return;
+
+    // Find swinging objects at the target tile and toggle them
+    let toggled = false;
+    for (const ro of room.recorded_objects) {
+      if (ro.x !== msg.targetX || ro.y !== msg.targetY) continue;
+      const doorDef = this.world.objects[ro.type];
+      if (!doorDef?.swings || !doorDef.alternate) continue;
+
+      // Type matching: skip if either side is 0 (universal), otherwise must share a bit
+      if (obj.opens && doorDef.type && !(obj.opens & doorDef.type)) continue;
+
+      ro.type = doorDef.alternate;
+      this.broadcastToRoom(player.room, {
+        type: 'ROOM_OBJECT_CHANGED',
+        room: player.room,
+        x: msg.targetX,
+        y: msg.targetY,
+        newType: ro.type,
+      });
+      toggled = true;
+    }
+
+    if (toggled && obj.numbered) {
+      handItem.quantity--;
+      if (handItem.quantity <= 0) {
+        if (msg.hand === 'left') player.leftHand  = null;
+        else                     player.rightHand = null;
+      }
+      this.sendInventory(player);
+    }
+
+    if (toggled) {
+      console.log(`[use] ${player.name} used ${obj.name ?? '?'} on (${msg.targetX},${msg.targetY})`);
+    }
   }
 
   private dealDamage(victim: Player, damage: number, attacker: Player | null): void {

@@ -59,6 +59,9 @@ export interface ObjDef {
   numbered?: boolean;
   capacity?: number;
   directional?: boolean;
+  opens?: number;
+  swings?: boolean;
+  alternate?: number;
 }
 
 export interface InventoryItem {

@@ -4,6 +4,7 @@ import { join } from 'path';
 export interface ObjDef {
   _index: number;
   name?: string;
+  type?: number;        // bitmask for opens-matching (0 if absent = matches all openers)
   takeable?: boolean;
   weight?: number;
   numbered?: boolean;
@@ -13,6 +14,9 @@ export interface ObjDef {
   range?: number;
   movingobj?: number;
   speed?: number;
+  opens?: number;       // non-zero: item can open swinging objects (bitmask)
+  swings?: boolean;     // true: this object can be toggled open/closed
+  alternate?: number;   // object type this becomes when toggled
 }
 
 export interface RecObj {

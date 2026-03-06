@@ -171,6 +171,10 @@ export class Game {
   // rate-limit: keyboard cannot move faster than click-to-move
   private moveReadyAt = 0;
 
+  // hand items (kept in sync via setHands, used for click routing)
+  private leftHand: InventoryItem | null = null;
+  private rightHand: InventoryItem | null = null;
+
   // tile hover debug mode (toggled by ?)
   private hoverMode = false;
 
@@ -266,11 +270,19 @@ export class Game {
       }
 
       if (e.button === 0 || e.button === 1) {
-        // Left/middle: fire weapon or pick up without interrupting movement
+        // Left/middle: pick up, use opener, or fire weapon
         const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
+        const handItem = hand === 'left' ? this.leftHand : this.rightHand;
+        const handObj = handItem ? this.objects[handItem.type] : null;
         const key = `${tx},${ty}`;
         if (this.floorItems.get(this.currentRoom)?.has(key)) {
           this.network?.sendPickup(tx, ty, hand);
+        } else if (
+          handObj?.opens &&
+          Math.max(Math.abs(tx - this.px), Math.abs(ty - this.py)) === 1
+        ) {
+          // Holding an opener adjacent to target tile — use it (open/close door)
+          this.network?.sendUseItem(hand, tx, ty);
         } else if (tx !== this.px || ty !== this.py) {
           this.network?.sendFireWeapon(hand, tx, ty);
         }
@@ -412,6 +424,28 @@ export class Game {
     net.onYouDied = async (msg) => {
       await this.goToRoom(msg.respawnRoom, msg.respawnX, msg.respawnY);
     };
+
+    net.onRoomObjectChanged = async (msg) => {
+      const room = this.mapData.rooms[msg.room];
+      if (!room) return;
+      // Update the type of the matching recorded object
+      for (const ro of room.recorded_objects ?? []) {
+        if (ro.x === msg.x && ro.y === msg.y && this.objects[ro.type]?.swings) {
+          ro.type = msg.newType;
+          break;
+        }
+      }
+      if (msg.room === this.currentRoom) {
+        this.roomBg = null; // door appearance changed — rebuild background
+        await this.render();
+      }
+    };
+  }
+
+  /** Keep hand-item state in sync so click routing can check opens field. */
+  setHands(left: InventoryItem | null, right: InventoryItem | null): void {
+    this.leftHand = left;
+    this.rightHand = right;
   }
 
   destroy(): void {

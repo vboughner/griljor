@@ -8,7 +8,8 @@ type C2SMessage =
   | { type: 'PICKUP';       x: number; y: number; hand: 'left' | 'right' }
   | { type: 'DROP';         source: 'left' | 'right' | number }
   | { type: 'INV_SWAP';     slot: number; hand: 'left' | 'right' }
-  | { type: 'FIRE_WEAPON';  hand: 'left' | 'right'; targetX: number; targetY: number };
+  | { type: 'FIRE_WEAPON';  hand: 'left' | 'right'; targetX: number; targetY: number }
+  | { type: 'USE_ITEM';     hand: 'left' | 'right'; targetX: number; targetY: number };
 
 type S2CMessage =
   | { type: 'ACCEPTED';      id: number; msg: string; mapName: string; rooms: number }
@@ -39,7 +40,8 @@ type S2CMessage =
   | { type: 'MISSILE_END';   id: number }
   | { type: 'REPORT';        text: string }
   | { type: 'YOU_DIED';      killedBy: number; killerName: string;
-                             respawnRoom: number; respawnX: number; respawnY: number };
+                             respawnRoom: number; respawnX: number; respawnY: number }
+  | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number };
 
 export class GameNetwork {
   private ws: WebSocket;
@@ -59,9 +61,10 @@ export class GameNetwork {
   onPlayerHealth:(msg: Extract<S2CMessage, { type: 'PLAYER_HEALTH' }>) => void  = () => {};
   onMissileStart:(msg: Extract<S2CMessage, { type: 'MISSILE_START' }>) => void  = () => {};
   onMissileEnd:  (msg: Extract<S2CMessage, { type: 'MISSILE_END' }>) => void    = () => {};
-  onReport:      (msg: Extract<S2CMessage, { type: 'REPORT' }>) => void         = () => {};
-  onYouDied:     (msg: Extract<S2CMessage, { type: 'YOU_DIED' }>) => void       = () => {};
-  onClose:       () => void                                                      = () => {};
+  onReport:             (msg: Extract<S2CMessage, { type: 'REPORT' }>) => void              = () => {};
+  onYouDied:            (msg: Extract<S2CMessage, { type: 'YOU_DIED' }>) => void             = () => {};
+  onRoomObjectChanged:  (msg: Extract<S2CMessage, { type: 'ROOM_OBJECT_CHANGED' }>) => void = () => {};
+  onClose:              () => void                                                            = () => {};
 
   constructor(url: string) {
     this.ws = new WebSocket(url);
@@ -92,8 +95,9 @@ export class GameNetwork {
         case 'PLAYER_HEALTH':  this.onPlayerHealth(msg); break;
         case 'MISSILE_START':  this.onMissileStart(msg); break;
         case 'MISSILE_END':    this.onMissileEnd(msg);   break;
-        case 'REPORT':         this.onReport(msg);       break;
-        case 'YOU_DIED':       this.onYouDied(msg);      break;
+        case 'REPORT':               this.onReport(msg);            break;
+        case 'YOU_DIED':             this.onYouDied(msg);           break;
+        case 'ROOM_OBJECT_CHANGED':  this.onRoomObjectChanged(msg); break;
       }
     });
   }
@@ -129,6 +133,10 @@ export class GameNetwork {
 
   sendFireWeapon(hand: 'left' | 'right', targetX: number, targetY: number): void {
     this.send({ type: 'FIRE_WEAPON', hand, targetX, targetY });
+  }
+
+  sendUseItem(hand: 'left' | 'right', targetX: number, targetY: number): void {
+    this.send({ type: 'USE_ITEM', hand, targetX, targetY });
   }
 
   private send(msg: C2SMessage): void {

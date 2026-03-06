@@ -12,7 +12,8 @@ export type C2SMessage =
   | { type: 'PICKUP';       x: number; y: number; hand: 'left' | 'right' }
   | { type: 'DROP';         source: 'left' | 'right' | number }
   | { type: 'INV_SWAP';     slot: number; hand: 'left' | 'right' }
-  | { type: 'FIRE_WEAPON';  hand: 'left' | 'right'; targetX: number; targetY: number };
+  | { type: 'FIRE_WEAPON';  hand: 'left' | 'right'; targetX: number; targetY: number }
+  | { type: 'USE_ITEM';     hand: 'left' | 'right'; targetX: number; targetY: number };
 
 // Server → Client messages
 export type S2CMessage =
@@ -44,4 +45,5 @@ export type S2CMessage =
   | { type: 'MISSILE_END';   id: number }
   | { type: 'REPORT';        text: string }
   | { type: 'YOU_DIED';      killedBy: number; killerName: string;
-                             respawnRoom: number; respawnX: number; respawnY: number };
+                             respawnRoom: number; respawnX: number; respawnY: number }
+  | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number };
