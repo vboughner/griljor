@@ -426,7 +426,7 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
     animId = requestAnimationFrame(loop);
     frame++;
 
-    ctx.fillStyle = '#0a0a0a';
+    ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, W, H);
 
     // ── Top band: letters + prompt ───────────────────────────────

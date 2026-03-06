@@ -178,6 +178,8 @@ export class Game {
   // tile hover debug mode (toggled by ?)
   private hoverMode = false;
 
+  private destroyed = false;
+
   constructor(
     mapData: MapFile,
     objFile: ObjectFile,
@@ -455,7 +457,13 @@ export class Game {
   }
 
   destroy(): void {
+    this.destroyed = true;
     window.removeEventListener('keydown', this.onKeyDown);
+    this.stopMoving();
+    for (const anim of this.missiles.values()) {
+      if (anim.timer) clearTimeout(anim.timer);
+    }
+    this.missiles.clear();
     this.network?.sendLeave();
   }
 
@@ -709,6 +717,7 @@ export class Game {
   // ── Rendering ──────────────────────────────────────────────────────────────
 
   private async render(): Promise<void> {
+    if (this.destroyed) return;
     const room = this.mapData.rooms[this.currentRoom];
 
     if (!this.roomBg) {
