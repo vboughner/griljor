@@ -832,3 +832,78 @@ the session regardless of avatar changes.
 setup, causing a temporal dead zone error. The state variable block
 (`currentGame`, `currentNetwork`, `currentMode`, etc.) was moved to
 immediately after the DOM refs, before the avatar picker setup.
+
+---
+
+## Phase 12 — Rendering Fixes and Map Data Corrections
+
+### Unmasked Tile Rendering (Floor/Wall Bleed-Through)
+
+In the original X11 game, all sprites were drawn via `XCopyPlane`: white
+pixels drew the background colour (opaque), black pixels drew the
+foreground colour. Nothing was ever transparent — only the mask shape
+(for masked sprites) controlled whether pixels were drawn at all.
+
+The web renderer's `loadAndProcess` made white pixels transparent for all
+sprites, which was correct for masked sprites (where transparency outside
+the mask shape is intended) but wrong for unmasked tiles. An unmasked
+tile like "plains" (a mostly-white speckled grass texture) became nearly
+invisible, letting the floor tile beneath it show through.
+
+**Fix** (`assets.ts`): Added `loadOpaqueTile(url)`. For unmasked tiles,
+white pixels are rendered as the map background colour (`#333` dark /
+`#e8e8e8` light) rather than transparent. Dark pixels are inverted as
+usual for dark mode.
+
+**`renderer.ts`**: `spriteForObj` gains an `opaque` flag. The floor and
+wall layers in `buildRoomBackground` pass `opaque = true`, routing
+unmasked tiles through `loadOpaqueTile`. Masked sprites (corners, walls,
+etc.) continue to use `loadMaskedSprite` unchanged — their outside-mask
+transparency is correct and intentional.
+
+The `spriteMap` local cache in `buildRoomBackground` was changed from
+`Map<number, …>` to `Map<string, …>` to allow separate cache entries for
+the same object ID rendered in opaque vs transparent mode.
+
+### Map Data: Swapped Floor/Wall Tiles
+
+The `parse_maps.py` pipeline writes `spot[x][y] = [floor_id, wall_id]`
+from the binary map files, but several tiles in the original data have
+the two IDs in the wrong order — an architectural wall object (no
+`movement` field) ends up in the floor slot, and a walkable floor tile
+ends up in the wall slot. This caused the tile to render as a passable
+floor while drawing a wall on top of it, and blocked the tile from
+movement when the floor slot's wall object stopped it.
+
+**Fixed tiles (corrected by hand in the JSON map files)**:
+
+| Map | Room | Tiles |
+|-----|------|-------|
+| `paradise.json` | 1 | (5,16) |
+| `paradise.json` | 0 | (0,5) (0,6) (0,7) (1,7) (2,7) (12,15) (17,5) (17,6) |
+| `battle.json` | 0–4 | (13,19) (17,19) in each room |
+
+The pattern to recognise a swap: floor slot has an object with no
+`movement` field (a wall/blocked type), and wall slot has an object with
+`movement > 0` (a walkable type).
+
+### Exit Tiles Unreachable via Mouse (Click-to-Move)
+
+Exit tiles — `recorded_objects` entries with `exit: true` — sometimes
+have non-walkable objects in their floor slot (e.g. "laserbolt", "frap
+bolt" in `battle.json` room 6 tile 16,18). These are artefacts of the
+original object indexing. The `move()` method already checks exits before
+collision (`exitMap` lookup comes first), so keyboard movement works fine.
+
+However, the BFS pathfinder (`findNextStep`) and the Bresenham blocked
+check in `doMoveStep` both called `isTileBlocked` without any exit
+awareness, so they treated exit tiles as impassable and could not route
+toward them.
+
+**Fix** (`game.ts`): `isTileBlocked` and `findNextStep` accept an
+optional `exitKeys?: Set<string>` parameter. When a tile key is in
+`exitKeys` the function returns `false` immediately (walkable). In
+`doMoveStep`, `new Set(this.exitMap.keys())` is passed to both the
+Bresenham blocked check and the BFS fallback, making exit tiles
+transparent to pathfinding while the movement system still triggers the
+room transition when the player steps onto them.
