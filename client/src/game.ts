@@ -261,10 +261,7 @@ export class Game {
 
       // Border click → walk toward that exit (any button)
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
-        if      (tx < 0)    this.startMovingTo(-(GRID), this.py);
-        else if (tx >= GRID) this.startMovingTo(GRID * 2, this.py);
-        else if (ty < 0)    this.startMovingTo(this.px, -(GRID));
-        else                 this.startMovingTo(this.px, GRID * 2);
+        this.startMovingTo(tx, ty);
         return;
       }
 
@@ -518,7 +515,12 @@ export class Game {
     if (x >= 0 && x < GRID && y >= 0 && y < GRID) {
       this.movePath = computeBresenhamPath(this.px, this.py, x, y);
     } else {
-      this.movePath = []; // off-grid targets handled separately
+      // Off-grid border exit: navigate to the nearest edge tile first, then step off
+      const ex = Math.max(0, Math.min(GRID - 1, x));
+      const ey = Math.max(0, Math.min(GRID - 1, y));
+      this.movePath = (this.px === ex && this.py === ey)
+        ? []
+        : computeBresenhamPath(this.px, this.py, ex, ey);
     }
     this.scheduleMoveStep();
   }
@@ -542,10 +544,29 @@ export class Game {
     const target = this.moveTarget;
 
     let dx: number, dy: number;
-    if (target.x < 0 || target.x >= GRID || target.y < 0 || target.y >= GRID) {
-      // Off-map target (border exit): walk straight in that direction
-      dx = Math.sign(target.x - this.px);
-      dy = Math.sign(target.y - this.py);
+    const offGrid = target.x < 0 || target.x >= GRID || target.y < 0 || target.y >= GRID;
+    if (offGrid) {
+      // Off-map target (border exit)
+      if (this.movePath.length > 0) {
+        // Navigate to edge tile first
+        const room = this.mapData.rooms[this.currentRoom];
+        const next = this.movePath[0];
+        const ex = Math.max(0, Math.min(GRID - 1, target.x));
+        const ey = Math.max(0, Math.min(GRID - 1, target.y));
+        if (isTileBlocked(next.x, next.y, room, this.objects)) {
+          const step = findNextStep(this.px, this.py, ex, ey, room, this.objects);
+          if (!step) { this.stopMoving(); return; }
+          const [sdx, sdy] = step;
+          this.movePath = computeBresenhamPath(this.px + sdx, this.py + sdy, ex, ey);
+          this.movePath.unshift({ x: this.px + sdx, y: this.py + sdy });
+        }
+        dx = this.movePath[0].x - this.px;
+        dy = this.movePath[0].y - this.py;
+      } else {
+        // At the edge tile — step off the grid to trigger room transition
+        dx = Math.sign(target.x - this.px);
+        dy = Math.sign(target.y - this.py);
+      }
     } else {
       // In-room: follow pre-computed Bresenham path
       if (this.movePath.length === 0) { this.stopMoving(); return; }
