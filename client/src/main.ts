@@ -5,7 +5,7 @@ import { GameNetwork } from './network';
 import { fetchGames, watchGames, GameInfo } from './lobby';
 import { loadMaskedSprite, loadSprite } from './assets';
 import { initMouseWidget, setHandItem } from './mouse-widget';
-import { runTitleScreen } from './title';
+import { runTitleScreen, drawLogo } from './title';
 import { showTooltip, hideTooltip, moveTooltip, buildItemHtml } from './tooltip';
 
 const AVATARS = [
@@ -703,6 +703,13 @@ async function main(): Promise<void> {
   });
 
 
+
+  // Size the lobby logo canvas the same way the title screen sizes its top band
+  const lobbyLogo = document.getElementById('lobby-logo') as HTMLCanvasElement;
+  const logoH = Math.max(60, Math.floor(window.innerHeight / 4) - 30);
+  lobbyLogo.width  = 780;
+  lobbyLogo.height = logoH;
+  void drawLogo(lobbyLogo);
 
   showTitle();
   void refreshServerList(); // start fetching in background during title

@@ -28,6 +28,7 @@
 
     /* ── Lobby ── */
     #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 780px; }
+    #lobby-logo { border: none; margin-top: -20px; }
     #lobby-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
     #avatar-picker { position: relative; display: inline-flex; flex-direction: column; align-items: center; margin-top: 12px; }
     #avatar-preview { cursor: pointer; }
@@ -80,6 +81,7 @@
     }
     .join-btn:hover:not(:disabled) { background: #3a3a3a; }
     .join-btn:disabled { opacity: 0.4; cursor: default; }
+    .lobby-label { font-size: 0.8em; color: #666; }
     #lobby-status { font-size: 0.85em; color: #666; min-height: 1.2em; }
     #lobby-updated { font-size: 0.75em; color: #555; margin-top: 4px; }
 
@@ -330,7 +332,8 @@
 
   <!-- ── Lobby Screen ── -->
   <div id="lobby-screen" style="display:none">
-    <h1>GRILJOR</h1>
+    <canvas id="lobby-logo" style="display:block; image-rendering:pixelated;"></canvas>
+    <div class="lobby-label">Choose your avatar and name:</div>
     <div id="lobby-controls">
       <div id="avatar-picker">
         <canvas id="avatar-preview" width="32" height="32" title="Choose avatar"></canvas>
@@ -340,6 +343,7 @@
       <input id="player-name" maxlength="24" placeholder="name" spellcheck="false" autocomplete="off" />
       <button id="random-avatar-btn" title="Random avatar">↻</button>
     </div>
+    <div class="lobby-label" style="margin-top: 16px;">Join a game in progress below:</div>
     <div id="server-list"></div>
     <div id="lobby-updated"></div>
     <div id="lobby-status">Loading…</div>

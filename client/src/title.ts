@@ -269,6 +269,40 @@ async function buildTerrainMap(tiles: Map<string, ImageBitmap | null>): Promise<
   return oc;
 }
 
+// ── Lobby logo ───────────────────────────────────────────────────────────────
+
+export async function drawLogo(canvas: HTMLCanvasElement): Promise<void> {
+  const rawLetters = await Promise.all(
+    LETTER_NAMES.map((n) => loadBitmap(`/sprites/bitmaps/${n}.png`)),
+  );
+  const ctx = canvas.getContext('2d')!;
+  const W = canvas.width;
+  const H = canvas.height;
+
+  let scale = 1;
+  for (const bm of rawLetters)
+    if (bm && bm.height > 0) scale = Math.min(scale, H / bm.height);
+
+  const totalW = rawLetters.reduce((s, bm) => s + Math.floor((bm?.width ?? 48) * scale) + LETTER_PAD, -LETTER_PAD);
+  if (totalW > W - 20) scale *= (W - 20) / totalW;
+
+  const finalW = rawLetters.reduce((s, bm) => s + Math.floor((bm?.width ?? 48) * scale) + LETTER_PAD, -LETTER_PAD);
+  let x = Math.floor((W - finalW) / 2);
+  const tallest = rawLetters.reduce((h, bm) => Math.max(h, bm ? Math.floor(bm.height * scale) : 0), 0);
+  const baseY = Math.floor((H - tallest) / 2);
+
+  ctx.clearRect(0, 0, W, H);
+  for (let i = 0; i < rawLetters.length; i++) {
+    const bm = rawLetters[i];
+    if (!bm) continue;
+    const w = Math.floor(bm.width * scale);
+    const h = Math.floor(bm.height * scale);
+    const extraY = LETTER_NAMES[i] === 'j' ? Math.floor(h * 0.2) : 0;
+    ctx.drawImage(bm, x, baseY + extraY, w, h);
+    x += w + LETTER_PAD;
+  }
+}
+
 // ── Main entry point ─────────────────────────────────────────────────────────
 
 export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
