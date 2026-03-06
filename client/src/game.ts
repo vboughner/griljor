@@ -11,7 +11,8 @@ interface ExitTile { destRoom: number; landX: number; landY: number; }
 /** Returns true if the tile at (x, y) cannot be entered by players.
  *  movement>0 means walkable; movement=0/absent means blocked.
  *  permeable controls missile passage only (not player movement). */
-function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[]): boolean {
+function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[], exitKeys?: Set<string>): boolean {
+  if (exitKeys?.has(`${x},${y}`)) return false; // exit tiles are always walkable
   const cell = room.spot?.[x]?.[y];
   if (cell) {
     const [flId, wlId] = cell;
@@ -41,7 +42,8 @@ const STEP_DIRS: [number, number][] = [
 function findNextStep(
   sx: number, sy: number,
   tx: number, ty: number,
-  room: RoomData, objects: ObjDef[]
+  room: RoomData, objects: ObjDef[],
+  exitKeys?: Set<string>
 ): [number, number] | null {
   if (sx === tx && sy === ty) return null;
   const visited = new Uint8Array(GRID * GRID);
@@ -51,7 +53,7 @@ function findNextStep(
   for (const [dx, dy] of STEP_DIRS) {
     const nx = sx + dx, ny = sy + dy;
     if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
-    if (isTileBlocked(nx, ny, room, objects)) continue;
+    if (isTileBlocked(nx, ny, room, objects, exitKeys)) continue;
     const k = ny * GRID + nx;
     if (visited[k]) continue;
     visited[k] = 1;
@@ -63,7 +65,7 @@ function findNextStep(
     for (const [dx, dy] of STEP_DIRS) {
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
-      if (isTileBlocked(nx, ny, room, objects)) continue;
+      if (isTileBlocked(nx, ny, room, objects, exitKeys)) continue;
       const k = ny * GRID + nx;
       if (visited[k]) continue;
       visited[k] = 1;
@@ -601,8 +603,9 @@ export class Game {
         const next = this.movePath[0];
         const ex = Math.max(0, Math.min(GRID - 1, target.x));
         const ey = Math.max(0, Math.min(GRID - 1, target.y));
-        if (isTileBlocked(next.x, next.y, room, this.objects)) {
-          const step = findNextStep(this.px, this.py, ex, ey, room, this.objects);
+        const exitKeys = new Set(this.exitMap.keys());
+        if (isTileBlocked(next.x, next.y, room, this.objects, exitKeys)) {
+          const step = findNextStep(this.px, this.py, ex, ey, room, this.objects, exitKeys);
           if (!step) { this.stopMoving(); return; }
           const [sdx, sdy] = step;
           this.movePath = computeBresenhamPath(this.px + sdx, this.py + sdy, ex, ey);
@@ -621,11 +624,12 @@ export class Game {
 
       const room = this.mapData.rooms[this.currentRoom];
       const next = this.movePath[0];
+      const exitKeys = new Set(this.exitMap.keys());
 
       // If the next Bresenham tile is blocked, fall back to BFS for one step
       // then recompute a fresh Bresenham path from the redirected position onward
-      if (isTileBlocked(next.x, next.y, room, this.objects)) {
-        const step = findNextStep(this.px, this.py, target.x, target.y, room, this.objects);
+      if (isTileBlocked(next.x, next.y, room, this.objects, exitKeys)) {
+        const step = findNextStep(this.px, this.py, target.x, target.y, room, this.objects, exitKeys);
         if (!step) { this.stopMoving(); return; }
         const [sdx, sdy] = step;
         this.movePath = computeBresenhamPath(this.px + sdx, this.py + sdy, target.x, target.y);
