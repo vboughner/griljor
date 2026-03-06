@@ -47,7 +47,7 @@ object ID (0–254).
 Key fields preserved:
 - `bitmap` / `mask` — PNG filenames for the tile sprites
 - `masked` — whether the mask file must be applied
-- `permeable` — whether players can walk through
+- `permeable` — whether missiles can pass through (NOT player movement — see Phase 6)
 - `exit` — whether stepping on the tile triggers a room transition
 - `movement` — movement cost (used for passability classification)
 
@@ -162,9 +162,9 @@ at `(10, 10)` (room center).
 Edge-of-room movement triggers directional exits (`exit_north` etc.)
 when the exit index ≥ 0, placing the player at the opposite edge.
 
-**Wall collision**: a tile is blocked if either its floor-layer or
-wall-layer object lacks `permeable: true`. All floor tiles have
-`permeable: true`; wall objects do not.
+**Wall collision**: a tile is blocked if the wall-layer object has
+`movement` absent or 0, or if the floor-layer object has `movement === 0`
+explicitly. `permeable` controls missile passage only (see Phase 6).
 
 **Exit tile teleportation**: `recorded_objects` with `exit: true` and
 `detail ≥ 0` are "invisible exits" (object type 49). An exit map
@@ -288,15 +288,138 @@ Right-click → `sendInvSwap(slot, 'right')`. Click on hand-slot canvases
 - **Numbered items**: `quantity` is preserved through pickup/drop cycles;
   no stack splitting is implemented.
 
-## What's Next
+---
 
-**Phase 3 — Server + WebSocket connection**
+## Phase 6 — Client UI Refinements
 
-The `grildriver` C server speaks raw TCP. To connect a browser client
-it needs either:
-- A WebSocket-to-TCP proxy (bridge approach), or
-- A new TypeScript/Node.js server implementing the same protocol
+### Avatar Sprite Masking
 
-The original packet structures are defined in `src/socket.h`. The
-protocol uses fixed-size binary structs (`DriverPack`, `AcceptancePack`,
-etc.) over TCP with a separate UDP channel for in-game packets.
+Player avatars use paired XBM files: `*bit` (face features) and `*mask`
+(silhouette). Original `loadMaskedSprite` ran the bitmap through
+`loadAndProcess` (which made all white pixels transparent) before
+applying the mask. This caused interior skin pixels — white in the face
+bitmap, black in the mask (inside silhouette) — to be made transparent,
+letting floor tiles bleed through the hollow face.
+
+**Fix**: `loadMaskedSprite` now uses `loadRaw` for the bitmap (no color
+transform) and processes both layers in one pass:
+- Outside mask (mask pixel ≥ 200) → alpha 0 (transparent)
+- Inside mask + dark bitmap pixel → foreground color (255 dark mode, 0 light mode)
+- Inside mask + light bitmap pixel → background color (0 dark mode, 255 light mode)
+
+### Mouse Slot Mapping and Hand Icons
+
+The original code had left/middle mouse buttons swapped relative to the
+on-screen mouse graphic (left button activated the middle box). Fixed in
+`game.ts`: `e.button === 0` = left hand, `e.button === 1` = right hand.
+
+Hand slot canvases previously showed text labels. Fixed in
+`mouse-widget.ts`: `setHandItem` now accepts `ImageData | null` and
+renders the item sprite via `OffscreenCanvas → drawImage`.
+
+### Inventory Cell Interactions
+
+Changed from `click` to `mousedown` event (required for middle button
+detection). Mapping:
+- Left click on inv cell → swap with left hand
+- Middle click on inv cell → swap with right hand
+- Right click on inv cell → drop item (via `contextmenu`)
+
+### Item Tooltips (`tooltip.ts`)
+
+New file with `showTooltip(html, x, y)`, `hideTooltip()`,
+`moveTooltip(x, y)`. The `#tooltip` div is fixed-position with
+viewport-edge detection (flips left or above when near an edge).
+
+`buildItemHtml(obj, item)` formats: name, weapon stats (damage/range/
+speed), weight, capacity, movement modifier, quantity.
+
+Wired up in `main.ts` via `mouseover` on inventory cells and hand
+canvases. `currentLeftHand`, `currentRightHand`, `slotItems[]` track
+what is in each slot for tooltip lookup.
+
+### Clickable Map Border
+
+Canvas expanded from 640×640 to 704×704 (22×22 tiles). A 1-tile blank
+border (`BORDER = TILE = 32`) surrounds the 20×20 map area. All tile
+draws in `renderer.ts` are offset by `BORDER`. `TILE` and `BORDER` are
+exported constants.
+
+`drawBorderIndicators(room)` draws filled triangle arrows at the center
+of each border strip where a room exit exists (uses `getColorMode()` for
+color). Border clicks call `startMovingTo(tx, ty)` with an off-grid
+coordinate, which navigates the player to the nearest edge tile then
+steps off.
+
+### Click-to-Move (`game.ts`)
+
+Right-click sets a move target and walks the player tile-by-tile at a
+timed rate. Implementation:
+
+- `computeBresenhamPath(x0,y0,x1,y1)` — pre-computes the tile sequence
+  for a straight-line path (Bresenham algorithm).
+- `startMovingTo(x, y)` — stops any existing movement, pre-computes
+  path via Bresenham, schedules first step.
+- `doMoveStep()` — advances one tile. If the next Bresenham tile is
+  blocked, falls back to `findNextStep` (BFS) and recomputes the
+  remainder of the path from the redirected position.
+- `scheduleMoveStep()` — `setTimeout` chain (not `setInterval`) so
+  delay can vary per step based on floor tile speed.
+- `getMoveDelay()` — reads `movement` field from the floor tile at the
+  player's current position, converts via `stepDelay(spd)`.
+- `stepDelay(spd)` — `Math.max(50, Math.round(150 * 9 / spd))`.
+  Speed 9 → 150 ms, speed 5 → 270 ms, absent movement → blocked.
+
+Left/middle mouse clicks do **not** interrupt ongoing movement — they
+only fire weapons or pick up items from where the player currently stands.
+
+Keyboard movement rate-limited by `moveReadyAt` timestamp so keys can't
+outrun click-to-move speed.
+
+### Movement Blocking: `permeable` vs `movement`
+
+**Original semantics** (confirmed from `src/objects.h` and
+`src/mapfunc.c`):
+- `permeable` — "May fire over": controls missile passage only.
+  Labeled as such in the object editor (`objprops.c`).
+- `movement` — controls player walkability: 0 = blocked (wall),
+  > 0 = walkable at that speed.
+
+**Pipeline output**: `BOLBOX` fields only appear in JSON when `true`.
+Wall objects have neither `movement` nor `permeable` set (both default
+to absent/false). Floor objects have `movement > 0` and `permeable: true`.
+
+**Fixed `isTileBlocked`**:
+- Wall layer: blocked unless `(movement ?? 0) > 0`
+- Floor layer: blocked only if `movement === 0` explicitly
+- `permeable` is no longer used for player movement anywhere in the client
+
+The server's missile tracing in `session.ts` correctly uses `permeable`
+for projectile passage — unchanged.
+
+The `nearbyFreeTile` drop helper in `session.ts` still uses `permeable`
+as its free-tile criterion (will be corrected to use `movement` in a
+future pass).
+
+### BFS Pathfinding
+
+`findNextStep(sx, sy, tx, ty, room, objects)` uses BFS on the 20×20
+grid with a `Uint8Array` visited set. Cardinal directions are tried
+first (preferred for straight paths), then diagonals. Returns the
+`[dx, dy]` of the first step toward the target, or `null` if no path
+exists. Used as fallback when the Bresenham path is blocked.
+
+### Tile Hover Debug Mode
+
+`?` key toggles `hoverMode`. When active, canvas cursor changes to
+crosshair and `mousemove` calls `buildTileHtml(tx, ty)` to show a
+tooltip with:
+- Floor tile name + speed (ms/step or "blocked")
+- Wall tile name + [passable] / [blocks] (based on `movement`)
+- Recorded objects at the tile with [spawn] for `takeable` items
+- Dropped items (from live `floorItems`) with [dropped] label
+- "empty" with default speed for bare tiles
+
+The spawn/dropped distinction: `recorded_objects` with `takeable: true`
+are item spawn points ([spawn]); items dropped by players appear via the
+live `floorItems` map ([dropped]).
