@@ -38,12 +38,13 @@
     }
     #server-list { width: 100%; border: 1px solid #444; min-height: 60px; }
     .server-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 8px 12px; border-bottom: 1px solid #333;
+      display: flex; align-items: center; gap: 12px;
+      padding: 6px 12px; border-bottom: 1px solid #333; min-height: 44px;
     }
     .server-row:last-child { border-bottom: none; }
     .server-map { flex: 1; }
-    .server-players { width: 60px; text-align: center; color: #888; }
+    .server-players { color: #888; white-space: nowrap; }
+    .server-avatars { display: flex; gap: 3px; align-items: center; }
     #lobby-status { font-size: 0.85em; color: #666; min-height: 1.2em; }
     #lobby-updated { font-size: 0.75em; color: #555; margin-top: 4px; }
 

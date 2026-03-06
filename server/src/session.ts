@@ -124,6 +124,9 @@ export class GameSession {
   }
 
   get playerCount(): number { return this.players.size; }
+  get playerAvatars(): Array<{ avatar: string; name: string }> {
+    return [...this.players.values()].map((p) => ({ avatar: p.avatar, name: p.name }));
+  }
 
   handleConnection(ws: WebSocket): void {
     ws.on('message', (data) => {

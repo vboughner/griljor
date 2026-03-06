@@ -7,6 +7,7 @@ interface GameEntry {
   port: number;
   players: number;
   maxPlayers: number;
+  avatars: Array<{ avatar: string; name: string }>;
   lastSeen: number;
 }
 
@@ -52,7 +53,7 @@ function isRegisterBody(b: unknown): b is { mapName: string; host: string; port:
     typeof (b as Record<string, unknown>).port === 'number';
 }
 
-function isHeartbeatBody(b: unknown): b is { host: string; port: number; players: number } {
+function isHeartbeatBody(b: unknown): b is { host: string; port: number; players: number; avatars?: Array<{ avatar: string; name: string }> } {
   return typeof b === 'object' && b !== null &&
     typeof (b as Record<string, unknown>).host === 'string' &&
     typeof (b as Record<string, unknown>).port === 'number' &&
@@ -98,6 +99,7 @@ const server = http.createServer(async (req, res) => {
         port: body.port,
         players: 0,
         maxPlayers: body.maxPlayers ?? 16,
+        avatars: [],
         lastSeen: Date.now(),
       });
       console.log(`[lobby] registered ${k} (${body.mapName})`);
@@ -115,6 +117,7 @@ const server = http.createServer(async (req, res) => {
       const entry = games.get(k);
       if (entry) {
         entry.players = body.players;
+        entry.avatars = body.avatars ?? [];
         entry.lastSeen = Date.now();
         broadcast();
       }

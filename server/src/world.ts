@@ -39,6 +39,7 @@ export interface World {
   objects: Array<ObjDef | null>;
   resetOnEmpty: boolean;
   resetAfterSeconds: number;
+  maxPlayers: number;
 }
 
 export async function loadWorld(mapName: string): Promise<World> {
@@ -46,7 +47,7 @@ export async function loadWorld(mapName: string): Promise<World> {
   const mapPath = join(__dirname, '..', '..', 'pipeline', 'out', 'data', 'maps', `${mapName}.json`);
   const raw = await readFile(mapPath, 'utf-8');
   const data = JSON.parse(raw) as {
-    map: { objfilename: string; resetOnEmpty?: boolean; resetAfterSeconds?: number };
+    map: { objfilename: string; resetOnEmpty?: boolean; resetAfterSeconds?: number; maxPlayers?: number };
     rooms: Array<{ recorded_objects?: RecObj[]; spot: number[][][] }>;
   };
 
@@ -68,5 +69,6 @@ export async function loadWorld(mapName: string): Promise<World> {
     objects: objData.objects,
     resetOnEmpty: data.map.resetOnEmpty ?? false,
     resetAfterSeconds: data.map.resetAfterSeconds ?? 30,
+    maxPlayers: data.map.maxPlayers ?? 16,
   };
 }

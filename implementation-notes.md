@@ -583,3 +583,47 @@ Left/middle canvas click priority order:
 
 Hand item state is tracked in `Game` via `setHands(left, right)`, called
 from `main.ts` whenever `YOUR_INVENTORY` is received.
+
+---
+
+## Phase 9 — Map State Reset on Empty Server
+
+**Goal**: Allow a map to automatically revert to its initial state (items,
+doors, chat history) a configurable number of seconds after the last player
+leaves. Maps that don't set this flag retain state indefinitely until the
+server process restarts.
+
+### Map-level configuration (`pipeline/out/data/maps/*.json`)
+
+Two optional fields added to the `map` object in each map's JSON file:
+
+| Field | Type | Default | Meaning |
+|-------|------|---------|---------|
+| `resetOnEmpty` | boolean | `false` | Whether to reset state when the server empties |
+| `resetAfterSeconds` | number | `30` | Seconds to wait before resetting |
+
+`castle.json` is set to `resetOnEmpty: true, resetAfterSeconds: 10`.
+
+### Server (`world.ts`)
+
+`World` interface gains `resetOnEmpty: boolean` and `resetAfterSeconds: number`.
+`loadWorld` reads both from `data.map`, applying defaults if absent.
+
+### Server (`session.ts`)
+
+**Construction**: The constructor deep-copies all `recorded_objects` arrays
+into `originalRecordedObjects: RecObj[][]`. This snapshot is the source of
+truth for resets, since door toggling mutates `recorded_objects` in-place.
+
+**On last player leaving** (`onLeave`): if `world.resetOnEmpty`, schedules
+`resetWorldState()` via `setTimeout(delay * 1000)` and stores the handle in
+`resetTimer`. If `resetOnEmpty` is false, only chat history is cleared (existing behaviour).
+
+**On new player joining** (`onJoin`): if `resetTimer` is non-null, the timer
+is cancelled (`clearTimeout`) before the player is admitted, so a player who
+arrives during the countdown prevents the reset.
+
+**`resetWorldState()`**:
+1. Restores each room's `recorded_objects` from the deep-copied snapshot (fresh `{ ...ro }` spread per object so subsequent mutations don't corrupt the snapshot).
+2. Clears and re-runs `initRoomItems()` to rebuild floor item maps from the restored objects.
+3. Clears `chatHistory`.

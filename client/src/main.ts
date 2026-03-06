@@ -460,7 +460,19 @@ async function main(): Promise<void> {
   }
 
   // ── Lobby ─────────────────────────────────────────────────────────
+  let lastGames: GameInfo[] = [];
+
+  function updateJoinButtons(): void {
+    const selected = avatarSelect.value;
+    for (const btn of serverList.querySelectorAll<HTMLButtonElement>('.join-btn')) {
+      const taken = (btn.dataset.avatars ?? '').split(',');
+      const full = btn.dataset.full === 'true';
+      btn.disabled = full || taken.includes(selected);
+    }
+  }
+
   function renderServerList(games: GameInfo[]): void {
+    lastGames = games;
     serverList.innerHTML = '';
     const time = new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     lobbyUpdated.textContent = `updated ${time}`;
@@ -472,14 +484,29 @@ async function main(): Promise<void> {
     for (const game of games) {
       const row = document.createElement('div');
       row.className = 'server-row';
+      const avatarKeys = (game.avatars ?? []).map((a) => a.avatar).join(',');
+      const full = game.players >= game.maxPlayers;
       row.innerHTML = `
         <span class="server-map">${game.mapName}</span>
+        <span class="server-avatars"></span>
         <span class="server-players">${game.players} / ${game.maxPlayers}</span>
-        <button class="join-btn" data-host="${game.host}" data-port="${game.port}">Join</button>
+        <button class="join-btn" data-host="${game.host}" data-port="${game.port}" data-avatars="${avatarKeys}" data-full="${full}">Join</button>
       `;
+      const avatarStrip = row.querySelector<HTMLElement>('.server-avatars')!;
+      for (const entry of (game.avatars ?? [])) {
+        const c = document.createElement('canvas');
+        c.width = 32;
+        c.height = 32;
+        void drawAvatarOnCanvas(c, entry.avatar);
+        c.addEventListener('mouseenter', (e) => showTooltip(`<div class="tip-name">${entry.name}</div>`, e.clientX, e.clientY));
+        c.addEventListener('mousemove',  (e) => moveTooltip(e.clientX, e.clientY));
+        c.addEventListener('mouseleave', () => hideTooltip());
+        avatarStrip.appendChild(c);
+      }
       row.querySelector<HTMLButtonElement>('.join-btn')!.addEventListener('click', () => joinServer(game));
       serverList.appendChild(row);
     }
+    updateJoinButtons();
   }
 
   async function refreshServerList(): Promise<void> {
@@ -629,6 +656,7 @@ async function main(): Promise<void> {
     playerNameInput.value = avatarSelect.value;
     void drawAvatarOnCanvas(avatarPreview, avatarSelect.value);
     currentGame?.setAvatar(avatarSelect.value);
+    updateJoinButtons();
   });
 
 

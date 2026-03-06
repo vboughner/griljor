@@ -4,6 +4,7 @@ export interface GameInfo {
   port: number;
   players: number;
   maxPlayers: number;
+  avatars: Array<{ avatar: string; name: string }>;
 }
 
 const LOBBY_HTTP = 'http://localhost:3000';
