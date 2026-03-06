@@ -29,9 +29,15 @@
     /* ── Lobby ── */
     #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 780px; }
     #lobby-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
-    #avatar-picker { position: relative; display: inline-block; }
+    #avatar-picker { position: relative; display: inline-flex; flex-direction: column; align-items: center; margin-top: 12px; }
     #avatar-preview { cursor: pointer; }
-    #avatar-preview:hover { border-color: #888; }
+    #avatar-preview:hover { border-color: #aaa; }
+    #avatar-caret { font-size: 1em; color: #777; line-height: 1; margin-top: 1px; pointer-events: none; }
+    #random-avatar-btn {
+      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      padding: 4px 7px; cursor: pointer; font-family: monospace; font-size: 1em; line-height: 1;
+    }
+    #random-avatar-btn:hover { background: #3a3a3a; }
     #avatar-dropdown {
       display: none; position: absolute; z-index: 100;
       left: 0; top: 36px;
@@ -304,6 +310,7 @@
     }
     input { cursor: text; }
     #player-name { width: 120px; }
+    #player-name:focus, #player-name:active { outline: none; border-color: #777; }
     .join-btn, #leave-btn, #mode-toggle {
       background: #2a2a2a; border: 1px solid #555; color: #bbb;
       padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
@@ -327,9 +334,11 @@
     <div id="lobby-controls">
       <div id="avatar-picker">
         <canvas id="avatar-preview" width="32" height="32" title="Choose avatar"></canvas>
+        <div id="avatar-caret">▾</div>
         <div id="avatar-dropdown"></div>
       </div>
-      <input id="player-name" maxlength="24" placeholder="name" />
+      <input id="player-name" maxlength="24" placeholder="name" spellcheck="false" autocomplete="off" />
+      <button id="random-avatar-btn" title="Random avatar">↻</button>
     </div>
     <div id="server-list"></div>
     <div id="lobby-updated"></div>

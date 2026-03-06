@@ -301,6 +301,11 @@ async function main(): Promise<void> {
   setSelectedAvatar(selectedAvatar);
   playerNameInput.value = selectedAvatar;
 
+  document.getElementById('random-avatar-btn')!.addEventListener('click', () => {
+    const others = AVATARS.filter((a) => a !== selectedAvatar);
+    setSelectedAvatar(others[Math.floor(Math.random() * others.length)]);
+  });
+
   // ── Player list state ────────────────────────────────────────────
   interface PlayerEntry {
     id: number; name: string; avatar: string;
