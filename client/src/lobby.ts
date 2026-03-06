@@ -1,5 +1,8 @@
 export interface GameInfo {
   mapName: string;
+  title: string;
+  teams: number;
+  rooms: number;
   host: string;
   port: number;
   players: number;

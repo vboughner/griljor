@@ -3,6 +3,9 @@ import { WebSocketServer, WebSocket } from 'ws';
 
 interface GameEntry {
   mapName: string;
+  title: string;
+  teams: number;
+  rooms: number;
   host: string;
   port: number;
   players: number;
@@ -46,7 +49,7 @@ async function readBody(req: http.IncomingMessage): Promise<unknown> {
   });
 }
 
-function isRegisterBody(b: unknown): b is { mapName: string; host: string; port: number; maxPlayers?: number } {
+function isRegisterBody(b: unknown): b is { mapName: string; title?: string; teams?: number; rooms?: number; host: string; port: number; maxPlayers?: number } {
   return typeof b === 'object' && b !== null &&
     typeof (b as Record<string, unknown>).mapName === 'string' &&
     typeof (b as Record<string, unknown>).host === 'string' &&
@@ -95,6 +98,9 @@ const server = http.createServer(async (req, res) => {
       const k = key(body.host, body.port);
       games.set(k, {
         mapName: body.mapName,
+        title: body.title ?? body.mapName,
+        teams: body.teams ?? 0,
+        rooms: body.rooms ?? 0,
         host: body.host,
         port: body.port,
         players: 0,

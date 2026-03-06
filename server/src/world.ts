@@ -34,6 +34,8 @@ export interface RoomData {
 
 export interface World {
   mapName: string;
+  title: string;
+  teams: number;
   roomCount: number;
   rooms: RoomData[];
   objects: Array<ObjDef | null>;
@@ -47,7 +49,7 @@ export async function loadWorld(mapName: string): Promise<World> {
   const mapPath = join(__dirname, '..', '..', 'pipeline', 'out', 'data', 'maps', `${mapName}.json`);
   const raw = await readFile(mapPath, 'utf-8');
   const data = JSON.parse(raw) as {
-    map: { objfilename: string; resetOnEmpty?: boolean; resetAfterSeconds?: number; maxPlayers?: number };
+    map: { name?: string; objfilename: string; teams_supported?: number; resetOnEmpty?: boolean; resetAfterSeconds?: number; maxPlayers?: number };
     rooms: Array<{ recorded_objects?: RecObj[]; spot: number[][][] }>;
   };
 
@@ -64,6 +66,8 @@ export async function loadWorld(mapName: string): Promise<World> {
 
   return {
     mapName,
+    title: data.map.name ?? mapName,
+    teams: data.map.teams_supported ?? 0,
     roomCount: rooms.length,
     rooms,
     objects: objData.objects,

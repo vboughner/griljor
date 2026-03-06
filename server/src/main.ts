@@ -67,7 +67,7 @@ async function main(): Promise<void> {
   console.log(`Griljor server on :${PORT}, map: ${world.mapName} (${world.roomCount} rooms)`);
 
   // Register with lobby
-  postJson(`${LOBBY_URL}/register`, { mapName, host: LOBBY_HOST, port: PORT, maxPlayers: world.maxPlayers });
+  postJson(`${LOBBY_URL}/register`, { mapName, title: world.title, teams: world.teams, rooms: world.roomCount, host: LOBBY_HOST, port: PORT, maxPlayers: world.maxPlayers });
 
   // Heartbeat every 5s
   setInterval(() => {

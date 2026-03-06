@@ -8,7 +8,7 @@
     "team_name_3": "Team 3",
     "team_name_4": "Team 4",
     "teams_supported": 2,
-    "objfilename": "/usr/wolf/c60c-3/fa90/labc-3fd/games/lib/griljor/default.obj",
+    "objfilename": "default.obj",
     "rooms_count": 3,
     "execute_file": "none",
     "startup_file": "none",
