@@ -213,13 +213,12 @@ If we go with Option A, a reasonable sequence would be:
 - Server-authoritative state broadcast
 - Game lifecycle (start, end, score)
 
-**Phase 6 — Persistence + auth**
-- Player profiles and passwords
-- Save/load stats between games
-
-**Phase 7 — Burt AI + polish**
-- Port Burt from C to the server language
+**Phase 6 — Polish + multiplayer UX**
 - Title screen, game listing, team selection
+- Keep-alive ping (client → server every 60s) so idle players stay connected
+
+**Note**: No player profile persistence — every game starts fresh at level 1.
+AI monsters are deferred indefinitely (unfinished in the original; a separate future project if desired).
 
 **Stretch: web-based editors**
 - editmap as a browser-based map editor
@@ -236,7 +235,7 @@ If we go with Option A, a reasonable sequence would be:
 | Fidelity | Faithful to original, with room to tune |
 | Editors | Port eventually (Phase 7+), not blocking the game port |
 | Hosting | TBD — build locally first |
-| Persistence | Flat JSON files (mirrors the original binary password store) |
+| Persistence | None — all game state is in-memory only; every session starts fresh at level 1 |
 | Server authority | Server-authoritative (cleaner for web, cheat-resistant) |
 | Protocol format | JSON over WebSockets (shared TS types between client and server) |
 

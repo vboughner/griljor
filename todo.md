@@ -2,12 +2,10 @@
 
 ## Client / Server
 
-- [ ] Item use requirements — level/XP gates on equipping or using items
+- [ ] Keep-alive pings — client sends a ping every 60 seconds while idle so a player can remain in-game with browser open; server uses this to avoid disconnecting motionless players
 - [ ] Consumables — items with health/power effects beyond the door mechanism
 - [ ] Teams — lobby team selection + server-side enforcement (friendly fire, spawn zones)
 - [ ] 8-direction movement — currently 4-directional only
-- [ ] Persistence / auth — player profiles saved across sessions (flat JSON; currently in-memory only, lost on disconnect)
-- [ ] AI monsters — NPC enemies with patrol/attack behavior
 - [ ] Fix `nearbyFreeTile` in `session.ts` — currently uses `permeable` instead of `movement` for free-tile checks
 - [ ] When everyone leaves a map, it should respawn and reset to original state
 - [ ] Research how the original screen was laid out so the UI matches better
@@ -32,3 +30,4 @@
 - [ ] Title screen and game listing refinements before public release
 - [ ] Make it possible for others to deploy a production release (if they have VM access)
 - [ ] Consider whether a code refactor is worthwhile to improve clarity and maintainability
+- [ ] add Burt back into the plan somehow, maybe to respond to chats if you address him directly?
