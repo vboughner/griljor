@@ -281,9 +281,19 @@ map $1 $ws_port {
 
 ```sh
 sudo cp ~/griljor/nginx-example.conf /etc/nginx/sites-available/griljor
+sudo sed -i 's|/home/ubuntu/|/home/griljor/|g' /etc/nginx/sites-available/griljor
 sudo ln -s /etc/nginx/sites-available/griljor /etc/nginx/sites-enabled/griljor
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
+```
+
+nginx runs as `www-data` and needs read access to the client build. Grant it:
+
+```sh
+chmod o+x /home/griljor
+chmod o+x /home/griljor/griljor
+chmod o+x /home/griljor/griljor/client
+chmod -R o+r /home/griljor/griljor/client/dist
 ```
 
 ### 5. HTTPS via Let's Encrypt
