@@ -508,8 +508,6 @@ async function main(): Promise<void> {
   }
 
   // ── Lobby ─────────────────────────────────────────────────────────
-  let lastGames: GameInfo[] = [];
-
   function updateJoinButtons(): void {
     const selected = selectedAvatar;
     for (const btn of serverList.querySelectorAll<HTMLButtonElement>('.join-btn')) {
@@ -520,7 +518,6 @@ async function main(): Promise<void> {
   }
 
   function renderServerList(games: GameInfo[]): void {
-    lastGames = games;
     serverList.innerHTML = '';
     const time = new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
     lobbyUpdated.textContent = `updated ${time}`;
