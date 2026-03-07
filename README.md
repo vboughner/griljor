@@ -1,34 +1,60 @@
-Fun and easy instructions for installing Griljor.  This should work for a web
-account (Sun 3/50) without too much trouble.  Some time in the near future,
-a distribution version that is easier to install on the various kinds of
-machines will be made available.
+# Griljor: The War of Griljor
 
-1. In your home directory, untar the griljor tarfile with:
-   'tar xvf griljor.tar'.  This will create directories in your account
-   called C/griljor and games/lib/griljor
+A multiplayer real-time action game originally written in 1989 for Sun workstations running X11. Players navigate 20×20 tile rooms, pick up weapons and items, and battle each other across interconnected maps.
 
-2. Type 'pwd' to take a look at the absolute path of your account's
-    home directory and replace all occurances of
-    '/net/water/c60c-3/fa91/labc-4lc' in the C/griljor/config.h
-    to whatever your home path is.  You'll have to use 'sccs edit config.h'
-    in the C/griljor directory in order to edit config.h
+---
 
-3. Use 'sccs edit Makefile' in the C/griljor directory and edit the
-   top few lines of the Makefile (most notably changing occurances of
-   'rgcc' to 'gcc'.
+## Active Development: Modern Web Rewrite
 
-4. In the C/griljor directory type 'make two' and pray.
+The game is being rewritten as a browser-playable web application. The goal is to preserve the original gameplay faithfully while making it accessible to anyone with a modern browser — no installation required.
 
-5. Decrease the size of the griljor and grildriver executables
-   with 'strip griljor' and 'strip grildriver'.
+**Why**: The original runs only on 1989-era Sun/X11 systems. The binary format, hardcoded paths, and X11 dependency make it effectively unplayable today. The rewrite extracts all original assets (bitmaps, maps, object definitions) through an automated pipeline and reimplements the game logic in TypeScript.
 
-6. Move griljor and grildriver to the ~/games directory.
+**How**:
+- A Python pipeline (`pipeline/`) parses the original binary `.map` and `.obj` files into JSON and converts raw 1-bit XBM bitmaps to PNGs — a one-time extraction of everything the original game shipped with.
+- A Node.js/TypeScript WebSocket server (`server/`) runs the authoritative game logic: movement, combat, inventory, doors, room state.
+- A Vite/TypeScript browser client (`client/`) renders the 20×20 tile grid on HTML5 Canvas using the original bitmaps, and communicates with the server over WebSockets.
+- A lobby server lists running game instances so players can browse and join from a title screen.
 
-7. If you want the map editor or object definition editor, you
-   can type 'make editmap' or 'make obtor' respectively.
+**What's implemented**: asset pipeline, full room rendering with original sprites, multiplayer sync, inventory system (35 slots + hand slots), combat with projectiles and damage, XP/leveling, doors and keys, consumables, map state reset, lobby with live player display.
 
-If you have any questions, please contact vanb@soda.berkeley.edu
+### Key documents
 
-Please do not redistribute Griljor source at this time.  The version
-you are installing isn't even considered a beta-test version.
-
+| Document | Contents |
+|----------|----------|
+| [`web-rewrite.md`](web-rewrite.md) | Architecture decisions, porting challenges, and feature plan |
+| [`implementation-notes.md`](implementation-notes.md) | Detailed record of what was built, phase by phase, with technical decisions |
+| [`todo.md`](todo.md) | Remaining work |
+| [`deployment-plan.md`](deployment-plan.md) | Hosting plan (Hetzner VM, nginx, PM2, HTTPS) |
+
+### Running locally
+
+```sh
+# Terminal 1 — game server (default map: battle, port 3001)
+cd server && npm run dev
+
+# Terminal 2 — Vite dev server (client)
+cd client && npm run dev
+```
+
+The lobby server (`server/src/lobby.ts`) runs on port 3000. The client connects to it automatically at `localhost:3000`.
+
+---
+
+## Legacy Codebase (Reference)
+
+The original C/X11 source is preserved in `src/` for reference. It is not the active development target.
+
+### Building the legacy code
+
+```sh
+cd src
+make two       # builds griljor (client) + grildriver (server)
+make all       # also builds editmap, obtor, editpass
+```
+
+Requires `OPENWINHOME` set (for X11 headers) and paths in `src/config.h` updated to the local system. See `CLAUDE.md` for full build details.
+
+### Original install instructions
+
+The file you're reading replaces the original `README.md`, which contained 1989-era Sun workstation install instructions (untarring a tarfile, editing hardcoded paths, running `make two`, contacting `vanb@soda.berkeley.edu`). Those instructions are preserved in git history.
