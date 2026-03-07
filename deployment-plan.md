@@ -194,7 +194,7 @@ cd server && npm install && npm run build && cd ..
 
 # Build client with production lobby URL baked in
 cd client
-echo "VITE_LOBBY_URL=https://griljor.com/games" > .env.production
+echo "VITE_LOBBY_URL=https://griljor.com" > .env.production
 npm install && npm run build && cd ..
 ```
 
