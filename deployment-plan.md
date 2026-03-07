@@ -2,7 +2,7 @@
 
 ## Context
 
-The modern rewrite runs a Vite/TypeScript frontend, a single lobby HTTP server (port 3000), and multiple game server processes (WebSocket, ports 3001+). The goal is to host this publicly so friends can play, with 1 lobby instance and 5–10 game servers each running a different map.
+The modern rewrite runs a Vite/TypeScript frontend, a single lobby HTTP server (port 3000), and multiple game server processes (WebSocket, ports 3001+). The goal is to host this publicly so friends can play, with 1 lobby instance and up to 10 game servers each running a different map.
 
 ## Platform: Hetzner Cloud
 
@@ -21,10 +21,21 @@ Internet (port 80/443 via nginx)
     │
     ├── /              → client/dist/ (static Vite build)
     ├── /games         → lobby:3000 (HTTP proxy)
-    └── /ws/<mapname>  → game server:<port> (WebSocket proxy)
+    ├── /watch         → lobby:3000/watch (WebSocket, live game list)
+    └── /ws/<mapname>  → game server:<port>/ws (WebSocket proxy)
 ```
 
-nginx routes all traffic through standard ports. Each game server registers its public WebSocket path (e.g. `wss://griljor.com/ws/battle`) with the lobby instead of a raw host:port.
+nginx routes all traffic through standard ports. Each game server registers its public WebSocket path (e.g. `wss://griljor.com/ws/castle`) with the lobby instead of a raw host:port.
+
+---
+
+## Key nginx Notes (lessons learned)
+
+- The `map` block must use `$uri` (not `$1`) as the key, with regex entries like `~^/ws/castle`
+- `proxy_pass` for game servers must use `127.0.0.1` (not `localhost`) and must include the `/ws` path: `http://127.0.0.1:$ws_port/ws`
+- Do NOT copy `nginx-example.conf` over the live config after certbot has run — certbot adds SSL lines that would be wiped. Use `sed` to edit the live config in place instead.
+- Run certbot with an HTTP-only config first; certbot adds the SSL lines itself.
+- After rebuilding `client/dist/`, re-run the chmod commands — the dist folder is recreated fresh.
 
 ---
 
@@ -37,30 +48,24 @@ nginx routes all traffic through standard ports. Each game server registers its 
 const LOBBY_URL = process.env.LOBBY_URL ?? 'http://localhost:3000';
 ```
 
-**`client/src/lobby.ts`** — replace hardcoded `http://localhost:3000`:
+**`client/src/lobby.ts`** — `VITE_LOBBY_URL` should be the origin only (no `/games` path):
 ```ts
-const LOBBY_URL = import.meta.env.VITE_LOBBY_URL ?? 'http://localhost:3000';
+const LOBBY_HTTP = import.meta.env.VITE_LOBBY_URL ?? 'http://localhost:3000';
+const LOBBY_WS = LOBBY_HTTP.replace(/^http/, 'ws') + '/watch';
 ```
 
 ### 2. Make game server public address configurable
 
-**`server/src/main.ts`** — when registering with lobby, send the public WebSocket URL instead of `host:port`:
+**`server/src/main.ts`** — registers with lobby using `wsUrl`:
 ```ts
-const PUBLIC_WS_URL = process.env.PUBLIC_WS_URL;  // e.g. wss://griljor.com/ws/battle
-// Registration payload becomes { mapName, wsUrl, maxPlayers }
+const PUBLIC_WS_URL = process.env.PUBLIC_WS_URL;  // e.g. wss://griljor.com/ws/castle
 ```
 
-Lobby `GET /games` response uses `wsUrl` so client connects to it directly.
+### 3. Vite client build with env var
 
-### 3. Client WebSocket connection
-
-**`client/src/network.ts`** — connection uses the `wsUrl` from the game list directly (already a full ws:// URL in production), falls back to `ws://localhost:{port}/ws` in dev.
-
-### 4. Vite client build with env var
-
-Add `client/.env.production` (gitignored):
+`client/.env.production` (gitignored) — use the bare origin, no path:
 ```
-VITE_LOBBY_URL=https://griljor.com/games
+VITE_LOBBY_URL=https://griljor.com
 ```
 
 ---
@@ -68,27 +73,14 @@ VITE_LOBBY_URL=https://griljor.com/games
 ## Server Infrastructure Files
 
 ### `server/ecosystem.config.js` (PM2 process file)
-```js
-module.exports = {
-  apps: [
-    { name: 'lobby',   script: 'dist/lobby.js', env: { PORT: 3000 } },
-    { name: 'battle',  script: 'dist/main.js', env: { MAP: 'battle',  PORT: 3001, PUBLIC_WS_URL: 'wss://griljor.com/ws/battle',  LOBBY_URL: 'http://localhost:3000' } },
-    { name: 'castle',  script: 'dist/main.js', env: { MAP: 'castle',  PORT: 3002, PUBLIC_WS_URL: 'wss://griljor.com/ws/castle',  LOBBY_URL: 'http://localhost:3000' } },
-    // ... up to 10 maps
-  ]
-}
-```
+
+The active maps are configured here. See the file in the repo for the current list. Each map needs:
+- A unique `PORT`
+- A matching entry in `nginx-example.conf`'s `map` block
 
 ### `nginx-example.conf`
-See the file in the repo root. Key sections: static frontend, `/games` HTTP proxy, `/watch` WebSocket proxy for lobby, `/ws/<mapname>` WebSocket proxy per game server.
 
----
-
-## Asset Serving
-
-The `pipeline/out/` assets (maps JSON, sprites PNG, objects JSON) are served by Vite's `publicDir`. In production:
-- Assets land in `client/dist/` after `npm run build`
-- nginx serves them as static files alongside the HTML/JS
+See the file in the repo root. This is the template — the live config on the server diverges after certbot adds SSL lines.
 
 ---
 
@@ -96,13 +88,13 @@ The `pipeline/out/` assets (maps JSON, sprites PNG, objects JSON) are served by 
 
 | File | Change |
 |------|--------|
-| `server/src/main.ts` | Use `LOBBY_URL` + `PUBLIC_WS_URL` env vars |
+| `server/src/main.ts` | Use `LOBBY_URL` + `PUBLIC_WS_URL` + `PORT` + `MAP` env vars |
 | `server/src/lobby.ts` | Accept `wsUrl` field instead of `host`/`port` |
-| `client/src/lobby.ts` | Use `VITE_LOBBY_URL` env var; connect using `wsUrl` directly |
+| `client/src/lobby.ts` | Use `VITE_LOBBY_URL` env var (origin only); derive WS URL |
 | `client/src/network.ts` | Accept full WebSocket URL string (already does) |
-| `server/ecosystem.config.js` | New: PM2 config for all processes |
-| `client/.env.production` | New: production lobby URL (gitignored) |
-| `nginx-example.conf` | New: nginx config example |
+| `server/ecosystem.config.js` | PM2 config for all processes |
+| `client/.env.production` | Production lobby URL — origin only, no `/games` (gitignored) |
+| `nginx-example.conf` | nginx config template |
 
 ---
 
@@ -186,7 +178,7 @@ sudo npm install -g pm2
 ### 2. Clone and build
 
 ```sh
-git clone https://github.com/vboughner/griljor.git ~/griljor
+git clone -b modern-rewrite https://github.com/vboughner/griljor.git ~/griljor
 cd ~/griljor
 
 # Build server
@@ -198,86 +190,9 @@ echo "VITE_LOBBY_URL=https://griljor.com" > .env.production
 npm install && npm run build && cd ..
 ```
 
-### 3. Edit the PM2 config
+### 3. Configure nginx
 
-In `server/ecosystem.config.js`, replace `griljor.example.com` with your domain and add your maps:
-
-```js
-const DOMAIN = 'griljor.com';
-
-  apps: [
-    {
-      name:   'lobby',
-      script: 'dist/lobby.js',
-      env:    { PORT: 3000 },
-    },
-    {
-      name:   'battle',
-      script: 'dist/main.js',
-      env:    { MAP: 'battle', PORT: 3001, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/battle` },
-    },
-    {
-      name:   'castle',
-      script: 'dist/main.js',
-      env:    { MAP: 'castle', PORT: 3002, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/castle` },
-    },
-    {
-      name:   'paradise',
-      script: 'dist/main.js',
-      env:    { MAP: 'paradise', PORT: 3003, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/paradise` },
-    },
-    {
-      name:   'flag',
-      script: 'dist/main.js',
-      env:    { MAP: 'flag', PORT: 3004, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/flag` },
-    },
-    {
-      name:   'hometown',
-      script: 'dist/main.js',
-      env:    { MAP: 'hometown', PORT: 3005, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/hometown` },
-    },
-    {
-      name:   'sword',
-      script: 'dist/main.js',
-      env:    { MAP: 'sword', PORT: 3006, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/sword` },
-    },
-    {
-      name:   'twoperson',
-      script: 'dist/main.js',
-      env:    { MAP: 'twoperson', PORT: 3007, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/twoperson` },
-    },
-    {
-      name:   'trek',
-      script: 'dist/main.js',
-      env:    { MAP: 'trek', PORT: 3008, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/trek` },
-    },
-    {
-      name:   'title',
-      script: 'dist/main.js',
-      env:    { MAP: 'title', PORT: 3009, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/title` },
-    },
-    // Add more maps here following the same pattern.
-    // Each map needs a unique PORT and a matching /ws/<mapname> block in nginx-example.conf.
-  ],
-```
-
-Also add the corresponding entries in `nginx-example.conf`'s `map` block:
-
-```nginx
-map $1 $ws_port {
-    battle  3001;
-    castle  3002;
-    paradise  3003;
-    flag  3004;
-    hometown  3005;
-    sword  3006;
-    twoperson  3007;
-    trek  3008;
-    title  3009;
-}
-```
-
-### 4. Configure nginx
+Copy the template and fix the home directory path (the template uses `/home/ubuntu/` as a placeholder):
 
 ```sh
 sudo cp ~/griljor/nginx-example.conf /etc/nginx/sites-available/griljor
@@ -287,7 +202,7 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-nginx runs as `www-data` and needs read access to the client build. Grant it:
+nginx runs as `www-data` and needs read access to the client build:
 
 ```sh
 chmod o+x /home/griljor
@@ -296,15 +211,17 @@ chmod o+x /home/griljor/griljor/client
 chmod -R o+r /home/griljor/griljor/client/dist
 ```
 
-### 5. HTTPS via Let's Encrypt
+### 4. HTTPS via Let's Encrypt
 
 ```sh
 sudo certbot --nginx -d griljor.com
 ```
 
-This edits the nginx config in-place to add SSL certs and auto-redirect HTTP→HTTPS.
+Certbot edits the live nginx config in-place to add SSL and the HTTP→HTTPS redirect. Certificates renew automatically via a systemd timer — no manual action needed.
 
-### 6. Start everything with PM2
+> **Important**: after this point, never overwrite `/etc/nginx/sites-available/griljor` by copying from the repo. The live file has certbot SSL lines that the repo file does not. Use `sed` to make targeted edits to the live file instead.
+
+### 5. Start everything with PM2
 
 ```sh
 cd ~/griljor/server
@@ -313,25 +230,69 @@ pm2 save
 pm2 startup   # prints a command — copy/paste it to enable auto-start on reboot
 ```
 
-### 7. Verify
+### 6. Verify
 
 ```sh
-pm2 status          # all 6 processes should show "online"
-pm2 logs            # watch heartbeat messages
+pm2 status                       # all processes should show "online"
+pm2 logs                         # watch for heartbeat messages
 curl https://griljor.com/games   # should return JSON game list
 ```
 
 Then open `https://griljor.com` in a browser — title screen should appear and the lobby should list all maps.
 
-### Updating later
+---
+
+## Managing Maps
+
+### Add a map
+
+1. Add an entry to `server/ecosystem.config.js`
+2. Add the corresponding entry to the `map` block in `nginx-example.conf`
+3. Edit the live nginx config on the server with `sed` (don't copy from repo):
+   ```sh
+   sudo sed -i '/~^\/ws\/flag/a\    ~^\/ws\/newmap   3010;' /etc/nginx/sites-available/griljor
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+4. `git pull` on the server, then: `cd ~/griljor/server && pm2 start ecosystem.config.js --only newmap`
+
+### Remove a map
+
+```sh
+pm2 delete <mapname>
+pm2 save
+```
+
+### If a map server fails to appear in the lobby
+
+It may have started before the lobby was ready. Restart it:
+```sh
+pm2 restart <mapname>
+```
+
+---
+
+## Updating the Game
 
 ```sh
 cd ~/griljor
 git pull
 cd server && npm run build && cd ..
 cd client && npm run build && cd ..
+chmod -R o+r ~/griljor/client/dist   # re-grant read access after rebuild
 pm2 restart all
 ```
+
+---
+
+## Troubleshooting
+
+| Symptom | Check |
+|---------|-------|
+| 500 on the site | `sudo tail -20 /var/log/nginx/error.log` — likely a path or permission issue |
+| `/games/games` 404 | `VITE_LOBBY_URL` has `/games` appended — it should be the bare origin only |
+| WebSocket connection refused | nginx not routing — check the `map` block uses `$uri` with regex entries |
+| Game server shows online but not in lobby | `pm2 restart <mapname>` — it started before the lobby was ready |
+| nginx test fails after editing | Never copy repo config over live config after certbot has run |
 
 ---
 
