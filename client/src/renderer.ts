@@ -45,17 +45,12 @@ export async function preloadRoomSprites(
   }));
 }
 
-/** Convert ImageData to ImageBitmap once for fast drawImage calls. */
-async function toBitmap(img: ImageData): Promise<ImageBitmap> {
-  return createImageBitmap(img);
-}
-
-/** Cache of ImageData → ImageBitmap to avoid re-converting on each draw. */
+/** Cache of ImageData → ImageBitmap to avoid repeated createImageBitmap calls. */
 const bitmapCache = new WeakMap<ImageData, ImageBitmap>();
 
-async function getBitmap(img: ImageData): Promise<ImageBitmap> {
+export async function getBitmap(img: ImageData): Promise<ImageBitmap> {
   if (bitmapCache.has(img)) return bitmapCache.get(img)!;
-  const bm = await toBitmap(img);
+  const bm = await createImageBitmap(img);
   bitmapCache.set(img, bm);
   return bm;
 }
@@ -93,24 +88,15 @@ export async function buildRoomBackground(
     return bm;
   };
 
-  // Floor layer — unmasked tiles are opaque (white → background color)
+  // Floor then wall layer per tile — unmasked tiles are opaque (white → background color)
   if (room.spot) {
     for (let x = 0; x < GRID; x++) {
       for (let y = 0; y < GRID; y++) {
-        const flId = room.spot[x][y][0];
+        const [flId, wlId] = room.spot[x][y];
         if (flId > 0) {
           const bm = await getSprite(flId, true);
           if (bm) ctx.drawImage(bm, BORDER + x * TILE, BORDER + y * TILE, TILE, TILE);
         }
-      }
-    }
-  }
-
-  // Wall layer — unmasked tiles are opaque (white → background color)
-  if (room.spot) {
-    for (let x = 0; x < GRID; x++) {
-      for (let y = 0; y < GRID; y++) {
-        const wlId = room.spot[x][y][1];
         if (wlId > 0) {
           const bm = await getSprite(wlId, true);
           if (bm) ctx.drawImage(bm, BORDER + x * TILE, BORDER + y * TILE, TILE, TILE);

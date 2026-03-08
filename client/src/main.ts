@@ -41,17 +41,21 @@ function formatAge(ms: number): string {
   return `${Math.round(h / 24)} days`;
 }
 
+async function drawImageDataOnCanvas(canvas: HTMLCanvasElement, imgData: ImageData | null): Promise<void> {
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!imgData) return;
+  const tmp = new OffscreenCanvas(imgData.width, imgData.height);
+  tmp.getContext('2d')!.putImageData(imgData, 0, 0);
+  ctx.drawImage(tmp, 0, 0, canvas.width, canvas.height);
+}
+
 async function drawAvatarOnCanvas(canvas: HTMLCanvasElement, avatarName: string): Promise<void> {
-  const imageData = await loadMaskedSprite(
+  const imgData = await loadMaskedSprite(
     `/sprites/facebits/${avatarName}bit.png`,
     `/sprites/facebits/${avatarName}mask.png`,
   );
-  const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!imageData) return;
-  const tmp = new OffscreenCanvas(imageData.width, imageData.height);
-  tmp.getContext('2d')!.putImageData(imageData, 0, 0);
-  ctx.drawImage(tmp, 0, 0, canvas.width, canvas.height);
+  await drawImageDataOnCanvas(canvas, imgData);
 }
 
 const INV_SIZE = 35;
@@ -146,13 +150,7 @@ async function getItemImgData(item: InventoryItem): Promise<ImageData | null> {
 }
 
 async function drawItemOnCanvas(canvas: HTMLCanvasElement, item: InventoryItem): Promise<void> {
-  const imgData = await getItemImgData(item);
-  const ctx = canvas.getContext('2d')!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!imgData) return;
-  const tmp = new OffscreenCanvas(imgData.width, imgData.height);
-  tmp.getContext('2d')!.putImageData(imgData, 0, 0);
-  ctx.drawImage(tmp, 0, 0, canvas.width, canvas.height);
+  await drawImageDataOnCanvas(canvas, await getItemImgData(item));
 }
 
 async function updateInventoryPanel(msg: {
@@ -170,11 +168,12 @@ async function updateInventoryPanel(msg: {
   const weightEl = document.getElementById('inv-weight');
   if (weightEl) weightEl.textContent = `${msg.currentWeight} / ${msg.maxWeight}`;
 
-  // Update hand slot icons
-  setHandItems(
-    msg.leftHand  ? await getItemImgData(msg.leftHand)  : null,
-    msg.rightHand ? await getItemImgData(msg.rightHand) : null,
-  );
+  // Update hand slot icons (fetched in parallel)
+  const [leftImg, rightImg] = await Promise.all([
+    msg.leftHand  ? getItemImgData(msg.leftHand)  : Promise.resolve(null),
+    msg.rightHand ? getItemImgData(msg.rightHand) : Promise.resolve(null),
+  ]);
+  setHandItems(leftImg, rightImg);
 
   // Update hand slot charge counts for numbered weapons
   const handLeftCount  = document.getElementById('hand-left-count');
@@ -543,14 +542,20 @@ async function main(): Promise<void> {
       const avatarKeys = (game.avatars ?? []).map((a) => a.avatar).join(',');
       const full = game.players >= game.maxPlayers;
       const teamsVal = (game.teams ?? 0) === 0 ? 'FFA' : String(game.teams);
+      // Use static structure only in innerHTML; server-supplied strings set via textContent/dataset
       row.innerHTML = `
-        <span class="server-map">${game.title ?? game.mapName}</span>
+        <span class="server-map"></span>
         <span class="server-avatars"></span>
         <span class="server-players">${game.players}/${game.maxPlayers}</span>
         <span class="server-teams">${teamsVal}</span>
         <span class="server-rooms">${game.rooms ?? '?'}</span>
-        <button class="join-btn" data-wsurl="${game.wsUrl}" data-avatars="${avatarKeys}" data-full="${full}">Join</button>
+        <button class="join-btn">Join</button>
       `;
+      row.querySelector<HTMLElement>('.server-map')!.textContent = game.title ?? game.mapName;
+      const joinBtn = row.querySelector<HTMLButtonElement>('.join-btn')!;
+      joinBtn.dataset.wsurl = game.wsUrl;
+      joinBtn.dataset.avatars = avatarKeys;
+      joinBtn.dataset.full = String(full);
       const avatarStrip = row.querySelector<HTMLElement>('.server-avatars')!;
       for (const entry of (game.avatars ?? [])) {
         const c = document.createElement('canvas');

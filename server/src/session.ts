@@ -145,24 +145,16 @@ export class GameSession {
       if (msg.type === 'JOIN') {
         this.onJoin(ws, msg);
       } else if (playerId !== undefined) {
-        if (msg.type === 'MY_LOCATION') {
-          this.onLocation(playerId, msg);
-        } else if (msg.type === 'MESSAGE') {
-          this.onMessage(playerId, msg);
-        } else if (msg.type === 'LEAVING_GAME') {
-          this.onLeave(playerId);
-        } else if (msg.type === 'PICKUP') {
-          this.onPickup(playerId, msg);
-        } else if (msg.type === 'DROP') {
-          this.onDrop(playerId, msg);
-        } else if (msg.type === 'INV_SWAP') {
-          this.onInvSwap(playerId, msg);
-        } else if (msg.type === 'FIRE_WEAPON') {
-          this.onFireWeapon(playerId, msg);
-        } else if (msg.type === 'PING') {
-          // no-op: keeps the connection alive
-        } else if (msg.type === 'USE_ITEM') {
-          this.onUseItem(playerId, msg);
+        switch (msg.type) {
+          case 'MY_LOCATION':  this.onLocation(playerId, msg);   break;
+          case 'MESSAGE':      this.onMessage(playerId, msg);    break;
+          case 'LEAVING_GAME': this.onLeave(playerId);           break;
+          case 'PICKUP':       this.onPickup(playerId, msg);     break;
+          case 'DROP':         this.onDrop(playerId, msg);       break;
+          case 'INV_SWAP':     this.onInvSwap(playerId, msg);   break;
+          case 'FIRE_WEAPON':  this.onFireWeapon(playerId, msg); break;
+          case 'USE_ITEM':     this.onUseItem(playerId, msg);    break;
+          case 'PING':         break; // no-op: keeps the connection alive
         }
       }
     });
@@ -521,12 +513,10 @@ export class GameSession {
     if ((obj.health ?? 0) < 0 || (obj.mana ?? 0) < 0) {
       const healsHp    = (obj.health ?? 0) < 0;
       const restoresMp = (obj.mana   ?? 0) < 0;
-      // Block if the relevant stat(s) are already full
+      // Block if every applicable stat is already full
       const hpFull  = player.hp    >= player.maxHp;
       const mpFull  = player.power >= player.maxPower;
-      if (healsHp && restoresMp && hpFull && mpFull) return;
-      if (healsHp && !restoresMp && hpFull) return;
-      if (!healsHp && restoresMp && mpFull) return;
+      if ((!healsHp || hpFull) && (!restoresMp || mpFull)) return;
 
       if (healsHp)    player.hp    = Math.min(player.maxHp,    player.hp    - (obj.health ?? 0));
       if (restoresMp) player.power = Math.min(player.maxPower, player.power - (obj.mana   ?? 0));
@@ -761,6 +751,12 @@ export class GameSession {
     if (!room) return null;
     const roomMap = this.roomItems.get(roomIdx) ?? new Map<string, InventoryItem>();
 
+    // Build player-occupied set once to avoid repeated Map iteration per tile
+    const playerOccupied = new Set<string>();
+    for (const p of this.players.values()) {
+      if (p.room === roomIdx) playerOccupied.add(`${p.x},${p.y}`);
+    }
+
     // Spiral search outward from player position
     for (let radius = 0; radius <= 5; radius++) {
       for (let dx = -radius; dx <= radius; dx++) {
@@ -770,6 +766,7 @@ export class GameSession {
           const ty = py + dy;
           if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) continue;
           if (roomMap.has(`${tx},${ty}`)) continue;
+          if (playerOccupied.has(`${tx},${ty}`)) continue;
           const cell = room.spot?.[tx]?.[ty];
           if (cell) {
             const [flId, wlId] = cell;
@@ -778,11 +775,6 @@ export class GameSession {
             if (wallObj  && !wallObj.movement)  continue;
             if (floorObj && !floorObj.movement) continue;
           }
-          // Also skip tiles occupied by other players
-          const occupied = [...this.players.values()].some(
-            (p) => p.room === roomIdx && p.x === tx && p.y === ty
-          );
-          if (occupied) continue;
           return { x: tx, y: ty };
         }
       }

@@ -1,8 +1,9 @@
 import { MapFile, ObjectFile, ObjDef, RoomData, InventoryItem } from './types';
 import { loadMaskedSprite, loadSprite, setColorMode, getColorMode, ColorMode } from './assets';
-import { preloadRoomSprites, buildRoomBackground, renderFrame, OtherPlayer, TILE, BORDER } from './renderer';
+import { preloadRoomSprites, buildRoomBackground, renderFrame, getBitmap, OtherPlayer, TILE, BORDER } from './renderer';
 import { GameNetwork } from './network';
 import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
+import { stepDelay } from './utils';
 
 const GRID = 20;
 
@@ -74,13 +75,6 @@ function findNextStep(
     }
   }
   return null; // no path
-}
-
-/** Build a map from "x,y" → exit destination for all exit objects in the room. */
-/** Convert a movement speed (1-9, where 9=fastest) to a step delay in ms.
- *  speed 9 → 150 ms, speed 5 → 270 ms, speed 4 → 338 ms. */
-function stepDelay(spd: number): number {
-  return Math.max(50, Math.round(150 * 9 / Math.max(1, spd)));
 }
 
 /**
@@ -163,8 +157,6 @@ export class Game {
 
   // active missile animations
   private missiles = new Map<number, MissileAnim>();
-  // cache: objType → ImageBitmap for missile sprites
-  private missileSpriteCache = new Map<number, ImageBitmap | null>();
 
   // click-to-move path: walk toward this tile step by step
   private moveTarget: { x: number; y: number } | null = null;
@@ -782,25 +774,18 @@ export class Game {
     const base = `/data/objects/bitmaps/${this.objset}`;
 
     for (const anim of this.missiles.values()) {
-      // Resolve sprite, using a local cache to avoid repeated createImageBitmap calls
-      let bm: ImageBitmap | null;
-      if (this.missileSpriteCache.has(anim.objType)) {
-        bm = this.missileSpriteCache.get(anim.objType)!;
-      } else {
-        const obj = this.objects[anim.objType];
-        let imgData: ImageData | null = null;
-        if (obj?.bitmap) {
-          if (obj.masked && obj.mask) {
-            imgData = await loadMaskedSprite(`${base}/${obj.bitmap}`, `${base}/${obj.mask}`);
-          } else {
-            imgData = await loadSprite(`${base}/${obj.bitmap}`);
-          }
+      const obj = this.objects[anim.objType];
+      let bm: ImageBitmap | null = null;
+      if (obj?.bitmap) {
+        let imgData: ImageData | null;
+        if (obj.masked && obj.mask) {
+          imgData = await loadMaskedSprite(`${base}/${obj.bitmap}`, `${base}/${obj.mask}`);
+        } else {
+          imgData = await loadSprite(`${base}/${obj.bitmap}`);
         }
-        bm = imgData ? await createImageBitmap(imgData) : null;
-        this.missileSpriteCache.set(anim.objType, bm);
+        bm = imgData ? await getBitmap(imgData) : null;
       }
 
-      const obj = this.objects[anim.objType];
       const ox = BORDER + anim.x * TILE;
       const oy = BORDER + anim.y * TILE;
       const cx = ox + TILE / 2;
