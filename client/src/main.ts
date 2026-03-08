@@ -242,7 +242,6 @@ async function main(): Promise<void> {
   const avatarDropdown  = document.getElementById('avatar-dropdown') as HTMLElement;
   const serverList      = document.getElementById('server-list') as HTMLElement;
   const lobbyStatus     = document.getElementById('lobby-status') as HTMLElement;
-  const lobbyUpdated    = document.getElementById('lobby-updated') as HTMLElement;
 
   // DOM refs — game
   const canvas     = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -290,20 +289,9 @@ async function main(): Promise<void> {
     c.addEventListener('click', (e) => {
       e.stopPropagation();
       setSelectedAvatar(name);
-      avatarDropdown.style.display = 'none';
     });
     avatarDropdown.appendChild(c);
   }
-
-  avatarPreview.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const isOpen = avatarDropdown.style.display === 'grid';
-    avatarDropdown.style.display = isOpen ? 'none' : 'grid';
-  });
-
-  document.addEventListener('click', () => {
-    avatarDropdown.style.display = 'none';
-  });
 
   playerNameInput.addEventListener('input', () => {
     nameManuallyEdited = true;
@@ -512,14 +500,22 @@ async function main(): Promise<void> {
     for (const btn of serverList.querySelectorAll<HTMLButtonElement>('.join-btn')) {
       const taken = (btn.dataset.avatars ?? '').split(',');
       const full = btn.dataset.full === 'true';
-      btn.disabled = full || taken.includes(selected);
+      const avatarTaken = taken.includes(selected);
+      btn.disabled = full || avatarTaken;
+      if (avatarTaken && !full) {
+        btn.onmouseenter = (e) => showTooltip('Your avatar is already in use in this game. Pick a different one to join.', e.clientX, e.clientY);
+        btn.onmousemove  = (e) => moveTooltip(e.clientX, e.clientY);
+        btn.onmouseleave = () => hideTooltip();
+      } else {
+        btn.onmouseenter = null;
+        btn.onmousemove  = null;
+        btn.onmouseleave = null;
+      }
     }
   }
 
   function renderServerList(games: GameInfo[]): void {
     serverList.innerHTML = '';
-    const time = new Date().toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-    lobbyUpdated.textContent = `updated ${time}`;
     if (games.length === 0) {
       lobbyStatus.textContent = 'No active servers found.';
       return;
@@ -535,7 +531,7 @@ async function main(): Promise<void> {
       <span class="server-rooms-hdr">Rooms</span>
       <span class="server-join-hdr"></span>
     `;
-    serverList.appendChild(header);
+serverList.appendChild(header);
     for (const game of games) {
       const row = document.createElement('div');
       row.className = 'server-row';

@@ -27,45 +27,64 @@
     #title-canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
 
     /* ── Lobby ── */
-    #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; max-width: 780px; }
-    #lobby-logo { border: none; margin-top: -20px; }
-    #lobby-controls { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
-    #avatar-picker { position: relative; display: inline-flex; flex-direction: column; align-items: center; margin-top: 12px; }
-    #avatar-preview { cursor: pointer; }
-    #avatar-preview:hover { border-color: #aaa; }
-    #avatar-caret { font-size: 1em; color: #777; line-height: 1; margin-top: 1px; pointer-events: none; }
-    #random-avatar-btn {
-      background: #2a2a2a; border: 1px solid #555; color: #bbb;
-      padding: 4px 7px; cursor: pointer; font-family: monospace; font-size: 1em; line-height: 1;
+    #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 800px; }
+    #lobby-logo { border: none; margin-top: -20px; margin-bottom: 24px; }
+    .lobby-panel { width: 100%; border: 1px solid #303030; margin-bottom: 40px; }
+    .lobby-panel-hdr {
+      padding: 5px 16px;
+      background: #202020;
+      border-bottom: 1px solid #303030;
+      font-size: 13px; color: #606060;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      display: flex; align-items: center; justify-content: space-between;
     }
-    #random-avatar-btn:hover { background: #3a3a3a; }
+    #lobby-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 14px 16px; }
+    #avatar-picker { position: relative; display: inline-flex; flex-direction: column; align-items: center; padding: 4px; }
+    #avatar-preview { cursor: pointer; }
+    #avatar-preview:hover { border-color: #7a5220; }
+    #random-avatar-btn {
+      background: #1e1910;
+      border: 1px solid #52380e;
+      color: #b8842a;
+      padding: 2px 8px 4px 8px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 24px;
+      line-height: 1;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    #random-avatar-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+    #avatar-picker:hover #avatar-dropdown { display: grid; }
     #avatar-dropdown {
       display: none; position: absolute; z-index: 100;
-      left: 0; top: 36px;
-      background: #1a1a1a; border: 1px solid #555; padding: 4px;
+      left: 4px; top: 38px;
+      background: #1a1a1a; border: 1px solid #444; padding: 4px;
       grid-template-columns: repeat(5, 32px); gap: 3px;
     }
     #avatar-dropdown canvas { display: block; cursor: pointer; }
-    #avatar-dropdown canvas:hover { outline: 1px solid #aaa; }
+    #avatar-dropdown canvas:hover { outline: 1px solid #888; }
     #avatar-preview {
       width: 32px; height: 32px;
       image-rendering: pixelated;
-      border: 1px solid #444;
+      border: 1px solid #52380e;
       background: #111;
+      box-shadow: inset 0 0 0 2px #111;
       display: block;
     }
-    #server-list { width: 100%; border: 1px solid #444; min-height: 60px; }
+    #server-list { width: 100%; min-height: 60px; }
     .server-row {
       display: flex; align-items: center; gap: 12px;
-      padding: 10px 12px; border-bottom: 1px solid #333;
+      padding: 10px 16px; min-height: 54px; border-bottom: 1px solid #282828; font-size: 15px;
     }
     .server-row:last-child { border-bottom: none; }
     .server-header {
       display: flex; align-items: center; gap: 12px;
-      padding: 4px 12px; border-bottom: 1px solid #555;
-      font-size: 0.75em; color: #666; text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 5px 16px; border-bottom: 1px solid #303030;
+      font-size: 11px; color: #585858; text-transform: uppercase; letter-spacing: 0.08em;
+      background: #1e1e1e;
     }
     .server-map        { width: 160px; flex-shrink: 0; word-break: break-word; }
+    .server-row .server-map { color: #bbb; }
     .server-avatars    { display: flex; flex-wrap: wrap; gap: 4px; width: 300px; flex-shrink: 0; }
     .server-avatars-hdr{ width: 300px; flex-shrink: 0; }
     .server-players    { color: #888; white-space: nowrap; width: 55px; text-align: center; flex-shrink: 0; }
@@ -76,14 +95,16 @@
     .server-rooms-hdr  { width: 50px; text-align: center; flex-shrink: 0; }
     .server-join-hdr   { width: 50px; flex-shrink: 0; }
     .join-btn {
-      background: #2a2a2a; border: 1px solid #555; color: #bbb;
-      padding: 5px 6px 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.9em;
+      margin-left: auto;
+      background: #1e1910; border: 1px solid #52380e; color: #b8842a;
+      padding: 6px 12px; cursor: pointer; font-family: monospace; font-size: 15px;
+      transition: background 0.1s, border-color 0.1s;
     }
-    .join-btn:hover:not(:disabled) { background: #3a3a3a; }
-    .join-btn:disabled { opacity: 0.4; cursor: default; }
-    .lobby-label { font-size: 0.8em; color: #666; }
-    #lobby-status { font-size: 0.85em; color: #666; min-height: 1.2em; }
-    #lobby-updated { font-size: 0.75em; color: #555; margin-top: 4px; }
+    .join-btn:hover:not(:disabled) { background: #272212; border-color: #7a5220; color: #d4a040; }
+    .join-btn:disabled { color: #505050; background: #1a1a1a; border-color: #2e2e2e; cursor: default; }
+    #lobby-status { margin-left: auto; color: #585858; text-transform: none; letter-spacing: normal; font-size: 13px; }
+    .server-header .server-join-hdr { width: auto; flex: 1; text-align: right; }
+    .lobby-panel-games .lobby-panel-hdr { border-bottom: none; }
 
     /* ── Game ── */
     #game-screen { display: none; flex-direction: column; align-items: center; gap: 12px; }
@@ -321,14 +342,14 @@
       padding: 5px 8px; font-family: monospace; font-size: 0.9em; cursor: pointer;
     }
     input { cursor: text; }
-    #player-name { width: 120px; }
-    #player-name:focus, #player-name:active { outline: none; border-color: #777; }
-    .join-btn, #leave-btn, #mode-toggle {
+    #player-name { width: 160px; padding-top: 6px; padding-bottom: 6px; font-size: 15px; height: 32px; background: #1e1e1e; border-color: #52380e; }
+    #player-name:hover { border-color: #7a5220; }
+    #player-name:focus, #player-name:active { outline: none; border-color: #b8842a; }
+    #leave-btn, #mode-toggle {
       background: #2a2a2a; border: 1px solid #555; color: #bbb;
       padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
     }
-    .join-btn:hover:not(:disabled), #leave-btn:hover, #mode-toggle:hover { background: #3a3a3a; }
-    .join-btn:disabled { opacity: 0.4; cursor: default; }
+    #leave-btn:hover, #mode-toggle:hover { background: #3a3a3a; }
   </style>
 </head>
 <body>
@@ -343,20 +364,21 @@
   <!-- ── Lobby Screen ── -->
   <div id="lobby-screen" style="display:none">
     <canvas id="lobby-logo" style="display:block; image-rendering:pixelated;"></canvas>
-    <div class="lobby-label">Choose your avatar and name:</div>
-    <div id="lobby-controls">
-      <div id="avatar-picker">
-        <canvas id="avatar-preview" width="32" height="32" title="Choose avatar"></canvas>
-        <div id="avatar-caret">▾</div>
-        <div id="avatar-dropdown"></div>
+    <div class="lobby-panel">
+      <div class="lobby-panel-hdr">Player Setup</div>
+      <div id="lobby-controls">
+        <div id="avatar-picker">
+          <canvas id="avatar-preview" width="32" height="32" title="Choose avatar"></canvas>
+<div id="avatar-dropdown"></div>
+        </div>
+        <input id="player-name" maxlength="24" placeholder="name" spellcheck="false" autocomplete="off" />
+        <button id="random-avatar-btn" title="Random avatar">↻</button>
       </div>
-      <input id="player-name" maxlength="24" placeholder="name" spellcheck="false" autocomplete="off" />
-      <button id="random-avatar-btn" title="Random avatar">↻</button>
     </div>
-    <div class="lobby-label" style="margin-top: 16px;">Join a game in progress below:</div>
-    <div id="server-list"></div>
-    <div id="lobby-updated"></div>
-    <div id="lobby-status">Loading…</div>
+    <div class="lobby-panel lobby-panel-games" style="margin-bottom: 0">
+      <div class="lobby-panel-hdr">Available Games<span id="lobby-status">Loading…</span></div>
+      <div id="server-list"></div>
+    </div>
   </div>
 
   <!-- ── Game Screen ── -->

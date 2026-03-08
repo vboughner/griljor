@@ -953,3 +953,97 @@ slot canvases in the mouse widget had no equivalent display.
 - `updateInventoryPanel` sets `textContent` to the quantity string when
   `obj.numbered` is true for the hand item, or `''` when the slot is empty
   or holds a non-numbered item. Clears automatically on item removal.
+
+---
+
+## Lobby UI Style — Design Decisions
+
+These decisions reflect a deliberate visual direction established during a
+styling pass. Avoid reverting these without good reason.
+
+### Color Palette
+
+The lobby uses a strict dark monochrome base with a single amber accent:
+
+| Role | Value |
+|------|-------|
+| Page background | `#1a1a1a` |
+| Panel border | `#303030` |
+| Panel header background | `#202020` |
+| Panel header border-bottom | `#303030` |
+| Row dividers | `#282828` |
+| Server column header background | `#1e1e1e` |
+| Primary text | `#ccc` |
+| Secondary text (counts, stats) | `#888` |
+| Dim text (header labels) | `#606060` |
+| **Amber accent** — interactive borders | `#52380e` |
+| **Amber accent** — interactive text | `#b8842a` |
+| **Amber accent** — interactive background | `#1e1910` |
+| **Amber hover** — border | `#7a5220` |
+| **Amber hover** — text | `#d4a040` |
+
+The amber accent (`#b8842a` / `#52380e`) is used **only** on interactive
+elements: join buttons, avatar preview border, player name input border,
+and the random avatar button. Everything else is gray/black. This makes
+clickable/editable elements immediately identifiable without adding noise.
+
+### Font Sizes (all `px`, no `em` in the lobby)
+
+| Element | Size |
+|---------|------|
+| Panel header labels (PLAYER SETUP, AVAILABLE GAMES) | `13px` |
+| Server column header row (MAP, PLAYERS, etc.) | `11px` |
+| Server data rows | `15px` |
+| Player name input | `15px` |
+| Join buttons | `15px` |
+| Random avatar button (↻) | `24px` |
+| Status text (`#lobby-status`) | `13px` |
+
+### Panel Structure
+
+The lobby uses two bordered panels (`.lobby-panel`) with dark header bars
+(`.lobby-panel-hdr`). These create clear visual sections without relying
+on whitespace alone. Panels have `margin-bottom: 40px` between them.
+
+The **Available Games** panel uses class `.lobby-panel-games` which removes
+the `border-bottom` from its header bar, visually merging it with the
+column header row below. The **Player Setup** panel retains its border.
+
+### Server Row Layout
+
+- All rows (column headers + data) share the same `16px` horizontal padding
+  so columns align perfectly edge-to-edge.
+- `min-height: 54px` is set on data rows so the row height does not shift
+  when players join or leave (avatar canvases are 32px tall; 54px is enough
+  to contain them comfortably with 10px top/bottom padding).
+- The join button uses `margin-left: auto` to sit flush against the right
+  edge of the row, regardless of the widths of the columns to its left.
+- Row hover is intentionally absent — only the join button is interactive,
+  so highlighting the whole row would be misleading.
+
+### Avatar Picker
+
+- The avatar preview has an amber border matching the other interactive elements.
+- `box-shadow: inset 0 0 0 2px #111` creates a 2px visual gap between the
+  avatar sprite and the border without shrinking the 32×32 canvas.
+- The dropdown opens on CSS hover (`#avatar-picker:hover #avatar-dropdown`)
+  rather than on click, removing the need for JS click toggles and a close
+  handler.
+- The caret was removed; the amber border signals interactivity.
+- The dropdown is positioned at `left: 4px; top: 38px` to account for the
+  4px padding on `#avatar-picker` and to overlap slightly with the avatar
+  border, ensuring the CSS `:hover` chain is never broken as the mouse
+  moves from the avatar to the dropdown.
+
+### Disabled Join Button Tooltip
+
+When the join button is disabled because the player's selected avatar is
+already in use in that game, hovering the button shows a tooltip:
+`"Your avatar is already in use in this game. Pick a different one to join."`
+
+This uses the existing `showTooltip` / `moveTooltip` / `hideTooltip`
+system. The tooltip is attached via `btn.onmouseenter` / `btn.onmouseleave`
+(not `addEventListener`) so it is cleanly replaced on each call to
+`updateJoinButtons()` without accumulating duplicate listeners.
+Mouse events fire on disabled buttons (there is no `pointer-events: none`
+on disabled join buttons).
