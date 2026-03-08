@@ -125,8 +125,9 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readBody(req);
       if (!isUnregisterBody(body)) { send(400, { error: 'Bad body' }); return; }
+      const mapName = games.get(body.wsUrl)?.mapName;
       games.delete(body.wsUrl);
-      console.log(`[lobby] unregistered ${body.wsUrl}`);
+      console.log(`[lobby] unregistered ${body.wsUrl}${mapName ? ` (${mapName})` : ''}`);
       broadcast();
       send(200, { ok: true });
     } catch { send(400, { error: 'Bad request' }); }
