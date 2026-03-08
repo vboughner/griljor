@@ -138,6 +138,52 @@ async function loadRawBitmap(url: string): Promise<ImageBitmap | null> {
   });
 }
 
+// Load a river tile bitmap with auto-generated transparency.
+// Dark pixels are the ripple features. White pixels near a dark pixel are the
+// river body (kept opaque). White pixels far from any dark pixel are background
+// (made transparent so the terrain underneath shows through).
+async function loadRiverBitmapMasked(url: string): Promise<ImageBitmap | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const W = img.width, H = img.height;
+      const oc = new OffscreenCanvas(W, H);
+      const c = oc.getContext('2d')!;
+      c.drawImage(img, 0, 0);
+      const id = c.getImageData(0, 0, W, H);
+      const RADIUS = 6;
+
+      // Mark dark (feature) pixels
+      const isDark = new Uint8Array(W * H);
+      for (let i = 0; i < id.data.length; i += 4)
+        if (id.data[i] < 200) isDark[i >> 2] = 1;
+
+      // For each white pixel: transparent if no dark pixel within RADIUS
+      for (let py = 0; py < H; py++) {
+        for (let px = 0; px < W; px++) {
+          const idx = py * W + px;
+          if (isDark[idx]) continue;
+          let near = false;
+          outer: for (let dy = -RADIUS; dy <= RADIUS; dy++) {
+            for (let dx = -RADIUS; dx <= RADIUS; dx++) {
+              const nx = px + dx, ny = py + dy;
+              if (nx >= 0 && nx < W && ny >= 0 && ny < H && isDark[ny * W + nx]) {
+                near = true; break outer;
+              }
+            }
+          }
+          if (!near) id.data[idx * 4 + 3] = 0;
+        }
+      }
+
+      c.putImageData(id, 0, 0);
+      createImageBitmap(oc).then(resolve).catch(() => resolve(null));
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
 async function loadMaskedBitmap(burl: string, murl: string): Promise<ImageBitmap | null> {
   const id = await loadMaskedSprite(burl, murl);
   return id ? createImageBitmap(id) : null;
@@ -176,6 +222,15 @@ function drawFace(ctx: CanvasRenderingContext2D, sprite: FaceSprite, x: number, 
 }
 
 // ── Terrain map (ported from scene.c) ────────────────────────────────────────
+
+// Return the appropriate background tile name for a river tile at (col, row)
+function riverBgAt(col: number, row: number): string {
+  if (col <= 16 && row <= 4) return 'forest';
+  if (row >= 5 && row <= 9) { const [cs, ce] = FOREST1_RANGES[row - 5]; if (col >= cs && col <= ce) return 'forest'; }
+  if (row >= 8 && row <= 19) { const [cs, ce] = FOREST2_RANGES[row - 8]; if (col >= cs && col <= ce) return 'forest'; }
+  if (row >= 3 && row <= 16) { const [cs, ce] = FOREST3_RANGES[row - 3]; if (col >= cs && col <= ce) return 'forest'; }
+  return 'sand';
+}
 
 function drawRiverSection(ctx: OffscreenCanvasRenderingContext2D, pts: number[], tiles: Map<string, ImageBitmap | null>, tileA: string, tileB: string): void {
   for (let i = 1; i < pts[0]; i += 2) {
@@ -238,6 +293,19 @@ async function buildTerrainMap(tiles: Map<string, ImageBitmap | null>): Promise<
   for (const [col, row] of LL_CORNERS) { const bm = t('llpath'); if (bm) ctx.drawImage(bm, col*TILE, row*TILE, TILE, TILE); }
   for (const [col, row] of UR_CORNERS) { const bm = t('urpath'); if (bm) ctx.drawImage(bm, col*TILE, row*TILE, TILE, TILE); }
   for (const [col, row] of UL_CORNERS) { const bm = t('ulpath'); if (bm) ctx.drawImage(bm, col*TILE, row*TILE, TILE, TILE); }
+
+  // Draw terrain background under every river tile so it shows through transparent areas
+  const RIVER_ARRAYS = [R0,R2,R4,R6,R8,R9,R10,R11,R12,R13,R14,R15,R16];
+  for (const pts of RIVER_ARRAYS)
+    for (let i = 1; i < pts[0]; i += 2) {
+      const bm = t(riverBgAt(pts[i], pts[i + 1]));
+      if (bm) ctx.drawImage(bm, pts[i] * TILE, pts[i + 1] * TILE, TILE, TILE);
+    }
+  for (let col = 17; col <= 25; col++)
+    for (let row = 5; row <= 6; row++) {
+      const bm = t(riverBgAt(col, row));
+      if (bm) ctx.drawImage(bm, col * TILE, row * TILE, TILE, TILE);
+    }
 
   drawRiverSection(ctx, R0,  tiles, 'river0',  'river1');
   drawRiverSection(ctx, R2,  tiles, 'river2',  'river3');
@@ -337,7 +405,7 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
 
   const [rawLetters, terrainBitmaps, faceSprites] = await Promise.all([
     Promise.all(LETTER_NAMES.map((n) => loadBitmap(`/sprites/bitmaps/${n}.png`))),
-    Promise.all(TERRAIN_NAMES.map((n) => loadRawBitmap(`/sprites/bitmaps/${n}.png`))),
+    Promise.all(TERRAIN_NAMES.map((n) => (n.startsWith('river') ? loadRiverBitmapMasked : loadRawBitmap)(`/sprites/bitmaps/${n}.png`))),
     Promise.all(AVATARS.map((n) => loadFaceSprite(n))),
   ]);
 
