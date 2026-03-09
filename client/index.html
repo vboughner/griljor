@@ -116,23 +116,7 @@
       image-rendering: pixelated;
       border: 1px solid #444;
     }
-    #nav {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      grid-template-rows: auto auto auto;
-      gap: 6px;
-      width: 200px;
-    }
-    #nav button {
-      background: #2a2a2a; border: 1px solid #555; color: #bbb;
-      padding: 6px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
-    }
-    #nav button:hover:not(:disabled) { background: #3a3a3a; }
-    #nav button:disabled { opacity: 0.3; cursor: default; }
-    #btn-north { grid-column: 2; grid-row: 1; }
-    #btn-west  { grid-column: 1; grid-row: 2; }
-    #btn-east  { grid-column: 3; grid-row: 2; }
-    #btn-south { grid-column: 2; grid-row: 3; }
+    #nav { display: none; }
     #game-controls { display: flex; gap: 8px; }
     #status { font-size: 0.8em; color: #666; min-height: 1em; }
     #chat-panel {
@@ -167,10 +151,11 @@
       font-size: 0.85em;
     }
     #chat-send {
-      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      background: #1e1910; border: 1px solid #52380e; color: #b8842a;
       padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
+      transition: background 0.1s, border-color 0.1s;
     }
-    #chat-send:hover { background: #3a3a3a; }
+    #chat-send:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
 
     /* ── Mouse widget ── */
     #mouse-widget { margin-bottom: 10px; }
@@ -346,10 +331,11 @@
     #player-name:hover { border-color: #7a5220; }
     #player-name:focus, #player-name:active { outline: none; border-color: #b8842a; }
     #leave-btn, #mode-toggle {
-      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      background: #1e1910; border: 1px solid #52380e; color: #b8842a;
       padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
+      transition: background 0.1s, border-color 0.1s;
     }
-    #leave-btn:hover, #mode-toggle:hover { background: #3a3a3a; }
+    #leave-btn:hover, #mode-toggle:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
   </style>
 </head>
 <body>
