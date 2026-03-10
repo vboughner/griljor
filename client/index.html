@@ -197,21 +197,21 @@
     /* ── Player list ── */
     #player-list-panel {
       width: 240px;
-      height: 704px;
+      min-height: 704px;
       display: flex;
       flex-direction: column;
       gap: 6px;
       padding-top: 29px;
     }
-    #player-list-panel h2 {
-      font-size: 0.8em;
-      color: #666;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border-bottom: 1px solid #333;
-      padding-bottom: 4px;
+    #player-list {
+      flex: 1;
+      min-height: 214px;
+      padding: 2px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      align-content: start;
     }
-    #player-list { display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto; min-height: 0; }
     .player-row {
       display: flex;
       align-items: center;
@@ -224,7 +224,7 @@
       flex-shrink: 0;
     }
     .player-details { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-    .player-name { font-size: 0.85em; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .player-name { font-size: 0.85em; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 68px; }
     .player-kd   { font-size: 0.75em; color: #666; }
     .player-time { font-size: 0.75em; color: #555; }
 
@@ -359,7 +359,7 @@
           <canvas id="avatar-preview" width="32" height="32" title="Choose avatar"></canvas>
 <div id="avatar-dropdown"></div>
         </div>
-        <input id="player-name" maxlength="24" placeholder="name" spellcheck="false" autocomplete="off" />
+        <input id="player-name" maxlength="10" placeholder="name" spellcheck="false" autocomplete="off" />
         <button id="random-avatar-btn" title="Random avatar">↻</button>
       </div>
     </div>
@@ -413,7 +413,6 @@
           </div>
           <div id="inv-grid"></div>
         </div>
-        <h2>Players</h2>
         <div id="player-list"></div>
         <div id="chat-panel">
           <div id="chat-log"></div>

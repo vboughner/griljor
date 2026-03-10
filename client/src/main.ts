@@ -303,7 +303,11 @@ async function main(): Promise<void> {
   }
 
   playerNameInput.addEventListener('input', () => {
-    nameManuallyEdited = true;
+    if (playerNameInput.value.trim() === '') {
+      nameManuallyEdited = false;
+    } else {
+      nameManuallyEdited = true;
+    }
   });
 
   setSelectedAvatar(selectedAvatar);
@@ -596,7 +600,7 @@ serverList.appendChild(header);
     setInputsDisabled(true);
     lobbyStatus.textContent = `Connecting to ${gameInfo.mapName}\u2026`;
 
-    const playerName = playerNameInput.value.trim() || 'player';
+    const playerName = playerNameInput.value.trim() || selectedAvatar;
 
     try {
       const { mapData, objFile } = await loadMap(gameInfo.mapName);
@@ -735,11 +739,11 @@ serverList.appendChild(header);
   leaveBtn.addEventListener('click', () => {
     if (leaveCountdown !== null) { cancelLeave(); return; }
     let secs = 5;
-    leaveBtn.textContent = `Leaving in ${secs}…`;
+    leaveBtn.textContent = `Leaving ${secs}…`;
     leaveCountdown = setInterval(() => {
       secs--;
       if (secs <= 0) { doLeave(); return; }
-      leaveBtn.textContent = `Leaving in ${secs}…`;
+      leaveBtn.textContent = `Leaving ${secs}…`;
     }, 1000);
   });
 
