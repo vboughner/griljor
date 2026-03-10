@@ -194,9 +194,17 @@ async function updateInventoryPanel(msg: {
     handLeftCanvas.onclick = () => {
       if (msg.leftHand && invNetwork) invNetwork.sendDrop('left');
     };
+    handLeftCanvas.oncontextmenu = (e) => {
+      e.preventDefault();
+      if (msg.leftHand && invNetwork) invNetwork.sendDrop('left');
+    };
   }
   if (handMiddleCanvas) {
     handMiddleCanvas.onclick = () => {
+      if (msg.rightHand && invNetwork) invNetwork.sendDrop('right');
+    };
+    handMiddleCanvas.oncontextmenu = (e) => {
+      e.preventDefault();
       if (msg.rightHand && invNetwork) invNetwork.sendDrop('right');
     };
   }
@@ -436,6 +444,10 @@ async function main(): Promise<void> {
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (e.key === 't') { e.preventDefault(); chatInput.focus(); }
     if (e.key === 'L') { e.preventDefault(); void toggleMode(); }
+  });
+
+  document.addEventListener('contextmenu', (e) => {
+    if (gameScreen.style.display !== 'none') e.preventDefault();
   });
 
   function showTitle(): void {
