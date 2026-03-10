@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **The active development work in this repository is a modern web rewrite of the original game.** The rewrite lives in the `server/` and `client/` directories and is implemented as a Node.js/TypeScript WebSocket server with a Vite/TypeScript browser client.
 
-- **Overall plan and feature roadmap**: see [`web-rewrite.md`](web-rewrite.md)
+- **Overall plan and feature roadmap**: see [`modern-rewrite-plan.md`](modern-rewrite-plan.md)
 - **What has already been implemented**: see [`implementation-notes.md`](implementation-notes.md)
 - **What still needs to be done**: see [`todo.md`](todo.md)
 - **Deployment and hosting plan**: see [`deployment-plan.md`](deployment-plan.md)
@@ -17,14 +17,14 @@ When asked to work on the game, assume the target is the modern web rewrite unle
 
 ## Legacy Game (Reference Only)
 
-**Griljor: The War of Griljor** is a 1989-era multiplayer real-time game written in C with an X11 GUI. It has a client-server architecture where multiple players connect to a game driver (server) over TCP sockets. The legacy source lives in `src/` and is kept for reference.
+**Griljor: The War of Griljor** is a 1989-era multiplayer real-time game written in C with an X11 GUI. It has a client-server architecture where multiple players connect to a game driver (server) over TCP sockets. The legacy source lives in `legacy/src/` and is kept for reference.
 
 ### Build System
 
-All source files live in `src/`. Build from the `src/` directory using `make`.
+All source files live in `legacy/src/`. Build from the `legacy/src/` directory using `make`.
 
 ```sh
-cd src
+cd legacy/src
 
 #### Build main client + server only
 make two
@@ -50,7 +50,7 @@ The Makefile uses `CC = cc` and requires `OPENWINHOME` to be set (for X11 header
 
 ### Configuration
 
-**`src/config.h`** is the central configuration file. All paths are hardcoded to the original Sun workstation at `/net/rootbeer.Eng/export/home/vbo/games/src/griljor/2.0/`. Before building on a new system, update all paths in `config.h` to point to the actual `lib/` directory location.
+**`legacy/src/config.h`** is the central configuration file. All paths are hardcoded to the original Sun workstation at `/net/rootbeer.Eng/export/home/vbo/games/src/griljor/2.0/`. Before building on a new system, update all paths in `config.h` to point to the actual `legacy/lib/` directory location.
 
 Key path defines: `OBJ_LIB_DIR`, `MAP_LIB_DIR`, `HELP_LIB_DIR`, `DFLT_PASS_FILE`, `DFLT_GAME_FILE`, `DFLT_MAP_FILE`.
 
@@ -60,7 +60,7 @@ Network ports: `BOSS_PORT 1137` (game listing), `BOSS_REC_PORT 3323` (player con
 
 #### Executables and Their Source Groupings
 
-The Makefile defines clear source groups (see `src/Makefile`):
+The Makefile defines clear source groups (see `legacy/src/Makefile`):
 
 | Executable | Purpose | Key sources |
 |------------|---------|-------------|
@@ -75,33 +75,33 @@ The Makefile defines clear source groups (see `src/Makefile`):
 - **Shared core** (`SRCS`/`OBJS`): `map.c`, `objects.c`, `socket.c`, `person.c`, `lib.c`, `gametime.c`, `message.c`, `notify.c`, `mapfunc.c`, `mapstore.c`, `connect.c`, etc. — used by both client and server.
 - **Window layer** (`WINDOW_SRCS`): `windowsX11.c`, `inputX11.c`, `outputX11.c`, `menusX11.c` — shared by client and all editors.
 - **Vline graphics** (`VSRCS`): `vsys.c`, `vline.c` — custom 2D drawing library used everywhere.
-- **Burt AI** (`BURT_SRCS`): `burt/io.c`, `burt/load.c`, `burt/main.c`, `burt/person.c`, `burt/response.c` — Eliza-style NPC AI, compiled into `grildriver` only.
+- **Burt AI** (`BURT_SRCS`): `legacy/burt/io.c`, `legacy/burt/load.c`, `legacy/burt/main.c`, `legacy/burt/person.c`, `legacy/burt/response.c` — Eliza-style NPC AI, compiled into `grildriver` only.
 
-#### Game Data (`lib/`)
+#### Game Data (`legacy/lib/`)
 
-- `lib/map/` — Map files (`.map`) with player placement metadata (`.pla`)
-- `lib/obj/` — Object definition files (`.obj`, `.bin`)
-- `lib/` — Help files, news, player password store, game list, monster variables, GM personality script (`gm.text`)
+- `legacy/lib/map/` — Map files (`.map`) with player placement metadata (`.pla`)
+- `legacy/lib/obj/` — Object definition files (`.obj`, `.bin`)
+- `legacy/lib/` — Help files, news, player password store, game list, monster variables, GM personality script (`gm.text`)
 
 #### Bitmap Resources
 
 Bitmaps are stored as raw binary files (no extension) and `#include`d directly into C source:
-- `bitmaps/` — Terrain, environment, and title screen bitmaps
-- `bit/` — UI elements and object bitmaps
-- `facebits/` — Player avatar bitmaps (paired `*bit`/`*mask` files)
+- `legacy/bitmaps/` — Terrain, environment, and title screen bitmaps
+- `legacy/bit/` — UI elements and object bitmaps
+- `legacy/facebits/` — Player avatar bitmaps (paired `*bit`/`*mask` files)
 
-#### Utilities (`util/`)
+#### Utilities (`legacy/util/`)
 
 Standalone tools with their own Makefiles:
-- `bmconvert/` — Bitmap format conversion
-- `mask/` — Auto-generate masks from bitmaps (`make mkmask`)
-- `rotate/` — Bitmap rotation
-- `textbit/` — Render text as bitmap
+- `legacy/util/bmconvert/` — Bitmap format conversion
+- `legacy/util/mask/` — Auto-generate masks from bitmaps (`make mkmask`)
+- `legacy/util/rotate/` — Bitmap rotation
+- `legacy/util/textbit/` — Render text as bitmap
 
 #### Burt AI Testing
 
 ```sh
-cd burt
+cd legacy/burt
 make testburt
 ./testburt
 ```

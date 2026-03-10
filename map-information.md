@@ -2,7 +2,7 @@
 
 ## Team & Spawn Structure
 
-Maps have a `teams_supported` field (1 or 2) and rooms have a `team` field (0=neutral, 1=team1, 2=team2). The actual per-tile spawn coordinates live in binary `.pla` files in `lib/map/` — not yet parsed by the pipeline.
+Maps have a `teams_supported` field (1 or 2) and rooms have a `team` field (0=neutral, 1=team1, 2=team2). The actual per-tile spawn coordinates live in binary `.pla` files in `legacy/lib/map/` — not yet parsed by the pipeline.
 
 ---
 
