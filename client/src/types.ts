@@ -63,7 +63,6 @@ export interface ObjDef {
   swings?: boolean;
   alternate?: number;
   health?: number;      // negative = restores HP on use
-  mana?: number;        // negative = restores power on use
   lost?: boolean;       // consumed on use
 }
 

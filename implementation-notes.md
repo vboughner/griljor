@@ -1047,3 +1047,67 @@ system. The tooltip is attached via `btn.onmouseenter` / `btn.onmouseleave`
 `updateJoinButtons()` without accumulating duplicate listeners.
 Mouse events fire on disabled buttons (there is no `pointer-events: none`
 on disabled join buttons).
+
+---
+
+## Design Decision — Mana/Power Removed
+
+### Rationale
+
+The original C game had a concept of "power" (mana) as a player resource
+alongside HP. When porting to the web rewrite, a power stat was scaffolded
+in — the player interface tracked `power`/`maxPower`, it was included in
+the `YOUR_STATS` protocol message, and an MP bar was displayed in the
+stats panel.
+
+However, an audit of the object data revealed the mana system was never
+meaningfully used:
+
+- Only **one object type** (the `scroll`, object 232 in `standard.json`)
+  had a `mana` field, and its value was positive (`mana: 20`), meaning it
+  was never a mana-restoring consumable.
+- The weapon-fire handler (`onFireWeapon` in `session.ts`) never checked
+  or consumed `player.power` before allowing a weapon to fire. In other
+  words, no weapon had a mana cost in practice.
+- Only 3 maps used the scroll at all (`main`, `playtesters`, `twoperson`),
+  and two of those are test/demo maps.
+
+Given that the power system was invisible to gameplay, added protocol
+complexity, and cluttered the UI with a stat bar that never changed
+meaningfully, the decision was made to remove it entirely and keep the
+game's resource model to a single stat: HP.
+
+### What Was Removed
+
+**Server (`server/src/session.ts`)**
+- `power` and `maxPower` fields removed from the `Player` interface
+- `BASE_POWER`, `POWER_PER_LEVEL` constants removed
+- `maxPowerForLevel()` helper removed
+- Player initialisation no longer sets power/maxPower
+- Consumable item handler simplified: only checks `obj.health < 0` (HP
+  restore); mana-restore branch (`restoresMp`, `mpFull`) removed
+- Level-up handler no longer increases `maxPower`
+- Respawn no longer restores `player.power`
+- `sendStats()` no longer includes `power`/`maxPower` in `YOUR_STATS`
+
+**Protocol (`server/src/protocol.ts`, `client/src/network.ts`)**
+- `power` and `maxPower` fields removed from the `YOUR_STATS` message type
+
+**Object interfaces (`server/src/world.ts`, `client/src/types.ts`)**
+- `mana?` field removed from `ObjDef` / object type interfaces
+- The raw JSON object data files in `pipeline/out/data/objects/` are left
+  unchanged (the `mana` field on the scroll is simply ignored at runtime)
+
+**Client UI (`client/src/main.ts`, `client/index.html`)**
+- `updateStats()` signature reduced to `(hp, maxHp, xp, level)`
+- MP bar (`#mp-bar`), MP text (`#mp-text`), and `.mp-fill` CSS class
+  removed from the stats panel
+- Tooltip for mana-restoring items removed from `tooltip.ts`
+- Consumable detection in `game.ts` simplified to `health < 0` only
+
+### Scroll Behaviour After Change
+
+The scroll (`strength: 80`, `weapon: true`, `range: 25`) works as a
+straightforward ranged weapon dealing 80 damage per hit. The `mana: 20`
+field it carried in the object data is now simply ignored. No map changes
+were required.

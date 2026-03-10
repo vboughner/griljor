@@ -36,8 +36,7 @@ export type S2CMessage =
       currentWeight: number; maxWeight: number }
   | { type: 'ITEMS_SYNC';
       items: Array<{ room: number; x: number; y: number; item: InventoryItem }> }
-  | { type: 'YOUR_STATS';    hp: number; maxHp: number; power: number; maxPower: number;
-                             xp: number; level: number }
+  | { type: 'YOUR_STATS';    hp: number; maxHp: number; xp: number; level: number }
   | { type: 'PLAYER_HEALTH'; id: number; hp: number; maxHp: number }
   | { type: 'MISSILE_START'; id: number; room: number;
                              path: Array<{x: number, y: number}>;

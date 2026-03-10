@@ -21,13 +21,10 @@ function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryItem): nu
 
 // Level/XP progression
 const BASE_HP    = 100;
-const BASE_POWER = 50;
 const HP_PER_LEVEL    = 20;
-const POWER_PER_LEVEL = 10;
 const XP_PER_LEVEL    = 100; // level N requires N*100 XP to advance
 
-function maxHpForLevel(level: number): number    { return BASE_HP    + (level - 1) * HP_PER_LEVEL; }
-function maxPowerForLevel(level: number): number { return BASE_POWER + (level - 1) * POWER_PER_LEVEL; }
+function maxHpForLevel(level: number): number { return BASE_HP + (level - 1) * HP_PER_LEVEL; }
 
 function levelForXp(xp: number): number {
   let level = 1;
@@ -59,8 +56,6 @@ interface Player {
   // combat stats
   hp: number;
   maxHp: number;
-  power: number;
-  maxPower: number;
   xp: number;
   level: number;
 }
@@ -191,7 +186,6 @@ export class GameSession {
       inventory: new Array<InventoryItem | null>(INV_SIZE).fill(null),
       currentWeight: 0,
       hp: BASE_HP, maxHp: BASE_HP,
-      power: BASE_POWER, maxPower: BASE_POWER,
       xp: 0, level: 1,
     };
     this.players.set(id, player);
@@ -510,16 +504,11 @@ export class GameSession {
     if (!obj) return;
 
     // --- Consumable branch (same-tile use) ---
-    if ((obj.health ?? 0) < 0 || (obj.mana ?? 0) < 0) {
-      const healsHp    = (obj.health ?? 0) < 0;
-      const restoresMp = (obj.mana   ?? 0) < 0;
-      // Block if every applicable stat is already full
-      const hpFull  = player.hp    >= player.maxHp;
-      const mpFull  = player.power >= player.maxPower;
-      if ((!healsHp || hpFull) && (!restoresMp || mpFull)) return;
+    if ((obj.health ?? 0) < 0) {
+      // Block if HP already full
+      if (player.hp >= player.maxHp) return;
 
-      if (healsHp)    player.hp    = Math.min(player.maxHp,    player.hp    - (obj.health ?? 0));
-      if (restoresMp) player.power = Math.min(player.maxPower, player.power - (obj.mana   ?? 0));
+      player.hp = Math.min(player.maxHp, player.hp - (obj.health ?? 0));
 
       if (obj.numbered) {
         handItem.quantity--;
@@ -612,8 +601,7 @@ export class GameSession {
       const newLevel = levelForXp(killer.xp);
       if (newLevel > killer.level) {
         killer.level = newLevel;
-        killer.maxHp    = maxHpForLevel(killer.level);
-        killer.maxPower = maxPowerForLevel(killer.level);
+        killer.maxHp = maxHpForLevel(killer.level);
         killer.hp = Math.min(killer.hp, killer.maxHp);
         this.send(killer.ws, { type: 'REPORT', text: `Level up! You are now level ${killer.level}.` });
       }
@@ -661,8 +649,7 @@ export class GameSession {
   }
 
   private respawnPlayer(victim: Player, _killer: Player | null): void {
-    victim.hp    = victim.maxHp;
-    victim.power = victim.maxPower;
+    victim.hp = victim.maxHp;
 
     // Find a free spawn tile near (10,10) in room 0
     const spawn = this.nearbyFreeTile(0, 10, 10) ?? { x: 10, y: 10 };
@@ -741,7 +728,6 @@ export class GameSession {
     this.send(player.ws, {
       type: 'YOUR_STATS',
       hp: player.hp, maxHp: player.maxHp,
-      power: player.power, maxPower: player.maxPower,
       xp: player.xp, level: player.level,
     });
   }

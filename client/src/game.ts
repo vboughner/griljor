@@ -281,7 +281,7 @@ export class Game {
           this.network?.sendUseItem(hand, tx, ty);
         } else if (
           tx === this.px && ty === this.py &&
-          ((handObj?.health ?? 0) < 0 || (handObj?.mana ?? 0) < 0)
+          (handObj?.health ?? 0) < 0
         ) {
           // Consumable: click own tile to use on self
           this.network?.sendUseItem(hand, tx, ty);
