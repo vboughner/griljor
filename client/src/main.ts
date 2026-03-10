@@ -255,7 +255,8 @@ async function main(): Promise<void> {
 
   // DOM refs — game
   const canvas     = document.getElementById('game-canvas') as HTMLCanvasElement;
-  const roomInfo   = document.getElementById('room-info') as HTMLElement;
+  const roomInfo   = document.getElementById('room-label') as HTMLElement;
+  const mapLabel   = document.getElementById('map-label') as HTMLElement;
   const status     = document.getElementById('status') as HTMLElement;
   const leaveBtn          = document.getElementById('leave-btn') as HTMLButtonElement;
   const chatLog    = document.getElementById('chat-log') as HTMLElement;
@@ -608,6 +609,7 @@ serverList.appendChild(header);
       // Set up inventory object references for the panel
       invObjects = objFile.objects;
       invObjset = mapData.map.objfilename.replace(/\.obj$/, '');
+      mapLabel.textContent = gameInfo.title ?? gameInfo.mapName;
 
       const network = new GameNetwork(gameInfo.wsUrl);
       currentNetwork = network;
@@ -755,6 +757,12 @@ serverList.appendChild(header);
   lobbyLogo.width  = 780;
   lobbyLogo.height = logoH;
   void drawLogo(lobbyLogo);
+
+  // Half-size game screen logo
+  const gameLogoCanvas = document.getElementById('game-logo') as HTMLCanvasElement;
+  gameLogoCanvas.width  = 400;
+  gameLogoCanvas.height = 100;
+  void drawLogo(gameLogoCanvas);
 
   showTitle();
   void refreshServerList(); // start fetching in background during title

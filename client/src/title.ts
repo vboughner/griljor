@@ -347,9 +347,10 @@ export async function drawLogo(canvas: HTMLCanvasElement): Promise<void> {
   const W = canvas.width;
   const H = canvas.height;
 
+  // Use H/1.4 so the j descender (extraY = 0.2h) fits within the canvas
   let scale = 1;
   for (const bm of rawLetters)
-    if (bm && bm.height > 0) scale = Math.min(scale, H / bm.height);
+    if (bm && bm.height > 0) scale = Math.min(scale, (H / 1.4) / bm.height);
 
   const totalW = rawLetters.reduce((s, bm) => s + Math.floor((bm?.width ?? 48) * scale) + LETTER_PAD, -LETTER_PAD);
   if (totalW > W - 20) scale *= (W - 20) / totalW;

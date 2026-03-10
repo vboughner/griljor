@@ -669,7 +669,10 @@ export class Game {
 
   private buildTileHtml(tx: number, ty: number): string {
     const room = this.mapData.rooms[this.currentRoom];
-    const rows: string[] = [`<div class="tip-name">Tile (${tx}, ${ty})</div>`];
+    const rows: string[] = [
+      `<div class="tip-name">Room ${this.currentRoom}</div>`,
+      `<div class="tip-name">Tile (${tx}, ${ty})</div>`,
+    ];
 
     const [flId, wlId] = room.spot?.[tx]?.[ty] ?? [0, 0];
     const flObj = flId > 0 ? this.objects[flId] : null;
@@ -739,8 +742,7 @@ export class Game {
     );
     this.drawBorderIndicators(room);
     await this.drawMissiles();
-    this.roomInfo.textContent =
-      `Room ${this.currentRoom}: "${room.name}" — (${this.px}, ${this.py})`;
+    this.roomInfo.textContent = (room.name && room.name !== 'no name') ? room.name : '';
   }
 
   private drawBorderIndicators(room: RoomData): void {
