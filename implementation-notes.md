@@ -1155,3 +1155,185 @@ the `(+N XP)` suffix.
 All players now have a fixed 100 HP for the duration of every session. The
 kill/death scoreboard and REPORT messages still work as before. Item tooltips
 are unaffected. No object data files were modified.
+
+---
+
+## Phase 14 — Game Screen UI Overhaul
+
+### Title Screen: River Tile Masking
+
+River tiles in the original bitmaps have sparse dark ripple marks on a white
+background. When displayed with white transparency, the white background turned
+invisible but left too much bare space. Without explicit mask files, a
+dilation algorithm was used to infer the river body:
+
+`loadRiverBitmapMasked(url)`:
+- Marks all dark pixels (value < 200) in an `isDark` byte array.
+- For each white pixel, performs a radius-6 neighbourhood search. If any dark
+  pixel falls within that radius, the white pixel is considered part of the
+  river body (kept opaque); otherwise it is made transparent (alpha = 0).
+- RADIUS = 6 was tuned interactively (3 left too much black space; 6 was right).
+
+A background pre-pass draws terrain tiles (forest or sand) under each river
+tile position before the masked rivers are drawn on top, replicating the
+layered look of the in-game tiles.
+
+### Stale Compiled Output Bug
+
+All title screen changes appeared to have no effect for several sessions. Root
+cause: a previous `tsc` run had emitted `main.js`, `title.js`, etc. alongside
+their `.ts` sources in `client/src/`. Vite served those pre-compiled files
+instead of the TypeScript source.
+
+**Fix**: deleted all `.js` files from `client/src/`. Changed the build script
+in `client/package.json` from `"tsc && vite build"` to `"tsc --noEmit && vite
+build"` so `tsc` only type-checks and never emits output files.
+
+### `drawLogo` j-Descender Fix
+
+The `drawLogo` function in `title.ts` scales letters to fill the canvas height
+H, then shifts the `j` down by `extraY = 0.2 * h`. Since the letter is already
+scaled to fill the full canvas, the j always clips at the bottom regardless of
+canvas height.
+
+**Fix**: changed the scale line to use `H / 1.4` as the effective height:
+
+```typescript
+scale = Math.min(scale, (H / 1.4) / bm.height);
+```
+
+With this, `tallest ≈ H/1.4`, `baseY ≈ H*0.083`, and the j's bottom lands at
+`baseY + extraY + tallest ≈ H`. The letters are smaller within the canvas but
+the descender is fully visible.
+
+### Game Screen Header
+
+**Before**: A plain `<h1>GRILJOR</h1>` text heading above the room info line
+`Room N: "name" — (x, y)`.
+
+**After**: A flex row (`#game-header`, `width: 704px`) containing:
+- `#game-logo` — a `400×100` canvas rendering the GRILJOR letter bitmaps via
+  `drawLogo()`, initialized at startup alongside the lobby logo.
+- `#room-info` — a flex column containing:
+  - `#map-label` (18px, `#aaa`) — the map title, set once when joining.
+  - `#room-label` (14px, `#666`) — the current room name, updated each
+    render. Rooms named `"no name"` display an empty string.
+
+Player coordinates are no longer shown.
+
+In `main.ts`, `roomInfo` now points to `#room-label` (was `#room-info`). A new
+`mapLabel` ref points to `#map-label`. The game logo canvas is drawn at
+startup: `gameLogoCanvas.width = 400; gameLogoCanvas.height = 100`.
+
+In `game.ts`, the `roomInfo.textContent` assignment was simplified:
+```typescript
+this.roomInfo.textContent = (room.name && room.name !== 'no name') ? room.name : '';
+```
+
+### Chat Panel Relocated
+
+Chat was moved from below the map canvas to the right column
+(`#player-list-panel`), below the player list. The right column is
+`min-height: 704px` with `flex: 1` on the player list, so the chat naturally
+aligns to the bottom as the player list grows.
+
+Chat log: 5 visible lines (`height: calc(5 * 1.2em + 12px)`), `overflow-y:
+scroll`, `scrollbar-gutter: stable`. Custom dark scrollbar: 9px wide,
+`#333` thumb on `#111` track (`::-webkit-scrollbar-*` rules).
+
+### Navigation Buttons Removed / Mode Toggle → Hotkey
+
+`#nav { display: none }` — the N/W/E/S direction buttons were hidden (they
+duplicate keyboard movement and cluttered the layout).
+
+The light/dark mode toggle button was removed. Pressing **Shift+L** (capital
+`L`) calls `toggleMode()`. The key was chosen to be harder to press
+accidentally.
+
+```typescript
+if (e.key === 'L') { e.preventDefault(); void toggleMode(); }
+```
+
+### Leave Game Countdown
+
+The leave button counts down from 5 seconds. Clicking again cancels:
+
+```typescript
+leaveCountdown = setInterval(() => {
+  secs--;
+  if (secs <= 0) { doLeave(); return; }
+  leaveBtn.textContent = `Leaving ${secs}…`;
+}, 1000);
+```
+
+A popup confirmation dialog was tried and then removed in favour of this
+in-button countdown approach.
+
+### Right-Click Context Menu
+
+`contextmenu` is suppressed globally while the game screen is visible:
+```typescript
+document.addEventListener('contextmenu', (e) => {
+  if (gameScreen.style.display !== 'none') e.preventDefault();
+});
+```
+
+Hand slot canvases (`hand-left-canvas`, `hand-middle-canvas`) retain
+right-click drop behavior via `oncontextmenu` handlers that call `sendDrop`.
+This works because the handler runs before the global suppressor and the
+`sendDrop` call does not require the browser menu.
+
+### Stats Panel
+
+Simplified to a single stat row:
+- MP bar, MP text, XP line, and the `STATS` section heading were all removed.
+- `HP` label renamed to `Health`; separator line below the health row removed.
+
+### Burden Bar (replaces Inventory heading)
+
+The `INVENTORY` heading was replaced with a `Burden` stat row:
+- `stat-label`: "Burden"
+- `stat-bar` / `stat-fill` (`#burden-fill`, background `#6b4210`): filled
+  proportionally to `currentWeight / maxWeight`.
+- `stat-val` (`#inv-weight`): displays `N/150`.
+
+The inventory grid sits directly below with `margin-top: 4px`.
+
+### Player List Layout
+
+The player list (`#player-list`) uses `grid-template-columns: 1fr 1fr`
+(two columns). No border, no background — it blends into the surrounding panel
+color. `min-height: 214px` reserves space when few players are online.
+
+Player name display: `max-width: 68px; overflow: hidden; text-overflow:
+ellipsis; white-space: nowrap` — names longer than ~9 chars show with an
+ellipsis.
+
+K/D display: `K:N  D:N` (kills and deaths on one line, two spaces between).
+
+### Player Name Input
+
+`maxlength="10"` restricts name entry to 10 characters.
+
+**Avatar name sync**: `nameManuallyEdited` is set to `false` whenever the
+field is cleared to empty. While false, every avatar pick (dropdown or random
+button) updates `playerNameInput.value` to the new avatar name. The player
+reasserts control by typing anything — at which point `nameManuallyEdited` is
+set to `true` and avatar changes no longer overwrite the field.
+
+If the name field is still blank when the player clicks Join, the player's
+in-game name defaults to the selected avatar name:
+```typescript
+const playerName = playerNameInput.value.trim() || selectedAvatar;
+```
+
+### Tile Hover Tooltip: Room Number
+
+The tile hover tooltip (`buildTileHtml` in `game.ts`) now includes a `Room N`
+line above the `Tile (x, y)` line:
+```typescript
+const rows: string[] = [
+  `<div class="tip-name">Room ${this.currentRoom}</div>`,
+  `<div class="tip-name">Tile (${tx}, ${ty})</div>`,
+];
+```
