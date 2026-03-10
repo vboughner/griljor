@@ -402,13 +402,11 @@ async function main(): Promise<void> {
   }
 
   // ── Stats panel ──────────────────────────────────────────────────
-  function updateStats(hp: number, maxHp: number, xp: number, level: number): void {
+  function updateStats(hp: number, maxHp: number): void {
     const hpBar  = document.getElementById('hp-bar');
     const hpText = document.getElementById('hp-text');
-    const xpLine = document.getElementById('xp-line');
     if (hpBar)  hpBar.style.width  = `${Math.max(0, (hp / maxHp) * 100)}%`;
     if (hpText) hpText.textContent = `${hp}/${maxHp}`;
-    if (xpLine) xpLine.textContent = `Lvl ${level} · XP: ${xp}`;
   }
 
   // ── Chat ─────────────────────────────────────────────────────────
@@ -676,7 +674,7 @@ serverList.appendChild(header);
       };
 
       network.onYourStats = (msg) => {
-        updateStats(msg.hp, msg.maxHp, msg.xp, msg.level);
+        updateStats(msg.hp, msg.maxHp);
       };
 
       network.onReport = (msg) => {

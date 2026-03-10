@@ -19,24 +19,6 @@ function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryItem): nu
   return (obj.weight ?? 0) * item.quantity;
 }
 
-// Level/XP progression
-const BASE_HP    = 100;
-const HP_PER_LEVEL    = 20;
-const XP_PER_LEVEL    = 100; // level N requires N*100 XP to advance
-
-function maxHpForLevel(level: number): number { return BASE_HP + (level - 1) * HP_PER_LEVEL; }
-
-function levelForXp(xp: number): number {
-  let level = 1;
-  let xpLeft = xp;
-  let needed = level * XP_PER_LEVEL;
-  while (xpLeft >= needed) {
-    xpLeft -= needed;
-    level++;
-    needed = level * XP_PER_LEVEL;
-  }
-  return level;
-}
 
 interface Player {
   id: number;
@@ -56,8 +38,6 @@ interface Player {
   // combat stats
   hp: number;
   maxHp: number;
-  xp: number;
-  level: number;
 }
 
 interface ChatEntry {
@@ -185,8 +165,7 @@ export class GameSession {
       leftHand: null, rightHand: null,
       inventory: new Array<InventoryItem | null>(INV_SIZE).fill(null),
       currentWeight: 0,
-      hp: BASE_HP, maxHp: BASE_HP,
-      xp: 0, level: 1,
+      hp: 100, maxHp: 100,
     };
     this.players.set(id, player);
     this.wsToId.set(ws, id);
@@ -594,19 +573,7 @@ export class GameSession {
 
     if (killer) {
       killer.kills++;
-      const xpReward = 10 + victim.level * 10;
-      killer.xp += xpReward;
-
-      // Check level-up
-      const newLevel = levelForXp(killer.xp);
-      if (newLevel > killer.level) {
-        killer.level = newLevel;
-        killer.maxHp = maxHpForLevel(killer.level);
-        killer.hp = Math.min(killer.hp, killer.maxHp);
-        this.send(killer.ws, { type: 'REPORT', text: `Level up! You are now level ${killer.level}.` });
-      }
-
-      this.send(killer.ws, { type: 'REPORT', text: `You killed ${victim.name}! (+${xpReward} XP)` });
+      this.send(killer.ws, { type: 'REPORT', text: `You killed ${victim.name}!` });
       this.broadcast({ type: 'PLAYER_STATS', id: killer.id, kills: killer.kills, deaths: killer.deaths });
       this.sendStats(killer);
     }
@@ -728,7 +695,6 @@ export class GameSession {
     this.send(player.ws, {
       type: 'YOUR_STATS',
       hp: player.hp, maxHp: player.maxHp,
-      xp: player.xp, level: player.level,
     });
   }
 

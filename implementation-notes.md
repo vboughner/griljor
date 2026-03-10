@@ -1111,3 +1111,47 @@ The scroll (`strength: 80`, `weapon: true`, `range: 25`) works as a
 straightforward ranged weapon dealing 80 damage per hit. The `mana: 20`
 field it carried in the object data is now simply ignored. No map changes
 were required.
+
+---
+
+## Design Decision — XP/Levels Removed
+
+### Rationale
+
+The original Griljor was a persistent game where players logged in repeatedly
+over days or weeks. Level progression rewarded long-term investment. The web
+rewrite has no session persistence — every player starts fresh at level 1 each
+time they join, and stats are discarded when they leave. In this context,
+levelling up carries no lasting meaning: any HP advantage gained during a
+session is lost the moment the player disconnects.
+
+The only in-session effect of the XP/level system was HP scaling (+20 max HP
+per level). Since there were no item level requirements (the `maxlevel` field
+on the scroll object existed in raw JSON but was never checked by any code),
+no gameplay gating was lost. The kill-announcement REPORT messages simply drop
+the `(+N XP)` suffix.
+
+### What Was Removed
+
+**Server (`server/src/session.ts`)**
+- `BASE_HP`, `HP_PER_LEVEL`, `XP_PER_LEVEL` constants removed
+- `maxHpForLevel()` and `levelForXp()` helper functions removed
+- `xp` and `level` fields removed from the `Player` interface
+- Player initialisation simplified to `hp: 100, maxHp: 100`
+- `killPlayer()`: XP reward calculation, level-up check, and level-up REPORT
+  removed; kill announcement reduced to `"You killed X!"`
+- `sendStats()` no longer includes `xp`/`level` in `YOUR_STATS`
+
+**Protocol (`server/src/protocol.ts`, `client/src/network.ts`)**
+- `xp` and `level` fields removed from the `YOUR_STATS` message type
+
+**Client UI (`client/src/main.ts`, `client/index.html`)**
+- `updateStats()` signature reduced to `(hp, maxHp)`
+- `xpLine` DOM lookup and `Lvl N · XP: N` display removed
+- Orphaned `#xp-line` CSS rule removed from `index.html`
+
+### Unchanged
+
+All players now have a fixed 100 HP for the duration of every session. The
+kill/death scoreboard and REPORT messages still work as before. Item tooltips
+are unaffected. No object data files were modified.
