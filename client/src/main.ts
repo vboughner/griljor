@@ -247,8 +247,7 @@ async function main(): Promise<void> {
   const canvas     = document.getElementById('game-canvas') as HTMLCanvasElement;
   const roomInfo   = document.getElementById('room-info') as HTMLElement;
   const status     = document.getElementById('status') as HTMLElement;
-  const modeToggle = document.getElementById('mode-toggle') as HTMLButtonElement;
-  const leaveBtn   = document.getElementById('leave-btn') as HTMLButtonElement;
+  const leaveBtn          = document.getElementById('leave-btn') as HTMLButtonElement;
   const chatLog    = document.getElementById('chat-log') as HTMLElement;
   const chatInput  = document.getElementById('chat-input') as HTMLInputElement;
   const chatSend   = document.getElementById('chat-send') as HTMLButtonElement;
@@ -440,6 +439,7 @@ async function main(): Promise<void> {
     const tag = (document.activeElement as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (e.key === 't') { e.preventDefault(); chatInput.focus(); }
+    if (e.key === 'L') { e.preventDefault(); void toggleMode(); }
   });
 
   function showTitle(): void {
@@ -690,15 +690,17 @@ serverList.appendChild(header);
     }
   }
 
-  modeToggle.addEventListener('click', async () => {
+  async function toggleMode(): Promise<void> {
     currentMode = currentMode === 'dark' ? 'light' : 'dark';
-    modeToggle.textContent = currentMode === 'dark' ? '☀ Light' : '☾ Dark';
     document.body.style.background = currentMode === 'dark' ? '#1a1a1a' : '#d0d0d0';
     document.body.style.color = currentMode === 'dark' ? '#ccc' : '#222';
     await currentGame?.setMode(currentMode);
-  });
+  }
 
-  leaveBtn.addEventListener('click', () => {
+  let leaveCountdown: ReturnType<typeof setInterval> | null = null;
+
+  function doLeave(): void {
+    cancelLeave();
     currentNetwork?.sendLeave();
     currentGame?.destroy();
     currentGame = null;
@@ -710,6 +712,25 @@ serverList.appendChild(header);
     setInputsDisabled(false);
     showLobby();
     refreshServerList();
+  }
+
+  function cancelLeave(): void {
+    if (leaveCountdown !== null) {
+      clearInterval(leaveCountdown);
+      leaveCountdown = null;
+    }
+    leaveBtn.textContent = 'Leave Game';
+  }
+
+  leaveBtn.addEventListener('click', () => {
+    if (leaveCountdown !== null) { cancelLeave(); return; }
+    let secs = 5;
+    leaveBtn.textContent = `Leaving in ${secs}…`;
+    leaveCountdown = setInterval(() => {
+      secs--;
+      if (secs <= 0) { doLeave(); return; }
+      leaveBtn.textContent = `Leaving in ${secs}…`;
+    }, 1000);
   });
 
 

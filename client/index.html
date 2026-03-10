@@ -144,12 +144,14 @@
     #chat-input {
       flex: 1;
       background: #1e1e1e;
-      border: 1px solid #555;
+      border: 1px solid #52380e;
       color: #ccc;
-      padding: 5px 8px;
+      padding: 6px 8px;
       font-family: monospace;
-      font-size: 0.85em;
+      font-size: 15px;
     }
+    #chat-input:hover { border-color: #7a5220; }
+    #chat-input:focus, #chat-input:active { outline: none; border-color: #b8842a; }
     #chat-send {
       background: #1e1910; border: 1px solid #52380e; color: #b8842a;
       padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
@@ -158,7 +160,7 @@
     #chat-send:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
 
     /* ── Mouse widget ── */
-    #mouse-widget { margin-bottom: 10px; }
+    #mouse-widget { margin-bottom: 10px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
     #mouse-bitmap-wrap {
       position: relative;
       display: inline-block;
@@ -330,17 +332,21 @@
     #player-name { width: 160px; padding-top: 6px; padding-bottom: 6px; font-size: 15px; height: 32px; background: #1e1e1e; border-color: #52380e; }
     #player-name:hover { border-color: #7a5220; }
     #player-name:focus, #player-name:active { outline: none; border-color: #b8842a; }
-    #leave-btn, #mode-toggle {
+    #game-btns { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    #game-btns #leave-btn { width: 100%; }
+    #leave-btn {
       background: #1e1910; border: 1px solid #52380e; color: #b8842a;
-      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
+      padding: 6px 12px; cursor: pointer; font-family: monospace; font-size: 15px;
       transition: background 0.1s, border-color 0.1s;
     }
-    #leave-btn:hover, #mode-toggle:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+    #leave-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+
   </style>
 </head>
 <body>
 
   <div id="tooltip"></div>
+
 
   <!-- ── Title Screen ── -->
   <div id="title-screen">
@@ -380,10 +386,6 @@
           <button id="btn-east"  disabled>E →</button>
           <button id="btn-south" disabled>↓ S</button>
         </div>
-        <div id="game-controls">
-          <button id="mode-toggle">☀ Light</button>
-          <button id="leave-btn">Leave Game</button>
-        </div>
         <div id="status"></div>
         <div id="chat-panel">
           <div id="chat-log"></div>
@@ -402,6 +404,9 @@
             <canvas id="hand-right-canvas"  width="32" height="32"></canvas>
             <span id="hand-left-count"   class="hand-count"></span>
             <span id="hand-middle-count" class="hand-count"></span>
+          </div>
+          <div id="game-btns">
+            <button id="leave-btn">Leave Game</button>
           </div>
         </div>
         <div id="stats-panel">
