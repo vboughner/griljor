@@ -120,41 +120,50 @@
     #game-controls { display: flex; gap: 8px; }
     #status { font-size: 0.8em; color: #666; min-height: 1em; }
     #chat-panel {
-      width: 640px;
+      width: 100%;
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
     #chat-log {
-      height: 120px;
-      overflow-y: auto;
+      height: calc(5 * 1.2em + 12px);
+      overflow-y: scroll;
+      scrollbar-gutter: stable;
       background: #111;
       border: 1px solid #444;
       padding: 6px 8px;
-      font-size: 0.8em;
-      line-height: 1.5;
+      font-size: 13px;
+      line-height: 1.2em;
       display: flex;
       flex-direction: column;
       gap: 2px;
+      box-sizing: border-box;
+      width: 100%;
     }
+    #chat-log::-webkit-scrollbar { width: 9px; }
+    #chat-log::-webkit-scrollbar-track { background: #111; }
+    #chat-log::-webkit-scrollbar-thumb { background: #333; border-radius: 0; }
+    #chat-log::-webkit-scrollbar-thumb:hover { background: #444; }
     .chat-msg { color: #bbb; }
     .chat-msg .chat-name { color: #888; }
     .chat-report { color: #f84; font-style: italic; }
-    #chat-input-row { display: flex; gap: 6px; }
+    #chat-input-row { display: flex; gap: 6px; width: 100%; box-sizing: border-box; }
     #chat-input {
       flex: 1;
+      min-width: 0;
       background: #1e1e1e;
       border: 1px solid #52380e;
       color: #ccc;
       padding: 6px 8px;
       font-family: monospace;
-      font-size: 15px;
+      font-size: 13px;
     }
     #chat-input:hover { border-color: #7a5220; }
     #chat-input:focus, #chat-input:active { outline: none; border-color: #b8842a; }
     #chat-send {
       background: #1e1910; border: 1px solid #52380e; color: #b8842a;
-      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 0.85em;
+      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 13px;
+      flex-shrink: 0;
       transition: background 0.1s, border-color 0.1s;
     }
     #chat-send:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
@@ -188,6 +197,7 @@
     /* ── Player list ── */
     #player-list-panel {
       width: 240px;
+      height: 704px;
       display: flex;
       flex-direction: column;
       gap: 6px;
@@ -201,7 +211,7 @@
       border-bottom: 1px solid #333;
       padding-bottom: 4px;
     }
-    #player-list { display: flex; flex-direction: column; gap: 6px; }
+    #player-list { display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto; min-height: 0; }
     .player-row {
       display: flex;
       align-items: center;
@@ -223,9 +233,6 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #333;
-      margin-bottom: 4px;
     }
     #stats-panel h2 {
       font-size: 0.8em;
@@ -241,7 +248,7 @@
       gap: 6px;
       font-size: 0.75em;
     }
-    .stat-label { color: #666; width: 20px; flex-shrink: 0; }
+    .stat-label { color: #666; width: 44px; flex-shrink: 0; }
     .stat-bar {
       flex: 1;
       height: 8px;
@@ -259,18 +266,8 @@
       flex-direction: column;
       gap: 4px;
     }
-    #inv-panel h2 {
-      font-size: 0.8em;
-      color: #666;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border-bottom: 1px solid #333;
-      padding-bottom: 4px;
-    }
-    #inv-weight {
-      font-size: 0.75em;
-      color: #555;
-    }
+    #inv-panel #inv-grid { margin-top: 4px; }
+    #burden-fill { background: #6b4210; }
     #inv-grid {
       display: grid;
       grid-template-columns: repeat(7, 34px);
@@ -335,7 +332,7 @@
     #game-btns #leave-btn { width: 100%; }
     #leave-btn {
       background: #1e1910; border: 1px solid #52380e; color: #b8842a;
-      padding: 6px 12px; cursor: pointer; font-family: monospace; font-size: 15px;
+      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 13px;
       transition: background 0.1s, border-color 0.1s;
     }
     #leave-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
@@ -386,13 +383,6 @@
           <button id="btn-south" disabled>↓ S</button>
         </div>
         <div id="status"></div>
-        <div id="chat-panel">
-          <div id="chat-log"></div>
-          <div id="chat-input-row">
-            <input id="chat-input" type="text" maxlength="200" placeholder="Say something…" />
-            <button id="chat-send">Send</button>
-          </div>
-        </div>
       </div>
       <div id="player-list-panel">
         <div id="mouse-widget">
@@ -409,21 +399,29 @@
           </div>
         </div>
         <div id="stats-panel">
-          <h2>Stats</h2>
           <div class="stat-row">
-            <span class="stat-label">HP</span>
+            <span class="stat-label">Health</span>
             <div class="stat-bar"><div id="hp-bar" class="stat-fill hp-fill" style="width:100%"></div></div>
             <span class="stat-val" id="hp-text">100/100</span>
           </div>
-          <div id="xp-line">Lvl 1 · XP: 0</div>
         </div>
         <div id="inv-panel">
-          <h2>Inventory</h2>
-          <div id="inv-weight">0 / 150</div>
+          <div class="stat-row">
+            <span class="stat-label">Burden</span>
+            <div class="stat-bar"><div id="burden-fill" class="stat-fill" style="width:0%"></div></div>
+            <span class="stat-val" id="inv-weight">0/150</span>
+          </div>
           <div id="inv-grid"></div>
         </div>
         <h2>Players</h2>
         <div id="player-list"></div>
+        <div id="chat-panel">
+          <div id="chat-log"></div>
+          <div id="chat-input-row">
+            <input id="chat-input" type="text" maxlength="200" placeholder="Say something…" />
+            <button id="chat-send">Send</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

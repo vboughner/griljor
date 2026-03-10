@@ -164,9 +164,11 @@ async function updateInventoryPanel(msg: {
   currentLeftHand  = msg.leftHand;
   currentRightHand = msg.rightHand;
 
-  // Update weight display
-  const weightEl = document.getElementById('inv-weight');
-  if (weightEl) weightEl.textContent = `${msg.currentWeight} / ${msg.maxWeight}`;
+  // Update weight display and burden bar
+  const weightEl   = document.getElementById('inv-weight');
+  const burdenFill = document.getElementById('burden-fill');
+  if (weightEl)   weightEl.textContent = `${msg.currentWeight}/${msg.maxWeight}`;
+  if (burdenFill) burdenFill.style.width = `${Math.min(100, (msg.currentWeight / msg.maxWeight) * 100)}%`;
 
   // Update hand slot icons (fetched in parallel)
   const [leftImg, rightImg] = await Promise.all([
