@@ -22,7 +22,7 @@ The game is being rewritten as a browser-playable web application. The goal is t
 
 | Document | Contents |
 |----------|----------|
-| [`web-rewrite.md`](web-rewrite.md) | Architecture decisions, porting challenges, and feature plan |
+| [`modern-rewrite-plan.md`](modern-rewrite-plan.md) | Architecture decisions, porting challenges, and feature plan |
 | [`implementation-notes.md`](implementation-notes.md) | Detailed record of what was built, phase by phase, with technical decisions |
 | [`todo.md`](todo.md) | Remaining work |
 | [`deployment-plan.md`](deployment-plan.md) | Hosting plan (Hetzner VM, nginx, PM2, HTTPS) |
@@ -43,17 +43,17 @@ The lobby server (`server/src/lobby.ts`) runs on port 3000. The client connects 
 
 ## Legacy Codebase (Reference)
 
-The original C/X11 source is preserved in `src/` for reference. It is not the active development target.
+The original C/X11 source is preserved in `legacy/src/` for reference. It is not the active development target.
 
 ### Building the legacy code
 
 ```sh
-cd src
+cd legacy/src
 make two       # builds griljor (client) + grildriver (server)
 make all       # also builds editmap, obtor, editpass
 ```
 
-Requires `OPENWINHOME` set (for X11 headers) and paths in `src/config.h` updated to the local system. See `CLAUDE.md` for full build details.
+Requires `OPENWINHOME` set (for X11 headers) and paths in `legacy/src/config.h` updated to the local system. See `CLAUDE.md` for full build details.
 
 ### Original install instructions
 

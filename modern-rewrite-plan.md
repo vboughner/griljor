@@ -188,7 +188,7 @@ rather than something to translate line by line.
 If we go with Option A, a reasonable sequence would be:
 
 **Phase 1 — Asset pipeline**
-- Write a script to convert raw binary bitmaps (`bit/`, `bitmaps/`, `facebits/`)
+- Write a script to convert raw binary bitmaps (`legacy/bit/`, `legacy/bitmaps/`, `legacy/facebits/`)
   to PNGs
 - Convert `.map` and `.obj` binary files to JSON
 

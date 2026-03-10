@@ -32,8 +32,8 @@ The conversion:
 4. Write as 8-bit grayscale PNG via Pillow
 
 Three source directories were processed:
-- `bitmaps/` + `bit/` → `data/objects/bitmaps/{objset}/` (terrain/object tiles)
-- `facebits/` → `sprites/facebits/` (player avatar pairs: `*bit` + `*mask`)
+- `legacy/bitmaps/` + `legacy/bit/` → `data/objects/bitmaps/{objset}/` (terrain/object tiles)
+- `legacy/facebits/` → `sprites/facebits/` (player avatar pairs: `*bit` + `*mask`)
 
 ### Object Definition Parsing (`parse_objs.py`)
 
@@ -378,8 +378,8 @@ outrun click-to-move speed.
 
 ### Movement Blocking: `permeable` vs `movement`
 
-**Original semantics** (confirmed from `src/objects.h` and
-`src/mapfunc.c`):
+**Original semantics** (confirmed from `legacy/src/objects.h` and
+`legacy/src/mapfunc.c`):
 - `permeable` — "May fire over": controls missile passage only.
   Labeled as such in the object editor (`objprops.c`).
 - `movement` — controls player walkability: 0 = blocked (wall),
@@ -532,7 +532,7 @@ swinging objects (doors) on adjacent tiles.
 
 ### How the Original Game Worked
 
-From `src/play.c :: use_opener` and `open_something_on_square`:
+From `legacy/src/play.c :: use_opener` and `open_something_on_square`:
 - Left/middle click on an adjacent tile calls `use_object`, which
   detects `obj.opens > 0` and calls `use_opener`.
 - `use_opener` iterates `recorded_objects` at the target tile, looking
