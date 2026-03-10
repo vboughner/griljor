@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Griljor: The War of Griljor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #1a1a1a;
+      color: #ccc;
+      font-family: monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 12px;
+    }
+    h1 { font-size: 1.4em; color: #aaa; letter-spacing: 2px; }
+
+    /* ── Title ── */
+    #title-screen {
+      position: fixed; inset: 0; z-index: 10;
+      background: #1a1a1a;
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    }
+    #title-canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+
+    /* ── Lobby ── */
+    #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 800px; }
+    #lobby-logo { border: none; margin-top: -20px; margin-bottom: 24px; }
+    .lobby-panel { width: 100%; border: 1px solid #303030; margin-bottom: 40px; }
+    .lobby-panel-hdr {
+      padding: 5px 16px;
+      background: #202020;
+      border-bottom: 1px solid #303030;
+      font-size: 13px; color: #606060;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    #lobby-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 14px 16px; }
+    #avatar-picker { position: relative; display: inline-flex; flex-direction: column; align-items: center; padding: 4px; }
+    #avatar-preview { cursor: pointer; }
+    #avatar-preview:hover { border-color: #7a5220; }
+    #random-avatar-btn {
+      background: #1e1910;
+      border: 1px solid #52380e;
+      color: #b8842a;
+      padding: 2px 8px 4px 8px;
+      cursor: pointer;
+      font-family: monospace;
+      font-size: 24px;
+      line-height: 1;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    #random-avatar-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+    #avatar-picker:hover #avatar-dropdown { display: grid; }
+    #avatar-dropdown {
+      display: none; position: absolute; z-index: 100;
+      left: 4px; top: 38px;
+      background: #1a1a1a; border: 1px solid #444; padding: 4px;
+      grid-template-columns: repeat(5, 32px); gap: 3px;
+    }
+    #avatar-dropdown canvas { display: block; cursor: pointer; }
+    #avatar-dropdown canvas:hover { outline: 1px solid #888; }
+    #avatar-preview {
+      width: 32px; height: 32px;
+      image-rendering: pixelated;
+      border: 1px solid #52380e;
+      background: #111;
+      box-shadow: inset 0 0 0 2px #111;
+      display: block;
+    }
+    #server-list { width: 100%; min-height: 60px; }
+    .server-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px; min-height: 54px; border-bottom: 1px solid #282828; font-size: 15px;
+    }
+    .server-row:last-child { border-bottom: none; }
+    .server-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 5px 16px; border-bottom: 1px solid #303030;
+      font-size: 11px; color: #585858; text-transform: uppercase; letter-spacing: 0.08em;
+      background: #1e1e1e;
+    }
+    .server-map        { width: 160px; flex-shrink: 0; word-break: break-word; }
+    .server-row .server-map { color: #bbb; }
+    .server-avatars    { display: flex; flex-wrap: wrap; gap: 4px; width: 300px; flex-shrink: 0; }
+    .server-avatars-hdr{ width: 300px; flex-shrink: 0; }
+    .server-players    { color: #888; white-space: nowrap; width: 55px; text-align: center; flex-shrink: 0; }
+    .server-count-hdr  { width: 55px; text-align: center; flex-shrink: 0; }
+    .server-teams      { color: #888; white-space: nowrap; width: 50px; text-align: center; flex-shrink: 0; }
+    .server-teams-hdr  { width: 50px; text-align: center; flex-shrink: 0; }
+    .server-rooms      { color: #888; white-space: nowrap; width: 50px; text-align: center; flex-shrink: 0; }
+    .server-rooms-hdr  { width: 50px; text-align: center; flex-shrink: 0; }
+    .server-join-hdr   { width: 50px; flex-shrink: 0; }
+    .join-btn {
+      margin-left: auto;
+      background: #1e1910; border: 1px solid #52380e; color: #b8842a;
+      padding: 6px 12px; cursor: pointer; font-family: monospace; font-size: 15px;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .join-btn:hover:not(:disabled) { background: #272212; border-color: #7a5220; color: #d4a040; }
+    .join-btn:disabled { color: #505050; background: #1a1a1a; border-color: #2e2e2e; cursor: default; }
+    #lobby-status { margin-left: auto; color: #585858; text-transform: none; letter-spacing: normal; font-size: 13px; }
+    .server-header .server-join-hdr { width: auto; flex: 1; text-align: right; }
+    .lobby-panel-games .lobby-panel-hdr { border-bottom: none; }
+
+    /* ── Game ── */
+    #game-screen { display: none; flex-direction: column; align-items: center; gap: 12px; }
+    #game-body { display: flex; gap: 16px; align-items: flex-start; }
+    #game-left { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    #game-header { display: flex; align-items: center; gap: 20px; width: 704px; }
+    #game-logo { border: none !important; image-rendering: pixelated; }
+    #room-info { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+    #map-label { font-size: 18px; color: #aaa; letter-spacing: 0.05em; text-align: center; }
+    #room-label { font-size: 14px; color: #666; text-align: center; }
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+      border: 1px solid #444;
+    }
+    #nav { display: none; }
+    #game-controls { display: flex; gap: 8px; }
+    #status { font-size: 0.8em; color: #666; min-height: 1em; }
+    #chat-panel {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #chat-log {
+      height: calc(5 * 1.2em + 12px);
+      overflow-y: scroll;
+      scrollbar-gutter: stable;
+      background: #111;
+      border: 1px solid #444;
+      padding: 6px 8px;
+      font-size: 13px;
+      line-height: 1.2em;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    #chat-log::-webkit-scrollbar { width: 9px; }
+    #chat-log::-webkit-scrollbar-track { background: #111; }
+    #chat-log::-webkit-scrollbar-thumb { background: #333; border-radius: 0; }
+    #chat-log::-webkit-scrollbar-thumb:hover { background: #444; }
+    .chat-msg { color: #bbb; }
+    .chat-msg .chat-name { color: #888; }
+    .chat-report { color: #f84; font-style: italic; }
+    #chat-input-row { display: flex; gap: 6px; width: 100%; box-sizing: border-box; }
+    #chat-input {
+      flex: 1;
+      min-width: 0;
+      background: #1e1e1e;
+      border: 1px solid #52380e;
+      color: #ccc;
+      padding: 6px 8px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    #chat-input:hover { border-color: #7a5220; }
+    #chat-input:focus, #chat-input:active { outline: none; border-color: #b8842a; }
+    #chat-send {
+      background: #1e1910; border: 1px solid #52380e; color: #b8842a;
+      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 13px;
+      flex-shrink: 0;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    #chat-send:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+
+    /* ── Mouse widget ── */
+    #mouse-widget { margin-bottom: 10px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
+    #mouse-bitmap-wrap {
+      position: relative;
+      display: inline-block;
+      background: #111;
+    }
+    #mouse-bitmap { display: block; border: none; }
+    #hand-left-canvas, #hand-middle-canvas, #hand-right-canvas {
+      position: absolute;
+      top: 18px;
+    }
+    #hand-left-canvas   { left:  8px; }
+    #hand-middle-canvas { left: 48px; }
+    #hand-right-canvas  { left: 88px; }
+    .hand-count {
+      position: absolute;
+      top: 40px;
+      font-size: 9px;
+      color: #ff0;
+      pointer-events: none;
+      line-height: 1;
+    }
+    #hand-left-count   { right: 90px; }
+    #hand-middle-count { right: 50px; }
+
+    /* ── Player list ── */
+    #player-list-panel {
+      width: 240px;
+      min-height: 704px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 115px;
+    }
+    #player-list {
+      flex: 1;
+      min-height: 214px;
+      padding: 2px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      align-content: start;
+    }
+    .player-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .player-row canvas {
+      width: 32px; height: 32px;
+      border: 1px solid #333;
+      background: #111;
+      flex-shrink: 0;
+    }
+    .player-details { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+    .player-name { font-size: 0.85em; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 68px; }
+    .player-kd   { font-size: 0.75em; color: #666; }
+    .player-time { font-size: 0.75em; color: #555; }
+
+    /* ── Stats panel ── */
+    #stats-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #stats-panel h2 {
+      font-size: 0.8em;
+      color: #666;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+    }
+    .stat-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75em;
+    }
+    .stat-label { color: #666; width: 44px; flex-shrink: 0; }
+    .stat-bar {
+      flex: 1;
+      height: 8px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+    }
+    .stat-fill { height: 100%; transition: width 0.15s; }
+    .hp-fill  { background: #c33; }
+    .stat-val { color: #555; width: 54px; text-align: right; flex-shrink: 0; }
+
+    /* ── Inventory panel ── */
+    #inv-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    #inv-panel #inv-grid { margin-top: 4px; }
+    #burden-fill { background: #6b4210; }
+    #inv-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 34px);
+      gap: 1px;
+    }
+    .inv-cell {
+      width: 34px;
+      height: 34px;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      position: relative;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+    .inv-cell:hover { border-color: #555; }
+    .inv-cell canvas {
+      display: block;
+      width: 32px;
+      height: 32px;
+      image-rendering: pixelated;
+      border: none;
+    }
+    .inv-cell .inv-count {
+      position: absolute;
+      bottom: 1px;
+      right: 2px;
+      font-size: 9px;
+      color: #ff0;
+      pointer-events: none;
+      line-height: 1;
+    }
+
+    /* ── Tooltip ── */
+    #tooltip {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      background: #1a1a1a;
+      border: 1px solid #555;
+      padding: 7px 10px;
+      font-family: monospace;
+      font-size: 0.8em;
+      color: #ccc;
+      pointer-events: none;
+      max-width: 200px;
+      line-height: 1.5;
+    }
+    .tip-name { color: #eee; font-weight: bold; margin-bottom: 3px; }
+    .tip-row  { color: #aaa; }
+    .tip-lbl  { color: #666; }
+
+    /* shared input style */
+    select, input, button.game-btn {
+      background: #2a2a2a; border: 1px solid #555; color: #bbb;
+      padding: 5px 8px; font-family: monospace; font-size: 0.9em; cursor: pointer;
+    }
+    input { cursor: text; }
+    #player-name { width: 160px; padding-top: 6px; padding-bottom: 6px; font-size: 15px; height: 32px; background: #1e1e1e; border-color: #52380e; }
+    #player-name:hover { border-color: #7a5220; }
+    #player-name:focus, #player-name:active { outline: none; border-color: #b8842a; }
+    #game-btns { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    #game-btns #leave-btn { width: 100%; }
+    #leave-btn {
+      background: #1e1910; border: 1px solid #52380e; color: #b8842a;
+      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 13px;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    #leave-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+
+  </style>
+</head>
+<body>
+
+  <div id="tooltip"></div>
+
+
+  <!-- ── Title Screen ── -->
+  <div id="title-screen">
+    <canvas id="title-canvas"></canvas>
+  </div>
+
+  <!-- ── Lobby Screen ── -->
+  <div id="lobby-screen" style="display:none">
+    <canvas id="lobby-logo" style="display:block; image-rendering:pixelated;"></canvas>
+    <div class="lobby-panel">
+      <div class="lobby-panel-hdr">Player Setup</div>
+      <div id="lobby-controls">
+        <div id="avatar-picker">
+          <canvas id="avatar-preview" width="32" height="32" title="Choose avatar"></canvas>
+<div id="avatar-dropdown"></div>
+        </div>
+        <input id="player-name" maxlength="10" placeholder="name" spellcheck="false" autocomplete="off" />
+        <button id="random-avatar-btn" title="Random avatar">↻</button>
+      </div>
+    </div>
+    <div class="lobby-panel lobby-panel-games" style="margin-bottom: 0">
+      <div class="lobby-panel-hdr">Available Games<span id="lobby-status">Loading…</span></div>
+      <div id="server-list"></div>
+    </div>
+  </div>
+
+  <!-- ── Game Screen ── -->
+  <div id="game-screen">
+    <div id="game-body">
+      <div id="game-left">
+        <div id="game-header">
+          <canvas id="game-logo"></canvas>
+          <div id="room-info">
+            <div id="map-label"></div>
+            <div id="room-label"></div>
+          </div>
+        </div>
+        <canvas id="game-canvas" width="704" height="704"></canvas>
+        <div id="nav">
+          <button id="btn-north" disabled>↑ N</button>
+          <button id="btn-west"  disabled>← W</button>
+          <button id="btn-east"  disabled>E →</button>
+          <button id="btn-south" disabled>↓ S</button>
+        </div>
+        <div id="status"></div>
+      </div>
+      <div id="player-list-panel">
+        <div id="mouse-widget">
+          <div id="mouse-bitmap-wrap">
+            <canvas id="mouse-bitmap" width="128" height="128"></canvas>
+            <canvas id="hand-left-canvas"   width="32" height="32"></canvas>
+            <canvas id="hand-middle-canvas" width="32" height="32"></canvas>
+            <canvas id="hand-right-canvas"  width="32" height="32"></canvas>
+            <span id="hand-left-count"   class="hand-count"></span>
+            <span id="hand-middle-count" class="hand-count"></span>
+          </div>
+          <div id="game-btns">
+            <button id="leave-btn">Leave Game</button>
+          </div>
+        </div>
+        <div id="stats-panel">
+          <div class="stat-row">
+            <span class="stat-label">Health</span>
+            <div class="stat-bar"><div id="hp-bar" class="stat-fill hp-fill" style="width:100%"></div></div>
+            <span class="stat-val" id="hp-text">100/100</span>
+          </div>
+        </div>
+        <div id="inv-panel">
+          <div class="stat-row">
+            <span class="stat-label">Burden</span>
+            <div class="stat-bar"><div id="burden-fill" class="stat-fill" style="width:0%"></div></div>
+            <span class="stat-val" id="inv-weight">0/150</span>
+          </div>
+          <div id="inv-grid"></div>
+        </div>
+        <div id="player-list"></div>
+        <div id="chat-panel">
+          <div id="chat-log"></div>
+          <div id="chat-input-row">
+            <input id="chat-input" type="text" maxlength="200" placeholder="Say something…" />
+            <button id="chat-send">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
