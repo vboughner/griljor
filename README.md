@@ -37,8 +37,8 @@ You need three terminals. Start them in order:
 # Terminal 1 — lobby server (port 3000, must start first)
 cd server && npm run lobby
 
-# Terminal 2 — map/game server (registers itself with the lobby, port 3001)
-cd server && npm run dev
+# Terminal 2 — map/game server (registers itself with the lobby, default map is battle and port is 3001)
+cd server && npm run dev <map-name> <port-number>
 
 # Terminal 3 — Vite dev server (client, port 5173)
 cd client && npm run dev
