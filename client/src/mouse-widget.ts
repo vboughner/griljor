@@ -1,5 +1,5 @@
-import mousexbm from '../../bit/mouse?raw';
-import movexbm from '../../bit/movemark?raw';
+import mousexbm from '../../pipeline/bit/mouse?raw';
+import movexbm from '../../pipeline/bit/movemark?raw';
 
 // XBM slot geometry (derived from original MOUSE_START_X/Y and bitmap hole analysis)
 // Each hole is 32px wide; the 4×0x00 bytes per row give exactly 32 transparent pixels.

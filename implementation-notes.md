@@ -47,7 +47,7 @@ object ID (0–254).
 Key fields preserved:
 - `bitmap` / `mask` — PNG filenames for the tile sprites
 - `masked` — whether the mask file must be applied
-- `permeable` — whether missiles can pass through (NOT player movement — see Phase 6)
+- `permeable` — whether missiles can pass through (NOT player movement — see Phase 4)
 - `exit` — whether stepping on the tile triggers a room transition
 - `movement` — movement cost (used for passability classification)
 
@@ -164,7 +164,7 @@ when the exit index ≥ 0, placing the player at the opposite edge.
 
 **Wall collision**: a tile is blocked if the wall-layer object has
 `movement` absent or 0, or if the floor-layer object has `movement === 0`
-explicitly. `permeable` controls missile passage only (see Phase 6).
+explicitly. `permeable` controls missile passage only (see Phase 4).
 
 **Exit tile teleportation**: `recorded_objects` with `exit: true` and
 `detail ≥ 0` are "invisible exits" (object type 49). An exit map
@@ -204,7 +204,7 @@ No bird's-eye map feature existed.
 
 ---
 
-## Phase 5 — Inventory System
+## Phase 3 — Inventory System
 
 **Goal**: Server-authoritative inventory — 35 slots + 2 hand slots,
 weight limits, floor items, pickup/drop, multiplayer sync.
@@ -290,7 +290,7 @@ Right-click → `sendInvSwap(slot, 'right')`. Click on hand-slot canvases
 
 ---
 
-## Phase 6 — Client UI Refinements
+## Phase 4 — Client UI Refinements
 
 ### Avatar Sprite Masking
 
@@ -443,7 +443,7 @@ the nearest edge tile and computes a Bresenham path there first.
 
 ---
 
-## Phase 7 — Combat System
+## Phase 5 — Combat System
 
 **Goal**: Weapon firing, tick-based projectile animation, damage,
 death/respawn, and XP/level progression.
@@ -525,7 +525,7 @@ updates other players' visible HP bars (in the player list).
 
 ---
 
-## Phase 8 — Door / Key Mechanism
+## Phase 6 — Door / Key Mechanism
 
 **Goal**: Players can use held openers (keys, repair kits) to toggle
 swinging objects (doors) on adjacent tiles.
@@ -586,7 +586,7 @@ from `main.ts` whenever `YOUR_INVENTORY` is received.
 
 ---
 
-## Phase 9 — Map State Reset on Empty Server
+## Phase 7 — Map State Reset on Empty Server
 
 **Goal**: Allow a map to automatically revert to its initial state (items,
 doors, chat history) a configurable number of seconds after the last player
@@ -630,7 +630,7 @@ arrives during the countdown prevents the reset.
 
 ---
 
-## Phase 10 — Lobby Redesign
+## Phase 8 — Lobby Redesign
 
 **Goal**: Replace the lobby's polling model with WebSocket push, enrich each
 server row with live player avatars and map metadata, and tighten the UI.
@@ -752,7 +752,7 @@ wide, matching the approximate letter size from the title screen's top band.
 
 ---
 
-## Phase 11 — Consumables
+## Phase 9 — Consumables
 
 **Goal**: Allow players to use held items that restore HP or Power by clicking their own tile.
 
@@ -835,7 +835,7 @@ immediately after the DOM refs, before the avatar picker setup.
 
 ---
 
-## Phase 12 — Rendering Fixes and Map Data Corrections
+## Phase 10 — Rendering Fixes and Map Data Corrections
 
 ### Unmasked Tile Rendering (Floor/Wall Bleed-Through)
 
@@ -910,7 +910,7 @@ room transition when the player steps onto them.
 
 ---
 
-## Phase 13 — Numbered Weapon Charges (Ammo)
+## Phase 11 — Numbered Weapon Charges (Ammo)
 
 **Goal**: Numbered weapon items (guns, staves) consume one charge per shot
 and disappear from the hand slot when exhausted. The charge count is visible
@@ -925,7 +925,7 @@ on the hand slot UI.
 fallback is 1. Maps with pre-placed guns carry the correct detail value
 (e.g. castle.json: `"detail": 20` for object 64, a gun with `capacity: 40`).
 
-### Server (already implemented in Phase 7)
+### Server (already implemented in Phase 5)
 
 `onFireWeapon` in `session.ts`:
 1. Guards: `if (obj.numbered && handItem.quantity <= 0) return` — prevents
@@ -1158,7 +1158,7 @@ are unaffected. No object data files were modified.
 
 ---
 
-## Phase 14 — Game Screen UI Overhaul
+## Phase 12 — Game Screen UI Overhaul
 
 ### Title Screen: River Tile Masking
 
