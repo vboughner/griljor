@@ -1,0 +1,6342 @@
+{
+  "source": "standard.map",
+  "format": "diag",
+  "map": {
+    "name": "Playtester Paradise 4",
+    "teams_supported": 2,
+    "neutrals_allowed": true,
+    "neutral_name": "Neutral Scum",
+    "team_name_1": "Team 1",
+    "team_name_2": "Team 2",
+    "team_name_3": "Team 3",
+    "team_name_4": "Team 4",
+    "objfilename": "standard.obj"
+  },
+  "rooms": [
+    {
+      "name": "Center",
+      "floor": 11,
+      "objects_appear": true,
+      "object_floor": 11,
+      "people_appear": true,
+      "people_floor": 11,
+      "exit_north": -1,
+      "exit_east": -1,
+      "exit_south": 1,
+      "exit_west": -1
+    },
+    {
+      "name": "No Room Name",
+      "floor": 11,
+      "objects_appear": true,
+      "people_appear": true,
+      "exit_east": -1,
+      "exit_south": -1,
+      "exit_west": -1
+    }
+  ],
+  "room_count": 2,
+  "objects": [
+    {
+      "type": 11,
+      "id": 1
+    },
+    {
+      "type": 43,
+      "id": 401
+    },
+    {
+      "type": 11,
+      "id": 21,
+      "locy": 1
+    },
+    {
+      "type": 54,
+      "id": 405,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 41,
+      "locy": 2
+    },
+    {
+      "type": 54,
+      "id": 406,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 61,
+      "locy": 3
+    },
+    {
+      "type": 54,
+      "id": 407,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 81,
+      "locy": 4
+    },
+    {
+      "type": 54,
+      "id": 408,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 101,
+      "locy": 5
+    },
+    {
+      "type": 54,
+      "id": 409,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 121,
+      "locy": 6
+    },
+    {
+      "type": 54,
+      "id": 410,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 141,
+      "locy": 7
+    },
+    {
+      "type": 54,
+      "id": 411,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 161,
+      "locy": 8
+    },
+    {
+      "type": 54,
+      "id": 412,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 181,
+      "locy": 9
+    },
+    {
+      "type": 54,
+      "id": 413,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 201,
+      "locy": 10
+    },
+    {
+      "type": 54,
+      "id": 414,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 221,
+      "locy": 11
+    },
+    {
+      "type": 54,
+      "id": 415,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 241,
+      "locy": 12
+    },
+    {
+      "type": 54,
+      "id": 416,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 261,
+      "locy": 13
+    },
+    {
+      "type": 54,
+      "id": 417,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 281,
+      "locy": 14
+    },
+    {
+      "type": 54,
+      "id": 418,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 301,
+      "locy": 15
+    },
+    {
+      "type": 54,
+      "id": 419,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 321,
+      "locy": 16
+    },
+    {
+      "type": 54,
+      "id": 420,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 341,
+      "locy": 17
+    },
+    {
+      "type": 54,
+      "id": 421,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 361,
+      "locy": 18
+    },
+    {
+      "type": 54,
+      "id": 422,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 381,
+      "locy": 19
+    },
+    {
+      "type": 59,
+      "id": 403,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 2,
+      "locx": 1
+    },
+    {
+      "type": 65,
+      "id": 441,
+      "locx": 1
+    },
+    {
+      "type": 11,
+      "id": 82,
+      "locx": 1,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 102,
+      "locx": 1,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 122,
+      "locx": 1,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 142,
+      "locx": 1,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 162,
+      "locx": 1,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 182,
+      "locx": 1,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 202,
+      "locx": 1,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 222,
+      "locx": 1,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 242,
+      "locx": 1,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 262,
+      "locx": 1,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 282,
+      "locx": 1,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 302,
+      "locx": 1,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 322,
+      "locx": 1,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 342,
+      "locx": 1,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 362,
+      "locx": 1,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 480,
+      "locx": 1,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 3,
+      "locx": 2
+    },
+    {
+      "type": 65,
+      "id": 442,
+      "locx": 2
+    },
+    {
+      "type": 11,
+      "id": 83,
+      "locx": 2,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 103,
+      "locx": 2,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 123,
+      "locx": 2,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 143,
+      "locx": 2,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 163,
+      "locx": 2,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 183,
+      "locx": 2,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 203,
+      "locx": 2,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 223,
+      "locx": 2,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 243,
+      "locx": 2,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 263,
+      "locx": 2,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 283,
+      "locx": 2,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 303,
+      "locx": 2,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 323,
+      "locx": 2,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 343,
+      "locx": 2,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 363,
+      "locx": 2,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 479,
+      "locx": 2,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 4,
+      "locx": 3
+    },
+    {
+      "type": 65,
+      "id": 443,
+      "locx": 3
+    },
+    {
+      "type": 11,
+      "id": 24,
+      "locx": 3,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 44,
+      "locx": 3,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 64,
+      "locx": 3,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 84,
+      "locx": 3,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 104,
+      "locx": 3,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 124,
+      "locx": 3,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 144,
+      "locx": 3,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 164,
+      "locx": 3,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 184,
+      "locx": 3,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 204,
+      "locx": 3,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 224,
+      "locx": 3,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 244,
+      "locx": 3,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 264,
+      "locx": 3,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 284,
+      "locx": 3,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 304,
+      "locx": 3,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 324,
+      "locx": 3,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 344,
+      "locx": 3,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 364,
+      "locx": 3,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 384,
+      "locx": 3,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 461,
+      "locx": 3,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 5,
+      "locx": 4
+    },
+    {
+      "type": 65,
+      "id": 444,
+      "locx": 4
+    },
+    {
+      "type": 11,
+      "id": 25,
+      "locx": 4,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 45,
+      "locx": 4,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 65,
+      "locx": 4,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 85,
+      "locx": 4,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 105,
+      "locx": 4,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 125,
+      "locx": 4,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 145,
+      "locx": 4,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 165,
+      "locx": 4,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 185,
+      "locx": 4,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 205,
+      "locx": 4,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 225,
+      "locx": 4,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 245,
+      "locx": 4,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 265,
+      "locx": 4,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 285,
+      "locx": 4,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 305,
+      "locx": 4,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 325,
+      "locx": 4,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 345,
+      "locx": 4,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 365,
+      "locx": 4,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 385,
+      "locx": 4,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 462,
+      "locx": 4,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 6,
+      "locx": 5
+    },
+    {
+      "type": 65,
+      "id": 445,
+      "locx": 5
+    },
+    {
+      "type": 11,
+      "id": 26,
+      "locx": 5,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 46,
+      "locx": 5,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 66,
+      "locx": 5,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 86,
+      "locx": 5,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 106,
+      "locx": 5,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 126,
+      "locx": 5,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 146,
+      "locx": 5,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 166,
+      "locx": 5,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 186,
+      "locx": 5,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 206,
+      "locx": 5,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 226,
+      "locx": 5,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 246,
+      "locx": 5,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 266,
+      "locx": 5,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 286,
+      "locx": 5,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 306,
+      "locx": 5,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 326,
+      "locx": 5,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 346,
+      "locx": 5,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 366,
+      "locx": 5,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 386,
+      "locx": 5,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 463,
+      "locx": 5,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 7,
+      "locx": 6
+    },
+    {
+      "type": 65,
+      "id": 446,
+      "locx": 6
+    },
+    {
+      "type": 11,
+      "id": 27,
+      "locx": 6,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 47,
+      "locx": 6,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 67,
+      "locx": 6,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 87,
+      "locx": 6,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 107,
+      "locx": 6,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 127,
+      "locx": 6,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 147,
+      "locx": 6,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 167,
+      "locx": 6,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 187,
+      "locx": 6,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 207,
+      "locx": 6,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 227,
+      "locx": 6,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 247,
+      "locx": 6,
+      "locy": 12
+    },
+    {
+      "type": 179,
+      "id": 423,
+      "infox": 8,
+      "infoy": 12,
+      "locx": 6,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 267,
+      "locx": 6,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 287,
+      "locx": 6,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 307,
+      "locx": 6,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 327,
+      "locx": 6,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 347,
+      "locx": 6,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 367,
+      "locx": 6,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 387,
+      "locx": 6,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 464,
+      "locx": 6,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 8,
+      "locx": 7
+    },
+    {
+      "type": 65,
+      "id": 447,
+      "locx": 7
+    },
+    {
+      "type": 11,
+      "id": 28,
+      "locx": 7,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 48,
+      "locx": 7,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 68,
+      "locx": 7,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 88,
+      "locx": 7,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 108,
+      "locx": 7,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 128,
+      "locx": 7,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 148,
+      "locx": 7,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 168,
+      "locx": 7,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 188,
+      "locx": 7,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 208,
+      "locx": 7,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 228,
+      "locx": 7,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 248,
+      "locx": 7,
+      "locy": 12
+    },
+    {
+      "type": 178,
+      "id": 422,
+      "infox": 5,
+      "infoy": 12,
+      "locx": 7,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 268,
+      "locx": 7,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 288,
+      "locx": 7,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 308,
+      "locx": 7,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 328,
+      "locx": 7,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 348,
+      "locx": 7,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 368,
+      "locx": 7,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 388,
+      "locx": 7,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 465,
+      "locx": 7,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 9,
+      "locx": 8
+    },
+    {
+      "type": 65,
+      "id": 448,
+      "locx": 8
+    },
+    {
+      "type": 11,
+      "id": 29,
+      "locx": 8,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 49,
+      "locx": 8,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 69,
+      "locx": 8,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 89,
+      "locx": 8,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 109,
+      "locx": 8,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 129,
+      "locx": 8,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 149,
+      "locx": 8,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 169,
+      "locx": 8,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 189,
+      "locx": 8,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 209,
+      "locx": 8,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 229,
+      "locx": 8,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 249,
+      "locx": 8,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 269,
+      "locx": 8,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 289,
+      "locx": 8,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 309,
+      "locx": 8,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 329,
+      "locx": 8,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 349,
+      "locx": 8,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 369,
+      "locx": 8,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 389,
+      "locx": 8,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 466,
+      "locx": 8,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 10,
+      "locx": 9
+    },
+    {
+      "type": 65,
+      "id": 449,
+      "locx": 9
+    },
+    {
+      "type": 11,
+      "id": 30,
+      "locx": 9,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 50,
+      "locx": 9,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 70,
+      "locx": 9,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 90,
+      "locx": 9,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 110,
+      "locx": 9,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 416,
+      "locx": 9,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 150,
+      "locx": 9,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 170,
+      "locx": 9,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 418,
+      "locx": 9,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 210,
+      "locx": 9,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 230,
+      "locx": 9,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 250,
+      "locx": 9,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 270,
+      "locx": 9,
+      "locy": 13
+    },
+    {
+      "type": 197,
+      "id": 413,
+      "detail": 20,
+      "locx": 9,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 290,
+      "locx": 9,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 310,
+      "locx": 9,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 330,
+      "locx": 9,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 350,
+      "locx": 9,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 370,
+      "locx": 9,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 390,
+      "locx": 9,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 467,
+      "locx": 9,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 11,
+      "locx": 10
+    },
+    {
+      "type": 65,
+      "id": 450,
+      "locx": 10
+    },
+    {
+      "type": 11,
+      "id": 31,
+      "locx": 10,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 51,
+      "locx": 10,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 71,
+      "locx": 10,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 91,
+      "locx": 10,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 111,
+      "locx": 10,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 131,
+      "locx": 10,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 417,
+      "locx": 10,
+      "locy": 7
+    },
+    {
+      "type": 46,
+      "id": 420,
+      "locx": 10,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 171,
+      "locx": 10,
+      "locy": 8
+    },
+    {
+      "type": 111,
+      "id": 419,
+      "locx": 10,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 191,
+      "locx": 10,
+      "locy": 9
+    },
+    {
+      "type": 62,
+      "id": 421,
+      "locx": 10,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 211,
+      "locx": 10,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 231,
+      "locx": 10,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 251,
+      "locx": 10,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 271,
+      "locx": 10,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 291,
+      "locx": 10,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 311,
+      "locx": 10,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 331,
+      "locx": 10,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 351,
+      "locx": 10,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 371,
+      "locx": 10,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 391,
+      "locx": 10,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 468,
+      "locx": 10,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 12,
+      "locx": 11
+    },
+    {
+      "type": 65,
+      "id": 451,
+      "locx": 11
+    },
+    {
+      "type": 11,
+      "id": 32,
+      "locx": 11,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 52,
+      "locx": 11,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 72,
+      "locx": 11,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 92,
+      "locx": 11,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 112,
+      "locx": 11,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 132,
+      "locx": 11,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 152,
+      "locx": 11,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 172,
+      "locx": 11,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 192,
+      "locx": 11,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 212,
+      "locx": 11,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 232,
+      "locx": 11,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 252,
+      "locx": 11,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 272,
+      "locx": 11,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 292,
+      "locx": 11,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 312,
+      "locx": 11,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 332,
+      "locx": 11,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 352,
+      "locx": 11,
+      "locy": 17
+    },
+    {
+      "type": 209,
+      "id": 414,
+      "locx": 11,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 372,
+      "locx": 11,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 392,
+      "locx": 11,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 469,
+      "locx": 11,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 13,
+      "locx": 12
+    },
+    {
+      "type": 65,
+      "id": 452,
+      "locx": 12
+    },
+    {
+      "type": 11,
+      "id": 33,
+      "locx": 12,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 53,
+      "locx": 12,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 73,
+      "locx": 12,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 93,
+      "locx": 12,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 113,
+      "locx": 12,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 133,
+      "locx": 12,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 153,
+      "locx": 12,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 173,
+      "locx": 12,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 193,
+      "locx": 12,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 213,
+      "locx": 12,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 233,
+      "locx": 12,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 253,
+      "locx": 12,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 273,
+      "locx": 12,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 293,
+      "locx": 12,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 313,
+      "locx": 12,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 333,
+      "locx": 12,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 353,
+      "locx": 12,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 373,
+      "locx": 12,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 393,
+      "locx": 12,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 470,
+      "locx": 12,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 14,
+      "locx": 13
+    },
+    {
+      "type": 65,
+      "id": 453,
+      "locx": 13
+    },
+    {
+      "type": 11,
+      "id": 34,
+      "locx": 13,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 54,
+      "locx": 13,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 74,
+      "locx": 13,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 94,
+      "locx": 13,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 114,
+      "locx": 13,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 134,
+      "locx": 13,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 154,
+      "locx": 13,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 174,
+      "locx": 13,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 194,
+      "locx": 13,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 214,
+      "locx": 13,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 234,
+      "locx": 13,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 254,
+      "locx": 13,
+      "locy": 12
+    },
+    {
+      "type": 126,
+      "id": 406,
+      "locx": 13,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 274,
+      "locx": 13,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 294,
+      "locx": 13,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 314,
+      "locx": 13,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 334,
+      "locx": 13,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 354,
+      "locx": 13,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 374,
+      "locx": 13,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 394,
+      "locx": 13,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 471,
+      "locx": 13,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 15,
+      "locx": 14
+    },
+    {
+      "type": 65,
+      "id": 454,
+      "locx": 14
+    },
+    {
+      "type": 11,
+      "id": 35,
+      "locx": 14,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 55,
+      "locx": 14,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 75,
+      "locx": 14,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 95,
+      "locx": 14,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 115,
+      "locx": 14,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 135,
+      "locx": 14,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 155,
+      "locx": 14,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 175,
+      "locx": 14,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 195,
+      "locx": 14,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 215,
+      "locx": 14,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 235,
+      "locx": 14,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 255,
+      "locx": 14,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 275,
+      "locx": 14,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 295,
+      "locx": 14,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 315,
+      "locx": 14,
+      "locy": 15
+    },
+    {
+      "type": 204,
+      "id": 407,
+      "detail": 10,
+      "locx": 14,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 335,
+      "locx": 14,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 355,
+      "locx": 14,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 375,
+      "locx": 14,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 395,
+      "locx": 14,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 472,
+      "locx": 14,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 16,
+      "locx": 15
+    },
+    {
+      "type": 65,
+      "id": 455,
+      "locx": 15
+    },
+    {
+      "type": 11,
+      "id": 36,
+      "locx": 15,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 56,
+      "locx": 15,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 76,
+      "locx": 15,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 96,
+      "locx": 15,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 116,
+      "locx": 15,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 136,
+      "locx": 15,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 156,
+      "locx": 15,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 176,
+      "locx": 15,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 196,
+      "locx": 15,
+      "locy": 9
+    },
+    {
+      "type": 122,
+      "id": 405,
+      "locx": 15,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 216,
+      "locx": 15,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 236,
+      "locx": 15,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 256,
+      "locx": 15,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 276,
+      "locx": 15,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 296,
+      "locx": 15,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 316,
+      "locx": 15,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 336,
+      "locx": 15,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 356,
+      "locx": 15,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 376,
+      "locx": 15,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 396,
+      "locx": 15,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 473,
+      "locx": 15,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 17,
+      "locx": 16
+    },
+    {
+      "type": 65,
+      "id": 456,
+      "locx": 16
+    },
+    {
+      "type": 11,
+      "id": 37,
+      "locx": 16,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 57,
+      "locx": 16,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 77,
+      "locx": 16,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 97,
+      "locx": 16,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 117,
+      "locx": 16,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 137,
+      "locx": 16,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 157,
+      "locx": 16,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 177,
+      "locx": 16,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 197,
+      "locx": 16,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 217,
+      "locx": 16,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 237,
+      "locx": 16,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 257,
+      "locx": 16,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 277,
+      "locx": 16,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 297,
+      "locx": 16,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 317,
+      "locx": 16,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 337,
+      "locx": 16,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 357,
+      "locx": 16,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 377,
+      "locx": 16,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 397,
+      "locx": 16,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 474,
+      "locx": 16,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 18,
+      "locx": 17
+    },
+    {
+      "type": 65,
+      "id": 457,
+      "locx": 17
+    },
+    {
+      "type": 11,
+      "id": 38,
+      "locx": 17,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 58,
+      "locx": 17,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 78,
+      "locx": 17,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 98,
+      "locx": 17,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 118,
+      "locx": 17,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 138,
+      "locx": 17,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 158,
+      "locx": 17,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 178,
+      "locx": 17,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 198,
+      "locx": 17,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 218,
+      "locx": 17,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 238,
+      "locx": 17,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 258,
+      "locx": 17,
+      "locy": 12
+    },
+    {
+      "type": 206,
+      "id": 411,
+      "detail": 8,
+      "locx": 17,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 278,
+      "locx": 17,
+      "locy": 13
+    },
+    {
+      "type": 206,
+      "id": 410,
+      "detail": 8,
+      "locx": 17,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 298,
+      "locx": 17,
+      "locy": 14
+    },
+    {
+      "type": 206,
+      "id": 409,
+      "detail": 8,
+      "locx": 17,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 318,
+      "locx": 17,
+      "locy": 15
+    },
+    {
+      "type": 206,
+      "id": 408,
+      "detail": 8,
+      "locx": 17,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 338,
+      "locx": 17,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 358,
+      "locx": 17,
+      "locy": 17
+    },
+    {
+      "type": 218,
+      "id": 415,
+      "locx": 17,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 378,
+      "locx": 17,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 398,
+      "locx": 17,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 475,
+      "locx": 17,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 19,
+      "locx": 18
+    },
+    {
+      "type": 65,
+      "id": 458,
+      "locx": 18
+    },
+    {
+      "type": 11,
+      "id": 39,
+      "locx": 18,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 59,
+      "locx": 18,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 79,
+      "locx": 18,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 99,
+      "locx": 18,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 119,
+      "locx": 18,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 139,
+      "locx": 18,
+      "locy": 6
+    },
+    {
+      "type": 195,
+      "id": 412,
+      "locx": 18,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 159,
+      "locx": 18,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 179,
+      "locx": 18,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 199,
+      "locx": 18,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 219,
+      "locx": 18,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 239,
+      "locx": 18,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 259,
+      "locx": 18,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 279,
+      "locx": 18,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 299,
+      "locx": 18,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 319,
+      "locx": 18,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 339,
+      "locx": 18,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 359,
+      "locx": 18,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 379,
+      "locx": 18,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 399,
+      "locx": 18,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 476,
+      "locx": 18,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 20,
+      "locx": 19
+    },
+    {
+      "type": 45,
+      "id": 402,
+      "locx": 19
+    },
+    {
+      "type": 11,
+      "id": 40,
+      "locx": 19,
+      "locy": 1
+    },
+    {
+      "type": 54,
+      "id": 423,
+      "locx": 19,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 60,
+      "locx": 19,
+      "locy": 2
+    },
+    {
+      "type": 54,
+      "id": 424,
+      "locx": 19,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 80,
+      "locx": 19,
+      "locy": 3
+    },
+    {
+      "type": 54,
+      "id": 425,
+      "locx": 19,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 100,
+      "locx": 19,
+      "locy": 4
+    },
+    {
+      "type": 54,
+      "id": 426,
+      "locx": 19,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 120,
+      "locx": 19,
+      "locy": 5
+    },
+    {
+      "type": 54,
+      "id": 427,
+      "locx": 19,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 140,
+      "locx": 19,
+      "locy": 6
+    },
+    {
+      "type": 54,
+      "id": 428,
+      "locx": 19,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 160,
+      "locx": 19,
+      "locy": 7
+    },
+    {
+      "type": 54,
+      "id": 429,
+      "locx": 19,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 180,
+      "locx": 19,
+      "locy": 8
+    },
+    {
+      "type": 54,
+      "id": 430,
+      "locx": 19,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 200,
+      "locx": 19,
+      "locy": 9
+    },
+    {
+      "type": 54,
+      "id": 431,
+      "locx": 19,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 220,
+      "locx": 19,
+      "locy": 10
+    },
+    {
+      "type": 54,
+      "id": 432,
+      "locx": 19,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 240,
+      "locx": 19,
+      "locy": 11
+    },
+    {
+      "type": 54,
+      "id": 433,
+      "locx": 19,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 260,
+      "locx": 19,
+      "locy": 12
+    },
+    {
+      "type": 54,
+      "id": 434,
+      "locx": 19,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 280,
+      "locx": 19,
+      "locy": 13
+    },
+    {
+      "type": 54,
+      "id": 435,
+      "locx": 19,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 300,
+      "locx": 19,
+      "locy": 14
+    },
+    {
+      "type": 54,
+      "id": 436,
+      "locx": 19,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 320,
+      "locx": 19,
+      "locy": 15
+    },
+    {
+      "type": 54,
+      "id": 437,
+      "locx": 19,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 340,
+      "locx": 19,
+      "locy": 16
+    },
+    {
+      "type": 54,
+      "id": 438,
+      "locx": 19,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 360,
+      "locx": 19,
+      "locy": 17
+    },
+    {
+      "type": 54,
+      "id": 439,
+      "locx": 19,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 380,
+      "locx": 19,
+      "locy": 18
+    },
+    {
+      "type": 54,
+      "id": 440,
+      "locx": 19,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 400,
+      "locx": 19,
+      "locy": 19
+    },
+    {
+      "type": 61,
+      "id": 404,
+      "locx": 19,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 424,
+      "room": 1
+    },
+    {
+      "type": 11,
+      "id": 462,
+      "room": 1
+    },
+    {
+      "type": 59,
+      "id": 425,
+      "room": 1
+    },
+    {
+      "type": 54,
+      "id": 921,
+      "room": 1
+    },
+    {
+      "type": 11,
+      "id": 482,
+      "room": 1,
+      "locy": 1
+    },
+    {
+      "type": 54,
+      "id": 881,
+      "room": 1,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 502,
+      "room": 1,
+      "locy": 2
+    },
+    {
+      "type": 54,
+      "id": 882,
+      "room": 1,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 522,
+      "room": 1,
+      "locy": 3
+    },
+    {
+      "type": 54,
+      "id": 883,
+      "room": 1,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 542,
+      "room": 1,
+      "locy": 4
+    },
+    {
+      "type": 54,
+      "id": 884,
+      "room": 1,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 562,
+      "room": 1,
+      "locy": 5
+    },
+    {
+      "type": 54,
+      "id": 885,
+      "room": 1,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 582,
+      "room": 1,
+      "locy": 6
+    },
+    {
+      "type": 54,
+      "id": 886,
+      "room": 1,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 602,
+      "room": 1,
+      "locy": 7
+    },
+    {
+      "type": 54,
+      "id": 887,
+      "room": 1,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 622,
+      "room": 1,
+      "locy": 8
+    },
+    {
+      "type": 54,
+      "id": 888,
+      "room": 1,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 642,
+      "room": 1,
+      "locy": 9
+    },
+    {
+      "type": 54,
+      "id": 889,
+      "room": 1,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 662,
+      "room": 1,
+      "locy": 10
+    },
+    {
+      "type": 54,
+      "id": 890,
+      "room": 1,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 682,
+      "room": 1,
+      "locy": 11
+    },
+    {
+      "type": 54,
+      "id": 891,
+      "room": 1,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 702,
+      "room": 1,
+      "locy": 12
+    },
+    {
+      "type": 54,
+      "id": 892,
+      "room": 1,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 722,
+      "room": 1,
+      "locy": 13
+    },
+    {
+      "type": 54,
+      "id": 893,
+      "room": 1,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 742,
+      "room": 1,
+      "locy": 14
+    },
+    {
+      "type": 54,
+      "id": 894,
+      "room": 1,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 762,
+      "room": 1,
+      "locy": 15
+    },
+    {
+      "type": 54,
+      "id": 895,
+      "room": 1,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 782,
+      "room": 1,
+      "locy": 16
+    },
+    {
+      "type": 54,
+      "id": 896,
+      "room": 1,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 802,
+      "room": 1,
+      "locy": 17
+    },
+    {
+      "type": 54,
+      "id": 897,
+      "room": 1,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 822,
+      "room": 1,
+      "locy": 18
+    },
+    {
+      "type": 54,
+      "id": 898,
+      "room": 1,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 842,
+      "room": 1,
+      "locy": 19
+    },
+    {
+      "type": 54,
+      "id": 899,
+      "room": 1,
+      "locy": 19
+    },
+    {
+      "type": 59,
+      "id": 919,
+      "room": 1,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 426,
+      "room": 1,
+      "locx": 1
+    },
+    {
+      "type": 11,
+      "id": 463,
+      "room": 1,
+      "locx": 1
+    },
+    {
+      "type": 11,
+      "id": 483,
+      "room": 1,
+      "locx": 1,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 503,
+      "room": 1,
+      "locx": 1,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 523,
+      "room": 1,
+      "locx": 1,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 543,
+      "room": 1,
+      "locx": 1,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 563,
+      "room": 1,
+      "locx": 1,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 583,
+      "room": 1,
+      "locx": 1,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 603,
+      "room": 1,
+      "locx": 1,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 623,
+      "room": 1,
+      "locx": 1,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 643,
+      "room": 1,
+      "locx": 1,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 663,
+      "room": 1,
+      "locx": 1,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 683,
+      "room": 1,
+      "locx": 1,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 703,
+      "room": 1,
+      "locx": 1,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 723,
+      "room": 1,
+      "locx": 1,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 743,
+      "room": 1,
+      "locx": 1,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 763,
+      "room": 1,
+      "locx": 1,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 783,
+      "room": 1,
+      "locx": 1,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 803,
+      "room": 1,
+      "locx": 1,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 823,
+      "room": 1,
+      "locx": 1,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 843,
+      "room": 1,
+      "locx": 1,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 900,
+      "room": 1,
+      "locx": 1,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 427,
+      "room": 1,
+      "locx": 2
+    },
+    {
+      "type": 11,
+      "id": 464,
+      "room": 1,
+      "locx": 2
+    },
+    {
+      "type": 11,
+      "id": 484,
+      "room": 1,
+      "locx": 2,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 504,
+      "room": 1,
+      "locx": 2,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 524,
+      "room": 1,
+      "locx": 2,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 544,
+      "room": 1,
+      "locx": 2,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 564,
+      "room": 1,
+      "locx": 2,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 584,
+      "room": 1,
+      "locx": 2,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 604,
+      "room": 1,
+      "locx": 2,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 624,
+      "room": 1,
+      "locx": 2,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 644,
+      "room": 1,
+      "locx": 2,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 664,
+      "room": 1,
+      "locx": 2,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 684,
+      "room": 1,
+      "locx": 2,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 704,
+      "room": 1,
+      "locx": 2,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 724,
+      "room": 1,
+      "locx": 2,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 744,
+      "room": 1,
+      "locx": 2,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 764,
+      "room": 1,
+      "locx": 2,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 784,
+      "room": 1,
+      "locx": 2,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 804,
+      "room": 1,
+      "locx": 2,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 824,
+      "room": 1,
+      "locx": 2,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 844,
+      "room": 1,
+      "locx": 2,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 901,
+      "room": 1,
+      "locx": 2,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 428,
+      "room": 1,
+      "locx": 3
+    },
+    {
+      "type": 11,
+      "id": 465,
+      "room": 1,
+      "locx": 3
+    },
+    {
+      "type": 65,
+      "id": 429,
+      "room": 1,
+      "locx": 3
+    },
+    {
+      "type": 64,
+      "id": 922,
+      "room": 1,
+      "locx": 3
+    },
+    {
+      "type": 11,
+      "id": 485,
+      "room": 1,
+      "locx": 3,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 505,
+      "room": 1,
+      "locx": 3,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 525,
+      "room": 1,
+      "locx": 3,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 545,
+      "room": 1,
+      "locx": 3,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 565,
+      "room": 1,
+      "locx": 3,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 585,
+      "room": 1,
+      "locx": 3,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 605,
+      "room": 1,
+      "locx": 3,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 625,
+      "room": 1,
+      "locx": 3,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 645,
+      "room": 1,
+      "locx": 3,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 665,
+      "room": 1,
+      "locx": 3,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 685,
+      "room": 1,
+      "locx": 3,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 705,
+      "room": 1,
+      "locx": 3,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 725,
+      "room": 1,
+      "locx": 3,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 745,
+      "room": 1,
+      "locx": 3,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 765,
+      "room": 1,
+      "locx": 3,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 785,
+      "room": 1,
+      "locx": 3,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 805,
+      "room": 1,
+      "locx": 3,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 825,
+      "room": 1,
+      "locx": 3,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 845,
+      "room": 1,
+      "locx": 3,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 902,
+      "room": 1,
+      "locx": 3,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 430,
+      "room": 1,
+      "locx": 4
+    },
+    {
+      "type": 11,
+      "id": 466,
+      "room": 1,
+      "locx": 4
+    },
+    {
+      "type": 65,
+      "id": 431,
+      "room": 1,
+      "locx": 4
+    },
+    {
+      "type": 11,
+      "id": 486,
+      "room": 1,
+      "locx": 4,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 506,
+      "room": 1,
+      "locx": 4,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 526,
+      "room": 1,
+      "locx": 4,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 546,
+      "room": 1,
+      "locx": 4,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 566,
+      "room": 1,
+      "locx": 4,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 586,
+      "room": 1,
+      "locx": 4,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 606,
+      "room": 1,
+      "locx": 4,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 626,
+      "room": 1,
+      "locx": 4,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 646,
+      "room": 1,
+      "locx": 4,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 666,
+      "room": 1,
+      "locx": 4,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 686,
+      "room": 1,
+      "locx": 4,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 706,
+      "room": 1,
+      "locx": 4,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 726,
+      "room": 1,
+      "locx": 4,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 746,
+      "room": 1,
+      "locx": 4,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 766,
+      "room": 1,
+      "locx": 4,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 786,
+      "room": 1,
+      "locx": 4,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 806,
+      "room": 1,
+      "locx": 4,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 826,
+      "room": 1,
+      "locx": 4,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 846,
+      "room": 1,
+      "locx": 4,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 903,
+      "room": 1,
+      "locx": 4,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 432,
+      "room": 1,
+      "locx": 5
+    },
+    {
+      "type": 11,
+      "id": 467,
+      "room": 1,
+      "locx": 5
+    },
+    {
+      "type": 65,
+      "id": 433,
+      "room": 1,
+      "locx": 5
+    },
+    {
+      "type": 11,
+      "id": 487,
+      "room": 1,
+      "locx": 5,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 507,
+      "room": 1,
+      "locx": 5,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 527,
+      "room": 1,
+      "locx": 5,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 547,
+      "room": 1,
+      "locx": 5,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 567,
+      "room": 1,
+      "locx": 5,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 587,
+      "room": 1,
+      "locx": 5,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 607,
+      "room": 1,
+      "locx": 5,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 627,
+      "room": 1,
+      "locx": 5,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 647,
+      "room": 1,
+      "locx": 5,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 667,
+      "room": 1,
+      "locx": 5,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 687,
+      "room": 1,
+      "locx": 5,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 707,
+      "room": 1,
+      "locx": 5,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 727,
+      "room": 1,
+      "locx": 5,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 747,
+      "room": 1,
+      "locx": 5,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 767,
+      "room": 1,
+      "locx": 5,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 787,
+      "room": 1,
+      "locx": 5,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 807,
+      "room": 1,
+      "locx": 5,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 827,
+      "room": 1,
+      "locx": 5,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 847,
+      "room": 1,
+      "locx": 5,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 904,
+      "room": 1,
+      "locx": 5,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 434,
+      "room": 1,
+      "locx": 6
+    },
+    {
+      "type": 11,
+      "id": 468,
+      "room": 1,
+      "locx": 6
+    },
+    {
+      "type": 65,
+      "id": 435,
+      "room": 1,
+      "locx": 6
+    },
+    {
+      "type": 11,
+      "id": 488,
+      "room": 1,
+      "locx": 6,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 508,
+      "room": 1,
+      "locx": 6,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 528,
+      "room": 1,
+      "locx": 6,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 548,
+      "room": 1,
+      "locx": 6,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 568,
+      "room": 1,
+      "locx": 6,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 588,
+      "room": 1,
+      "locx": 6,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 608,
+      "room": 1,
+      "locx": 6,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 628,
+      "room": 1,
+      "locx": 6,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 648,
+      "room": 1,
+      "locx": 6,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 668,
+      "room": 1,
+      "locx": 6,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 688,
+      "room": 1,
+      "locx": 6,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 708,
+      "room": 1,
+      "locx": 6,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 728,
+      "room": 1,
+      "locx": 6,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 748,
+      "room": 1,
+      "locx": 6,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 768,
+      "room": 1,
+      "locx": 6,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 788,
+      "room": 1,
+      "locx": 6,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 808,
+      "room": 1,
+      "locx": 6,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 828,
+      "room": 1,
+      "locx": 6,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 848,
+      "room": 1,
+      "locx": 6,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 905,
+      "room": 1,
+      "locx": 6,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 436,
+      "room": 1,
+      "locx": 7
+    },
+    {
+      "type": 11,
+      "id": 469,
+      "room": 1,
+      "locx": 7
+    },
+    {
+      "type": 65,
+      "id": 437,
+      "room": 1,
+      "locx": 7
+    },
+    {
+      "type": 11,
+      "id": 489,
+      "room": 1,
+      "locx": 7,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 509,
+      "room": 1,
+      "locx": 7,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 529,
+      "room": 1,
+      "locx": 7,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 549,
+      "room": 1,
+      "locx": 7,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 569,
+      "room": 1,
+      "locx": 7,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 589,
+      "room": 1,
+      "locx": 7,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 609,
+      "room": 1,
+      "locx": 7,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 629,
+      "room": 1,
+      "locx": 7,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 649,
+      "room": 1,
+      "locx": 7,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 669,
+      "room": 1,
+      "locx": 7,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 689,
+      "room": 1,
+      "locx": 7,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 709,
+      "room": 1,
+      "locx": 7,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 729,
+      "room": 1,
+      "locx": 7,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 749,
+      "room": 1,
+      "locx": 7,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 769,
+      "room": 1,
+      "locx": 7,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 789,
+      "room": 1,
+      "locx": 7,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 809,
+      "room": 1,
+      "locx": 7,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 829,
+      "room": 1,
+      "locx": 7,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 849,
+      "room": 1,
+      "locx": 7,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 906,
+      "room": 1,
+      "locx": 7,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 438,
+      "room": 1,
+      "locx": 8
+    },
+    {
+      "type": 11,
+      "id": 470,
+      "room": 1,
+      "locx": 8
+    },
+    {
+      "type": 65,
+      "id": 439,
+      "room": 1,
+      "locx": 8
+    },
+    {
+      "type": 11,
+      "id": 490,
+      "room": 1,
+      "locx": 8,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 510,
+      "room": 1,
+      "locx": 8,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 530,
+      "room": 1,
+      "locx": 8,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 550,
+      "room": 1,
+      "locx": 8,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 570,
+      "room": 1,
+      "locx": 8,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 590,
+      "room": 1,
+      "locx": 8,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 610,
+      "room": 1,
+      "locx": 8,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 630,
+      "room": 1,
+      "locx": 8,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 650,
+      "room": 1,
+      "locx": 8,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 670,
+      "room": 1,
+      "locx": 8,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 690,
+      "room": 1,
+      "locx": 8,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 710,
+      "room": 1,
+      "locx": 8,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 730,
+      "room": 1,
+      "locx": 8,
+      "locy": 13
+    },
+    {
+      "type": 127,
+      "id": 924,
+      "room": 1,
+      "locx": 8,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 750,
+      "room": 1,
+      "locx": 8,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 770,
+      "room": 1,
+      "locx": 8,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 790,
+      "room": 1,
+      "locx": 8,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 810,
+      "room": 1,
+      "locx": 8,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 830,
+      "room": 1,
+      "locx": 8,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 850,
+      "room": 1,
+      "locx": 8,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 907,
+      "room": 1,
+      "locx": 8,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 440,
+      "room": 1,
+      "locx": 9
+    },
+    {
+      "type": 11,
+      "id": 471,
+      "room": 1,
+      "locx": 9
+    },
+    {
+      "type": 65,
+      "id": 441,
+      "room": 1,
+      "locx": 9
+    },
+    {
+      "type": 11,
+      "id": 491,
+      "room": 1,
+      "locx": 9,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 511,
+      "room": 1,
+      "locx": 9,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 531,
+      "room": 1,
+      "locx": 9,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 551,
+      "room": 1,
+      "locx": 9,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 571,
+      "room": 1,
+      "locx": 9,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 591,
+      "room": 1,
+      "locx": 9,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 611,
+      "room": 1,
+      "locx": 9,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 631,
+      "room": 1,
+      "locx": 9,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 651,
+      "room": 1,
+      "locx": 9,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 671,
+      "room": 1,
+      "locx": 9,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 691,
+      "room": 1,
+      "locx": 9,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 711,
+      "room": 1,
+      "locx": 9,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 731,
+      "room": 1,
+      "locx": 9,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 751,
+      "room": 1,
+      "locx": 9,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 771,
+      "room": 1,
+      "locx": 9,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 791,
+      "room": 1,
+      "locx": 9,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 811,
+      "room": 1,
+      "locx": 9,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 831,
+      "room": 1,
+      "locx": 9,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 851,
+      "room": 1,
+      "locx": 9,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 908,
+      "room": 1,
+      "locx": 9,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 442,
+      "room": 1,
+      "locx": 10
+    },
+    {
+      "type": 11,
+      "id": 472,
+      "room": 1,
+      "locx": 10
+    },
+    {
+      "type": 65,
+      "id": 443,
+      "room": 1,
+      "locx": 10
+    },
+    {
+      "type": 11,
+      "id": 492,
+      "room": 1,
+      "locx": 10,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 512,
+      "room": 1,
+      "locx": 10,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 532,
+      "room": 1,
+      "locx": 10,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 552,
+      "room": 1,
+      "locx": 10,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 572,
+      "room": 1,
+      "locx": 10,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 592,
+      "room": 1,
+      "locx": 10,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 612,
+      "room": 1,
+      "locx": 10,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 632,
+      "room": 1,
+      "locx": 10,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 652,
+      "room": 1,
+      "locx": 10,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 672,
+      "room": 1,
+      "locx": 10,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 692,
+      "room": 1,
+      "locx": 10,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 712,
+      "room": 1,
+      "locx": 10,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 732,
+      "room": 1,
+      "locx": 10,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 752,
+      "room": 1,
+      "locx": 10,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 772,
+      "room": 1,
+      "locx": 10,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 792,
+      "room": 1,
+      "locx": 10,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 812,
+      "room": 1,
+      "locx": 10,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 832,
+      "room": 1,
+      "locx": 10,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 852,
+      "room": 1,
+      "locx": 10,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 909,
+      "room": 1,
+      "locx": 10,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 444,
+      "room": 1,
+      "locx": 11
+    },
+    {
+      "type": 11,
+      "id": 473,
+      "room": 1,
+      "locx": 11
+    },
+    {
+      "type": 65,
+      "id": 445,
+      "room": 1,
+      "locx": 11
+    },
+    {
+      "type": 11,
+      "id": 493,
+      "room": 1,
+      "locx": 11,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 513,
+      "room": 1,
+      "locx": 11,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 533,
+      "room": 1,
+      "locx": 11,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 553,
+      "room": 1,
+      "locx": 11,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 573,
+      "room": 1,
+      "locx": 11,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 593,
+      "room": 1,
+      "locx": 11,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 613,
+      "room": 1,
+      "locx": 11,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 633,
+      "room": 1,
+      "locx": 11,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 653,
+      "room": 1,
+      "locx": 11,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 673,
+      "room": 1,
+      "locx": 11,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 693,
+      "room": 1,
+      "locx": 11,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 713,
+      "room": 1,
+      "locx": 11,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 733,
+      "room": 1,
+      "locx": 11,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 753,
+      "room": 1,
+      "locx": 11,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 773,
+      "room": 1,
+      "locx": 11,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 793,
+      "room": 1,
+      "locx": 11,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 813,
+      "room": 1,
+      "locx": 11,
+      "locy": 17
+    },
+    {
+      "type": 232,
+      "id": 928,
+      "detail": 5,
+      "infox": 10,
+      "infoy": 2,
+      "room": 1,
+      "locx": 11,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 833,
+      "room": 1,
+      "locx": 11,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 853,
+      "room": 1,
+      "locx": 11,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 910,
+      "room": 1,
+      "locx": 11,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 446,
+      "room": 1,
+      "locx": 12
+    },
+    {
+      "type": 11,
+      "id": 474,
+      "room": 1,
+      "locx": 12
+    },
+    {
+      "type": 65,
+      "id": 447,
+      "room": 1,
+      "locx": 12
+    },
+    {
+      "type": 11,
+      "id": 494,
+      "room": 1,
+      "locx": 12,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 514,
+      "room": 1,
+      "locx": 12,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 534,
+      "room": 1,
+      "locx": 12,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 554,
+      "room": 1,
+      "locx": 12,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 574,
+      "room": 1,
+      "locx": 12,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 594,
+      "room": 1,
+      "locx": 12,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 614,
+      "room": 1,
+      "locx": 12,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 634,
+      "room": 1,
+      "locx": 12,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 654,
+      "room": 1,
+      "locx": 12,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 674,
+      "room": 1,
+      "locx": 12,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 694,
+      "room": 1,
+      "locx": 12,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 714,
+      "room": 1,
+      "locx": 12,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 734,
+      "room": 1,
+      "locx": 12,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 754,
+      "room": 1,
+      "locx": 12,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 774,
+      "room": 1,
+      "locx": 12,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 794,
+      "room": 1,
+      "locx": 12,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 814,
+      "room": 1,
+      "locx": 12,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 834,
+      "room": 1,
+      "locx": 12,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 854,
+      "room": 1,
+      "locx": 12,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 911,
+      "room": 1,
+      "locx": 12,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 448,
+      "room": 1,
+      "locx": 13
+    },
+    {
+      "type": 11,
+      "id": 475,
+      "room": 1,
+      "locx": 13
+    },
+    {
+      "type": 65,
+      "id": 449,
+      "room": 1,
+      "locx": 13
+    },
+    {
+      "type": 11,
+      "id": 495,
+      "room": 1,
+      "locx": 13,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 515,
+      "room": 1,
+      "locx": 13,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 535,
+      "room": 1,
+      "locx": 13,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 555,
+      "room": 1,
+      "locx": 13,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 575,
+      "room": 1,
+      "locx": 13,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 595,
+      "room": 1,
+      "locx": 13,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 615,
+      "room": 1,
+      "locx": 13,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 635,
+      "room": 1,
+      "locx": 13,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 655,
+      "room": 1,
+      "locx": 13,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 675,
+      "room": 1,
+      "locx": 13,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 695,
+      "room": 1,
+      "locx": 13,
+      "locy": 11
+    },
+    {
+      "type": 215,
+      "id": 932,
+      "detail": 5,
+      "room": 1,
+      "locx": 13,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 715,
+      "room": 1,
+      "locx": 13,
+      "locy": 12
+    },
+    {
+      "type": 127,
+      "id": 923,
+      "room": 1,
+      "locx": 13,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 735,
+      "room": 1,
+      "locx": 13,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 755,
+      "room": 1,
+      "locx": 13,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 775,
+      "room": 1,
+      "locx": 13,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 795,
+      "room": 1,
+      "locx": 13,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 815,
+      "room": 1,
+      "locx": 13,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 835,
+      "room": 1,
+      "locx": 13,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 855,
+      "room": 1,
+      "locx": 13,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 912,
+      "room": 1,
+      "locx": 13,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 450,
+      "room": 1,
+      "locx": 14
+    },
+    {
+      "type": 11,
+      "id": 476,
+      "room": 1,
+      "locx": 14
+    },
+    {
+      "type": 65,
+      "id": 451,
+      "room": 1,
+      "locx": 14
+    },
+    {
+      "type": 11,
+      "id": 496,
+      "room": 1,
+      "locx": 14,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 516,
+      "room": 1,
+      "locx": 14,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 536,
+      "room": 1,
+      "locx": 14,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 556,
+      "room": 1,
+      "locx": 14,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 576,
+      "room": 1,
+      "locx": 14,
+      "locy": 5
+    },
+    {
+      "type": 34,
+      "id": 926,
+      "room": 1,
+      "locx": 14,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 596,
+      "room": 1,
+      "locx": 14,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 616,
+      "room": 1,
+      "locx": 14,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 636,
+      "room": 1,
+      "locx": 14,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 656,
+      "room": 1,
+      "locx": 14,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 676,
+      "room": 1,
+      "locx": 14,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 696,
+      "room": 1,
+      "locx": 14,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 716,
+      "room": 1,
+      "locx": 14,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 736,
+      "room": 1,
+      "locx": 14,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 756,
+      "room": 1,
+      "locx": 14,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 776,
+      "room": 1,
+      "locx": 14,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 796,
+      "room": 1,
+      "locx": 14,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 816,
+      "room": 1,
+      "locx": 14,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 836,
+      "room": 1,
+      "locx": 14,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 856,
+      "room": 1,
+      "locx": 14,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 913,
+      "room": 1,
+      "locx": 14,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 452,
+      "room": 1,
+      "locx": 15
+    },
+    {
+      "type": 11,
+      "id": 477,
+      "room": 1,
+      "locx": 15
+    },
+    {
+      "type": 65,
+      "id": 453,
+      "room": 1,
+      "locx": 15
+    },
+    {
+      "type": 11,
+      "id": 497,
+      "room": 1,
+      "locx": 15,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 517,
+      "room": 1,
+      "locx": 15,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 537,
+      "room": 1,
+      "locx": 15,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 557,
+      "room": 1,
+      "locx": 15,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 577,
+      "room": 1,
+      "locx": 15,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 597,
+      "room": 1,
+      "locx": 15,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 617,
+      "room": 1,
+      "locx": 15,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 637,
+      "room": 1,
+      "locx": 15,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 657,
+      "room": 1,
+      "locx": 15,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 677,
+      "room": 1,
+      "locx": 15,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 697,
+      "room": 1,
+      "locx": 15,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 717,
+      "room": 1,
+      "locx": 15,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 737,
+      "room": 1,
+      "locx": 15,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 757,
+      "room": 1,
+      "locx": 15,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 777,
+      "room": 1,
+      "locx": 15,
+      "locy": 15
+    },
+    {
+      "type": 211,
+      "id": 927,
+      "room": 1,
+      "locx": 15,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 797,
+      "room": 1,
+      "locx": 15,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 817,
+      "room": 1,
+      "locx": 15,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 837,
+      "room": 1,
+      "locx": 15,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 857,
+      "room": 1,
+      "locx": 15,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 914,
+      "room": 1,
+      "locx": 15,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 454,
+      "room": 1,
+      "locx": 16
+    },
+    {
+      "type": 11,
+      "id": 478,
+      "room": 1,
+      "locx": 16
+    },
+    {
+      "type": 65,
+      "id": 455,
+      "room": 1,
+      "locx": 16
+    },
+    {
+      "type": 11,
+      "id": 498,
+      "room": 1,
+      "locx": 16,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 518,
+      "room": 1,
+      "locx": 16,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 538,
+      "room": 1,
+      "locx": 16,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 558,
+      "room": 1,
+      "locx": 16,
+      "locy": 4
+    },
+    {
+      "type": 34,
+      "id": 925,
+      "room": 1,
+      "locx": 16,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 578,
+      "room": 1,
+      "locx": 16,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 598,
+      "room": 1,
+      "locx": 16,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 618,
+      "room": 1,
+      "locx": 16,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 638,
+      "room": 1,
+      "locx": 16,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 658,
+      "room": 1,
+      "locx": 16,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 678,
+      "room": 1,
+      "locx": 16,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 698,
+      "room": 1,
+      "locx": 16,
+      "locy": 11
+    },
+    {
+      "type": 215,
+      "id": 931,
+      "detail": 5,
+      "room": 1,
+      "locx": 16,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 718,
+      "room": 1,
+      "locx": 16,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 738,
+      "room": 1,
+      "locx": 16,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 758,
+      "room": 1,
+      "locx": 16,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 778,
+      "room": 1,
+      "locx": 16,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 798,
+      "room": 1,
+      "locx": 16,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 818,
+      "room": 1,
+      "locx": 16,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 838,
+      "room": 1,
+      "locx": 16,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 858,
+      "room": 1,
+      "locx": 16,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 915,
+      "room": 1,
+      "locx": 16,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 456,
+      "room": 1,
+      "locx": 17
+    },
+    {
+      "type": 11,
+      "id": 479,
+      "room": 1,
+      "locx": 17
+    },
+    {
+      "type": 65,
+      "id": 457,
+      "room": 1,
+      "locx": 17
+    },
+    {
+      "type": 11,
+      "id": 499,
+      "room": 1,
+      "locx": 17,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 519,
+      "room": 1,
+      "locx": 17,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 539,
+      "room": 1,
+      "locx": 17,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 559,
+      "room": 1,
+      "locx": 17,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 579,
+      "room": 1,
+      "locx": 17,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 599,
+      "room": 1,
+      "locx": 17,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 619,
+      "room": 1,
+      "locx": 17,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 639,
+      "room": 1,
+      "locx": 17,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 659,
+      "room": 1,
+      "locx": 17,
+      "locy": 9
+    },
+    {
+      "type": 213,
+      "id": 929,
+      "detail": 15,
+      "room": 1,
+      "locx": 17,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 679,
+      "room": 1,
+      "locx": 17,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 699,
+      "room": 1,
+      "locx": 17,
+      "locy": 11
+    },
+    {
+      "type": 215,
+      "id": 930,
+      "detail": 5,
+      "room": 1,
+      "locx": 17,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 719,
+      "room": 1,
+      "locx": 17,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 739,
+      "room": 1,
+      "locx": 17,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 759,
+      "room": 1,
+      "locx": 17,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 779,
+      "room": 1,
+      "locx": 17,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 799,
+      "room": 1,
+      "locx": 17,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 819,
+      "room": 1,
+      "locx": 17,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 839,
+      "room": 1,
+      "locx": 17,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 859,
+      "room": 1,
+      "locx": 17,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 916,
+      "room": 1,
+      "locx": 17,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 458,
+      "room": 1,
+      "locx": 18
+    },
+    {
+      "type": 11,
+      "id": 480,
+      "room": 1,
+      "locx": 18
+    },
+    {
+      "type": 65,
+      "id": 459,
+      "room": 1,
+      "locx": 18
+    },
+    {
+      "type": 11,
+      "id": 500,
+      "room": 1,
+      "locx": 18,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 520,
+      "room": 1,
+      "locx": 18,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 540,
+      "room": 1,
+      "locx": 18,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 560,
+      "room": 1,
+      "locx": 18,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 580,
+      "room": 1,
+      "locx": 18,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 600,
+      "room": 1,
+      "locx": 18,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 620,
+      "room": 1,
+      "locx": 18,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 640,
+      "room": 1,
+      "locx": 18,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 660,
+      "room": 1,
+      "locx": 18,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 680,
+      "room": 1,
+      "locx": 18,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 700,
+      "room": 1,
+      "locx": 18,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 720,
+      "room": 1,
+      "locx": 18,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 740,
+      "room": 1,
+      "locx": 18,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 760,
+      "room": 1,
+      "locx": 18,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 780,
+      "room": 1,
+      "locx": 18,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 800,
+      "room": 1,
+      "locx": 18,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 820,
+      "room": 1,
+      "locx": 18,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 840,
+      "room": 1,
+      "locx": 18,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 860,
+      "room": 1,
+      "locx": 18,
+      "locy": 19
+    },
+    {
+      "type": 65,
+      "id": 917,
+      "room": 1,
+      "locx": 18,
+      "locy": 19
+    },
+    {
+      "type": 11,
+      "id": 460,
+      "room": 1,
+      "locx": 19
+    },
+    {
+      "type": 11,
+      "id": 481,
+      "room": 1,
+      "locx": 19
+    },
+    {
+      "type": 61,
+      "id": 461,
+      "room": 1,
+      "locx": 19
+    },
+    {
+      "type": 53,
+      "id": 920,
+      "room": 1,
+      "locx": 19
+    },
+    {
+      "type": 11,
+      "id": 501,
+      "room": 1,
+      "locx": 19,
+      "locy": 1
+    },
+    {
+      "type": 54,
+      "id": 862,
+      "room": 1,
+      "locx": 19,
+      "locy": 1
+    },
+    {
+      "type": 11,
+      "id": 521,
+      "room": 1,
+      "locx": 19,
+      "locy": 2
+    },
+    {
+      "type": 54,
+      "id": 863,
+      "room": 1,
+      "locx": 19,
+      "locy": 2
+    },
+    {
+      "type": 11,
+      "id": 541,
+      "room": 1,
+      "locx": 19,
+      "locy": 3
+    },
+    {
+      "type": 54,
+      "id": 864,
+      "room": 1,
+      "locx": 19,
+      "locy": 3
+    },
+    {
+      "type": 11,
+      "id": 561,
+      "room": 1,
+      "locx": 19,
+      "locy": 4
+    },
+    {
+      "type": 54,
+      "id": 865,
+      "room": 1,
+      "locx": 19,
+      "locy": 4
+    },
+    {
+      "type": 11,
+      "id": 581,
+      "room": 1,
+      "locx": 19,
+      "locy": 5
+    },
+    {
+      "type": 54,
+      "id": 866,
+      "room": 1,
+      "locx": 19,
+      "locy": 5
+    },
+    {
+      "type": 11,
+      "id": 601,
+      "room": 1,
+      "locx": 19,
+      "locy": 6
+    },
+    {
+      "type": 54,
+      "id": 867,
+      "room": 1,
+      "locx": 19,
+      "locy": 6
+    },
+    {
+      "type": 11,
+      "id": 621,
+      "room": 1,
+      "locx": 19,
+      "locy": 7
+    },
+    {
+      "type": 54,
+      "id": 868,
+      "room": 1,
+      "locx": 19,
+      "locy": 7
+    },
+    {
+      "type": 11,
+      "id": 641,
+      "room": 1,
+      "locx": 19,
+      "locy": 8
+    },
+    {
+      "type": 54,
+      "id": 869,
+      "room": 1,
+      "locx": 19,
+      "locy": 8
+    },
+    {
+      "type": 11,
+      "id": 661,
+      "room": 1,
+      "locx": 19,
+      "locy": 9
+    },
+    {
+      "type": 54,
+      "id": 870,
+      "room": 1,
+      "locx": 19,
+      "locy": 9
+    },
+    {
+      "type": 11,
+      "id": 681,
+      "room": 1,
+      "locx": 19,
+      "locy": 10
+    },
+    {
+      "type": 54,
+      "id": 871,
+      "room": 1,
+      "locx": 19,
+      "locy": 10
+    },
+    {
+      "type": 11,
+      "id": 701,
+      "room": 1,
+      "locx": 19,
+      "locy": 11
+    },
+    {
+      "type": 54,
+      "id": 872,
+      "room": 1,
+      "locx": 19,
+      "locy": 11
+    },
+    {
+      "type": 11,
+      "id": 721,
+      "room": 1,
+      "locx": 19,
+      "locy": 12
+    },
+    {
+      "type": 54,
+      "id": 873,
+      "room": 1,
+      "locx": 19,
+      "locy": 12
+    },
+    {
+      "type": 11,
+      "id": 741,
+      "room": 1,
+      "locx": 19,
+      "locy": 13
+    },
+    {
+      "type": 54,
+      "id": 874,
+      "room": 1,
+      "locx": 19,
+      "locy": 13
+    },
+    {
+      "type": 11,
+      "id": 761,
+      "room": 1,
+      "locx": 19,
+      "locy": 14
+    },
+    {
+      "type": 54,
+      "id": 875,
+      "room": 1,
+      "locx": 19,
+      "locy": 14
+    },
+    {
+      "type": 11,
+      "id": 781,
+      "room": 1,
+      "locx": 19,
+      "locy": 15
+    },
+    {
+      "type": 54,
+      "id": 876,
+      "room": 1,
+      "locx": 19,
+      "locy": 15
+    },
+    {
+      "type": 11,
+      "id": 801,
+      "room": 1,
+      "locx": 19,
+      "locy": 16
+    },
+    {
+      "type": 54,
+      "id": 877,
+      "room": 1,
+      "locx": 19,
+      "locy": 16
+    },
+    {
+      "type": 11,
+      "id": 821,
+      "room": 1,
+      "locx": 19,
+      "locy": 17
+    },
+    {
+      "type": 54,
+      "id": 878,
+      "room": 1,
+      "locx": 19,
+      "locy": 17
+    },
+    {
+      "type": 11,
+      "id": 841,
+      "room": 1,
+      "locx": 19,
+      "locy": 18
+    },
+    {
+      "type": 54,
+      "id": 879,
+      "room": 1,
+      "locx": 19,
+      "locy": 18
+    },
+    {
+      "type": 11,
+      "id": 861,
+      "room": 1,
+      "locx": 19,
+      "locy": 19
+    },
+    {
+      "type": 54,
+      "id": 880,
+      "room": 1,
+      "locx": 19,
+      "locy": 19
+    },
+    {
+      "type": 61,
+      "id": 918,
+      "room": 1,
+      "locx": 19,
+      "locy": 19
+    }
+  ],
+  "object_count": 993
+}
