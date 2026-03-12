@@ -64,6 +64,76 @@ Output: `data/maps/{name}.json`
 
 **26 maps** and **7 object sets** were extracted.
 
+#### Object File per Map
+
+Each `.map` file's header contains an `objfilename` field that names the
+object set whose IDs the map tile data references. The server reads this
+field and loads the matching `data/objects/{name}.json` at startup.
+**Object IDs are not universal — they are relative to the map's own object
+file.** The same integer ID means a completely different object in
+`default.obj` vs `standard.obj`.
+
+| Object file | Maps that use it |
+|-------------|-----------------|
+| `default.obj` | battle, blowup, castle, flag, hometown, outdoor, paradise, paradise2, paradise3, playtesters, shooter, sword, three, title, two, twoperson |
+| `flames.obj` | flames, flash, ivarr, shelter, tunnel |
+| `main.obj` | hack, hack1, main |
+| `ring.obj` | ring |
+| `trek.obj` | trek |
+| `standard.obj` | standard (diag format) |
+
+**Critical implication**: any script that inspects or manipulates map tile
+IDs (e.g. to identify weapons, flags, or other takeable objects) must load
+the object JSON that matches the map's `objfilename`, not hardcode
+`standard.json`. The pipeline regenerates maps with `python3
+parse_maps.py legacy/lib/map/*.map` — after regenerating, re-run the
+`recorded_objects` fix sweep (see "Weapons in Spot Data" section below)
+using each map's correct object file.
+
+#### Weapons and Takeable Items in Spot Data
+
+The original map editor allowed placing any object — including weapons and
+takeable items — directly in the `spot[x][y]` tile grid. Such items render
+visually as floor/wall tiles but the server's item system only surfaces
+items from `recorded_objects`, so they cannot be picked up.
+
+All maps have been post-processed to move weapon/takeable objects out of
+the spot grid and into `recorded_objects`. The fix script pattern (run from
+repo root):
+
+```js
+const fs = require('fs'), path = require('path');
+const mapDir = 'pipeline/out/data/maps';
+const objDir = 'pipeline/out/data/objects';
+for (const file of fs.readdirSync(mapDir).filter(f => f.endsWith('.json'))) {
+  const filePath = path.join(mapDir, file);
+  const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  const objBasename = path.basename((data.map?.objfilename || 'standard.obj').replace(/\.obj$/, ''));
+  const objs = JSON.parse(fs.readFileSync(path.join(objDir, objBasename + '.json'), 'utf8')).objects;
+  for (let r = 0; r < data.rooms.length; r++) {
+    const room = data.rooms[r];
+    if (!room.spot) continue;
+    const newRO = [];
+    for (let x = 0; x < 20; x++) for (let y = 0; y < 20; y++) {
+      const tile = room.spot[x][y];
+      for (const si of [0, 1]) {
+        const id = tile[si]; if (!id) continue;
+        const obj = objs[id]; if (!obj || (!obj.weapon && !obj.takeable)) continue;
+        newRO.push({ x, y, type: id, detail: obj.def0 ?? 1, infox:-1, infoy:-1, zinger:-1, extra:[-1,-1,-1] });
+        tile[si] = si === 0 ? room.floor : 0;
+      }
+    }
+    if (newRO.length) room.recorded_objects = (room.recorded_objects || []).concat(newRO);
+  }
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
+```
+
+This must be re-run after any pipeline regeneration, and must use each
+map's own object file (as shown above) — using `standard.json` for all
+maps will misidentify IDs and either miss items or incorrectly move
+non-takeable objects.
+
 ### Output Structure
 
 ```
