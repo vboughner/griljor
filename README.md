@@ -2,6 +2,8 @@
 
 A multiplayer real-time action game originally written in 1989 for Sun workstations running X11. Players navigate 20×20 tile rooms, pick up weapons and items, and battle each other across interconnected maps.
 
+Try out the live demo by pointing your browser at https://griljor.com
+
 ---
 
 ## Active Development: Modern Web Rewrite
@@ -16,7 +18,7 @@ The game is being rewritten as a browser-playable web application. The goal is t
 - A Vite/TypeScript browser client (`client/`) renders the 20×20 tile grid on HTML5 Canvas using the original bitmaps, and communicates with the server over WebSockets.
 - A lobby server lists running game instances so players can browse and join from a title screen.
 
-**What's implemented**: asset pipeline, full room rendering with original sprites, multiplayer sync, inventory system (35 slots + hand slots), combat with projectiles and damage, XP/leveling, doors and keys, consumables, map state reset, lobby with live player display.
+**What's implemented**: asset pipeline, full room rendering with original sprites, multiplayer sync, inventory system (35 slots + hand slots), combat with projectiles and damage, doors and keys, consumables, map state reset, lobby with live player display.
 
 ### Key documents
 
@@ -29,32 +31,23 @@ The game is being rewritten as a browser-playable web application. The goal is t
 
 ### Running locally
 
+You need three terminals. Start them in order:
+
 ```sh
-# Terminal 1 — game server (default map: battle, port 3001)
+# Terminal 1 — lobby server (port 3000, must start first)
+cd server && npm run lobby
+
+# Terminal 2 — map/game server (registers itself with the lobby, port 3001)
 cd server && npm run dev
 
-# Terminal 2 — Vite dev server (client)
+# Terminal 3 — Vite dev server (client, port 5173)
 cd client && npm run dev
 ```
 
-The lobby server (`server/src/lobby.ts`) runs on port 3000. The client connects to it automatically at `localhost:3000`.
+Then open your browser to **http://localhost:5173**. The title screen will appear and connect to the lobby at `localhost:3000`. Click a game to join.
 
 ---
 
 ## Legacy Codebase (Reference)
 
-The original C/X11 source is preserved in `legacy/src/` for reference. It is not the active development target.
-
-### Building the legacy code
-
-```sh
-cd legacy/src
-make two       # builds griljor (client) + grildriver (server)
-make all       # also builds editmap, obtor, editpass
-```
-
-Requires `OPENWINHOME` set (for X11 headers) and paths in `legacy/src/config.h` updated to the local system. See `CLAUDE.md` for full build details.
-
-### Original install instructions
-
-The file you're reading replaces the original `README.md`, which contained 1989-era Sun workstation install instructions (untarring a tarfile, editing hardcoded paths, running `make two`, contacting `vanb@soda.berkeley.edu`). Those instructions are preserved in git history.
+The original C/X11 source is preserved in `legacy/` for reference. See [`legacy/README.md`](legacy/README.md) for build instructions.
