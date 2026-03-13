@@ -35,6 +35,7 @@ interface Player {
   rightHand: InventoryItem | null;
   inventory: Array<InventoryItem | null>;
   currentWeight: number;
+  team: number; // 1-based team number (0 = neutral)
   // combat stats
   hp: number;
   maxHp: number;
@@ -159,15 +160,21 @@ export class GameSession {
     }
 
     const id = this.nextId++;
+    const team = 1; // default to team 1 until team selection is implemented
     const player: Player = {
       id, name: msg.name, avatar: msg.avatar, room: 0, x: 10, y: 10, ws,
       kills: 0, deaths: 0, joinedAt: Date.now(),
       leftHand: null, rightHand: null,
       inventory: new Array<InventoryItem | null>(INV_SIZE).fill(null),
       currentWeight: 0,
+      team,
       hp: 100, maxHp: 100,
     };
     this.players.set(id, player);
+
+    // Place player in a random walkable tile in their team's room
+    const spawn = this.randomSpawnForTeam(team);
+    if (spawn) { player.room = spawn.room; player.x = spawn.x; player.y = spawn.y; }
     this.wsToId.set(ws, id);
     this.onPlayerCountChange?.();
 
@@ -615,14 +622,73 @@ export class GameSession {
     }
   }
 
+  // Return a random walkable, unoccupied tile in any room belonging to the
+  // given team (matching the original game's select_person_place logic).
+  // Falls back to any room if no team room found.
+  private randomSpawnForTeam(team: number): { room: number; x: number; y: number } | null {
+    // Collect candidate room indices for this team, then fall back to all rooms
+    const pickRooms = (t: number) =>
+      this.world.rooms
+        .map((r, i) => ({ r, i }))
+        .filter(({ r }) => t === -1 || r.team === t)
+        .map(({ i }) => i);
+
+    let candidates = pickRooms(team);
+    if (candidates.length === 0) candidates = pickRooms(-1);
+    if (candidates.length === 0) return null;
+
+    // Shuffle candidates so we try rooms in random order
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+
+    for (const roomIdx of candidates) {
+      const spot = this.randomWalkableTile(roomIdx);
+      if (spot) return { room: roomIdx, ...spot };
+    }
+    return null;
+  }
+
+  // Pick a random walkable, unoccupied tile in a room.
+  private randomWalkableTile(roomIdx: number): { x: number; y: number } | null {
+    const room = this.world.rooms[roomIdx];
+    if (!room?.spot) return null;
+
+    const playerOccupied = new Set<string>();
+    for (const p of this.players.values()) {
+      if (p.room === roomIdx) playerOccupied.add(`${p.x},${p.y}`);
+    }
+
+    // Collect all walkable, unoccupied tiles
+    const walkable: Array<{ x: number; y: number }> = [];
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        if (playerOccupied.has(`${x},${y}`)) continue;
+        const cell = room.spot[x]?.[y];
+        if (!cell) continue;
+        const [flId, wlId] = cell;
+        const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+        const floorObj = flId > 0 ? this.world.objects[flId] : null;
+        if (wallObj  && !wallObj.movement)  continue;
+        if (floorObj && !floorObj.movement) continue;
+        if (!wallObj && !floorObj) continue; // empty/void cell
+        walkable.push({ x, y });
+      }
+    }
+    if (walkable.length === 0) return null;
+    return walkable[Math.floor(Math.random() * walkable.length)];
+  }
+
   private respawnPlayer(victim: Player, _killer: Player | null): void {
     victim.hp = victim.maxHp;
 
-    // Find a free spawn tile near (10,10) in room 0
-    const spawn = this.nearbyFreeTile(0, 10, 10) ?? { x: 10, y: 10 };
-    victim.room = 0;
-    victim.x = spawn.x;
-    victim.y = spawn.y;
+    const spawn = this.randomSpawnForTeam(victim.team);
+    if (spawn) {
+      victim.room = spawn.room;
+      victim.x = spawn.x;
+      victim.y = spawn.y;
+    }
 
     // Tell victim they died and where they respawned
     this.send(victim.ws, {
