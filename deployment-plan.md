@@ -257,7 +257,7 @@ bash ~/griljor/scripts/add-map.sh battle 3005
 Available map names: see `pipeline/out/data/maps/` (use the filename without `.json`).
 Ports already in use: 3000 (lobby), 3002 (castle), 3003 (paradise), 3004 (flag).
 
-The script starts the PM2 process, adds the nginx route, reloads nginx, and saves the PM2 process list. To also commit the map to the repo, update `server/ecosystem.config.js` and `nginx-example.conf` by hand.
+The script starts the PM2 process, adds the nginx route, reloads nginx, and saves the PM2 process list.
 
 ### Remove a map
 
@@ -267,7 +267,18 @@ bash ~/griljor/scripts/remove-map.sh <mapname>
 bash ~/griljor/scripts/remove-map.sh battle
 ```
 
-The script stops and deletes the PM2 process, removes the nginx route, reloads nginx, and saves the PM2 process list. To also remove it from the repo, update `server/ecosystem.config.js` and `nginx-example.conf` by hand.
+The script stops and deletes the PM2 process, removes the nginx route, reloads nginx, and saves the PM2 process list.
+
+### Sync repo config files after adding or removing a map
+
+After adding or removing maps, run this to update `server/ecosystem.config.js` and `nginx-example.conf` to match the live PM2 state:
+
+```sh
+bash ~/griljor/scripts/sync-repo-config.sh
+git diff server/ecosystem.config.js nginx-example.conf
+git add server/ecosystem.config.js nginx-example.conf
+git commit -m "Update active map list"
+```
 
 ### If a map server fails to appear in the lobby
 
