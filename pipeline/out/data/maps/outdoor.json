@@ -13,7 +13,8 @@
     "execute_file": "none",
     "startup_file": "none",
     "placement_file": "outdoor.pla",
-    "neutrals_allowed": false
+    "neutrals_allowed": false,
+    "maxPlayers": 8
   },
   "rooms": [
     {

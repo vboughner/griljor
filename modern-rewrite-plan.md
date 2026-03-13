@@ -220,6 +220,41 @@ If we go with Option A, a reasonable sequence would be:
 **Note**: No player profile persistence — every game starts fresh at level 1.
 AI monsters are deferred indefinitely (unfinished in the original; a separate future project if desired).
 
+**Stretch: periodic random item drops (`.pla` files)**
+
+The original game driver supports a random object placement system driven
+by per-map `.pla` files in `legacy/lib/map/`. Each file is a plain-text
+script that tells the server to periodically drop items into specific rooms
+or team-owned areas. Example from `battle.pla`:
+
+```
+s 45          # run a placement cycle every 45 seconds
+t 202 1 1    # drop 1 neutron grenade into a random team-1 room
+t 202 1 2    # drop 1 neutron grenade into a random team-2 room
+r 224 1 0    # drop 1 repair kit into room 0
+r 62  2 5    # drop 2 food items into room 5
+```
+
+The format per line:
+- `s <seconds>` — interval between placement cycles
+- `t <objnum> <quantity> <team>` — drop into a random room owned by that team (0 = neutral)
+- `r <objnum> <quantity> <roomnum>` — drop into a specific room
+
+Object numbers in `.pla` files are relative to the map's own object file
+(e.g. `default.obj` for battle), matching the same ID space as the map's
+tile data.
+
+Maps with `.pla` files: battle, castle, flames, flash, hack1, hometown,
+ivarr, outdoor, paradise3, ring, shelter, shooter, three, trek, tunnel,
+two, twoperson.
+
+**Not yet implemented** in the modern rewrite. When added, the server would:
+1. Parse the map's `.pla` file (or a JSON equivalent) at game start.
+2. Set a repeating timer at the specified interval.
+3. On each tick, iterate the placement lines and call the existing
+   `ITEM_ADDED` broadcast path to drop items onto a random walkable tile
+   in the target room, exactly as if a player had dropped them there.
+
 **Stretch: web-based editors**
 - editmap as a browser-based map editor
 - obtor as a browser-based object definition editor

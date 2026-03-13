@@ -13,7 +13,8 @@
     "execute_file": "none",
     "startup_file": "none",
     "placement_file": "twoperson.pla",
-    "neutrals_allowed": false
+    "neutrals_allowed": false,
+    "maxPlayers": 4
   },
   "rooms": [
     {
