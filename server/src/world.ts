@@ -31,6 +31,7 @@ export interface RecObj {
 
 export interface RoomData {
   name: string;
+  floor: number; // default floor tile ID; 0 = void-floor map (battle-style)
   team: number; // 0 = neutral, 1+ = team-owned
   recorded_objects: RecObj[];
   spot?: number[][][]; // [x][y][2]; absent in diag-format maps
@@ -54,7 +55,7 @@ export async function loadWorld(mapName: string): Promise<World> {
   const raw = await readFile(mapPath, 'utf-8');
   const data = JSON.parse(raw) as {
     map: { name?: string; objfilename: string; teams_supported?: number; resetOnEmpty?: boolean; resetAfterSeconds?: number; maxPlayers?: number };
-    rooms: Array<{ name?: string; team?: number; recorded_objects?: RecObj[]; spot: number[][][] }>;
+    rooms: Array<{ name?: string; floor?: number; team?: number; recorded_objects?: RecObj[]; spot: number[][][] }>;
   };
 
   const objName = data.map.objfilename.replace(/\.obj$/, '');
@@ -64,6 +65,7 @@ export async function loadWorld(mapName: string): Promise<World> {
 
   const rooms: RoomData[] = data.rooms.map((r) => ({
     name: r.name ?? '',
+    floor: r.floor ?? 0,
     team: r.team ?? 0,
     recorded_objects: r.recorded_objects ?? [],
     spot: r.spot,

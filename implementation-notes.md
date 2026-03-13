@@ -1407,3 +1407,50 @@ const rows: string[] = [
   `<div class="tip-name">Tile (${tx}, ${ty})</div>`,
 ];
 ```
+
+---
+
+## Team Spawn and Walkability
+
+### Team-Based Respawn
+
+Players are assigned to a team on join (currently hardcoded to team 1 until
+team selection UI is implemented). On spawn or respawn, the server calls
+`randomSpawnForTeam(team)` which:
+
+1. Collects all rooms whose `room.team` matches the player's team.
+2. Shuffles that candidate list.
+3. For each candidate room, calls `randomWalkableTile(roomIdx)` to find an
+   unoccupied walkable tile.
+4. Falls back to any room (team=-1) if no team room has walkable space.
+
+The spawn position is sent in the `ACCEPTED` message so the client navigates
+to the correct room immediately on join.
+
+### Walkable Tile Classification
+
+Two map conventions exist, distinguished by `room.floor`:
+
+**Void-floor maps** (`room.floor === 0`, e.g. battle): tiles `[0, 0]` are
+open floor (no object at all). All void tiles are walkable.
+
+**Floor-tile maps** (`room.floor > 0`, e.g. ring): tile `[floorId, 0]` is
+the real floor inside the room; void tiles `[0, 0]` represent the space
+*outside* the room walls and are **not walkable**.
+
+The rule applied in both `randomWalkableTile` (server, `session.ts`) and
+`isTileBlocked` (client, `game.ts`):
+
+```typescript
+if (!flId && !wlId) {
+  // void tile: walkable only on void-floor maps (floor === 0)
+  if (!room.floor) walkable.push({ x, y });
+  continue;
+}
+// non-void: walkable only if all objects present allow movement
+if (wallObj  && !wallObj.movement)  /* blocked */;
+if (floorObj && !floorObj.movement) /* blocked */;
+```
+
+`room.floor` is loaded from the map JSON and stored in `RoomData` on both
+the server (`world.ts`) and client (`types.ts`, already present).

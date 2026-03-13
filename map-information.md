@@ -46,6 +46,23 @@ uses — see `implementation-notes.md` for the full per-map object file table.
 
 ---
 
+## Free-for-All Maps (1 team)
+
+These 8 maps have `teams_supported: 1` — all players compete individually with no team assignments:
+
+| Map file | Title |
+|----------|-------|
+| `blowup.json` | Duel |
+| `ivarr.json` | Ivarr's Forum of Fun |
+| `main.json` | Standards Example |
+| `paradise2.json` | Playtester Paradise #2 |
+| `playtesters.json` | Playtester Paradise |
+| `ring.json` | Ring World |
+| `shelter.json` | Nuclear Shelter |
+| `three.json` | Three Floors |
+
+---
+
 ## Player Limit Rationale
 
 Max player counts were set based on room count, walkable area, number of
