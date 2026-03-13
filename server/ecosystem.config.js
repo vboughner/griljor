@@ -13,6 +13,11 @@ module.exports = {
       env:    { PORT: 3000 },
     },
     {
+      name:   'battle',
+      script: 'dist/main.js',
+      env:    { MAP: 'battle', PORT: 3001, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/battle` },
+    },
+    {
       name:   'castle',
       script: 'dist/main.js',
       env:    { MAP: 'castle', PORT: 3002, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/castle` },
