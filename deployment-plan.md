@@ -244,23 +244,30 @@ Then open `https://griljor.com` in a browser — title screen should appear and 
 
 ## Managing Maps
 
+Use the scripts in `scripts/` to add or remove maps without manually editing configs.
+
 ### Add a map
 
-1. Add an entry to `server/ecosystem.config.js`
-2. Add the corresponding entry to the `map` block in `nginx-example.conf`
-3. Edit the live nginx config on the server with `sed` (don't copy from repo):
-   ```sh
-   sudo sed -i '/~^\/ws\/flag/a\    ~^\/ws\/newmap   3010;' /etc/nginx/sites-available/griljor
-   sudo nginx -t && sudo systemctl reload nginx
-   ```
-4. `git pull` on the server, then: `cd ~/griljor/server && pm2 start ecosystem.config.js --only newmap`
+```sh
+bash ~/griljor/scripts/add-map.sh <mapname> <port>
+# Example:
+bash ~/griljor/scripts/add-map.sh battle 3005
+```
+
+Available map names: see `pipeline/out/data/maps/` (use the filename without `.json`).
+Ports already in use: 3000 (lobby), 3002 (castle), 3003 (paradise), 3004 (flag).
+
+The script starts the PM2 process, adds the nginx route, reloads nginx, and saves the PM2 process list. To also commit the map to the repo, update `server/ecosystem.config.js` and `nginx-example.conf` by hand.
 
 ### Remove a map
 
 ```sh
-pm2 delete <mapname>
-pm2 save
+bash ~/griljor/scripts/remove-map.sh <mapname>
+# Example:
+bash ~/griljor/scripts/remove-map.sh battle
 ```
+
+The script stops and deletes the PM2 process, removes the nginx route, reloads nginx, and saves the PM2 process list. To also remove it from the repo, update `server/ecosystem.config.js` and `nginx-example.conf` by hand.
 
 ### If a map server fails to appear in the lobby
 
@@ -274,12 +281,8 @@ pm2 restart <mapname>
 ## Updating the Game
 
 ```sh
-cd ~/griljor
-git pull
-cd server && npm run build && cd ..
-cd client && npm run build && cd ..
-chmod -R o+r ~/griljor/client/dist   # re-grant read access after rebuild
-pm2 restart all
+cd ~/griljor && git pull
+bash ~/griljor/scripts/rebuild-restart-production.sh
 ```
 
 ---

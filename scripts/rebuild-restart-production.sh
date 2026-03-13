@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# rebuild-restart-production.sh
+# scripts/rebuild-restart-production.sh
 #
 # Run this on the production server to rebuild and redeploy the game.
 #
@@ -8,7 +8,7 @@
 #   1. Pull the latest code manually:
 #        cd ~/griljor && git pull
 #   2. Then run this script:
-#        bash ~/griljor/rebuild-restart-production.sh
+#        bash ~/griljor/scripts/rebuild-restart-production.sh
 #
 # IMPORTANT NOTES:
 #
@@ -29,7 +29,7 @@
 
 set -e
 
-REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "==> Building server..."
 cd "$REPO_DIR/server"
