@@ -18,7 +18,7 @@ export type C2SMessage =
 
 // Server → Client messages
 export type S2CMessage =
-  | { type: 'ACCEPTED';      id: number; msg: string; mapName: string; rooms: number }
+  | { type: 'ACCEPTED';      id: number; msg: string; mapName: string; rooms: number; room: number; x: number; y: number }
   | { type: 'REJECTED';      msg: string }
   | { type: 'PLAYER_INFO';   id: number; name: string; avatar: string;
                              room: number; x: number; y: number;

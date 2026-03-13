@@ -17,10 +17,13 @@ function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[], 
   const cell = room.spot?.[x]?.[y];
   if (cell) {
     const [flId, wlId] = cell;
-    // Wall layer: blocks unless movement > 0
-    if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
-    // Floor layer: absent movement defaults to 0 (blocked), same as wall layer
-    if (flId > 0 && !((objects[flId]?.movement ?? 0) > 0)) return true;
+    // Void tile (no objects) = open floor = walkable; skip to recorded-object check
+    if (!flId && !wlId) { /* void = walkable */ }
+    else {
+      // Non-void: block if any object lacks movement (absent = blocked)
+      if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
+      if (flId > 0 && !((objects[flId]?.movement ?? 0) > 0)) return true;
+    }
   }
   // Recorded objects (doors, etc.): block if movement absent (=0) or explicitly 0
   for (const ro of room.recorded_objects ?? []) {

@@ -692,10 +692,10 @@ serverList.appendChild(header);
         game.setMyId(msg.id);
         // Server doesn't send PLAYER_INFO for the local player back to themselves
         void addPlayerRow(msg.id, playerName, selectedAvatar, 0, 0, Date.now());
+        void game.goToRoom(msg.room, msg.x, msg.y);
       };
 
       await game.setAvatar(selectedAvatar);
-      await game.goToRoom(0);
       network.join(playerName, selectedAvatar);
     } catch (err) {
       lobbyStatus.textContent = `Error: ${err}`;

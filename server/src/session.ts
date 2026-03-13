@@ -185,6 +185,9 @@ export class GameSession {
       msg: `Welcome to Griljor, ${msg.name}!`,
       mapName: this.world.mapName,
       rooms: this.world.roomCount,
+      room: player.room,
+      x: player.x,
+      y: player.y,
     });
 
     for (const other of this.players.values()) {
@@ -670,9 +673,11 @@ export class GameSession {
         const [flId, wlId] = cell;
         const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
         const floorObj = flId > 0 ? this.world.objects[flId] : null;
+        // Void tile (no objects) = open floor = walkable
+        if (!wallObj && !floorObj) { walkable.push({ x, y }); continue; }
+        // Non-void: walkable only if objects allow movement (absent = blocked)
         if (wallObj  && !wallObj.movement)  continue;
         if (floorObj && !floorObj.movement) continue;
-        if (!wallObj && !floorObj) continue; // empty/void cell
         walkable.push({ x, y });
       }
     }
