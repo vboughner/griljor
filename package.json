@@ -14,6 +14,6 @@
     "format:check": "npm run format:check --prefix server && npm run format:check --prefix client",
     "format:check:server": "npm run format:check --prefix server",
     "format:check:client": "npm run format:check --prefix client",
-    "check": "npm test --prefix server && npm test --prefix client && npm run lint --prefix server && npm run lint --prefix client && npm run format:check --prefix server && npm run format:check --prefix client"
+    "check": "npm test && npm run lint && npm run format:check"
   }
 }
