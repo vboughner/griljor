@@ -389,6 +389,84 @@ The following items in `todo.md` represent mechanics from the legacy game that a
 
 ---
 
+## 14. Legacy Assets and Files Not Yet Used
+
+This section covers files in `legacy/` outside of `legacy/src/` that exist and could be useful but are not currently used in the modern rewrite.
+
+### 14.1 Status indicator bitmaps (`legacy/bit/`)
+Several bitmaps correspond to gameplay states that aren't yet implemented:
+
+| File | Purpose |
+|------|---------|
+| `hit` | Hit marker shown momentarily when a missile connects (in todo as unimplemented) |
+| `winner` / `loser` | End-of-game result graphics (no win condition yet) |
+| `friend` | Indicator for friendly/same-team players |
+| `invis` | Indicator for invisible players |
+| `box` | Player outline/border box (in todo: "need border boxes around other players") |
+| `wait` | Waiting state indicator |
+| `intro1.b`, `intro2.b`, `intro3.b` | Intro/splash screen artwork (not used in modern title screen) |
+| `logo` | Original game logo bitmap (modern title screen uses canvas-drawn letters instead) |
+| `modemask` | Light/dark mode toggle mask |
+
+### 14.2 River tile bitmaps (`legacy/bitmaps/`)
+`river0` through `river20` — 18 directional/animated river connection frames. The original used these to render rivers based on which adjacent tiles connected. The modern rewrite instead uses a dilation algorithm to *infer* the river body from sparse ripple marks. These directional tiles exist if a proper connected-river-rendering system is ever implemented.
+
+Path tiles (`hpath`, `vpath`, `llpath`, `lrpath`, `ulpath`, `urpath`) are also available for directional path rendering if needed.
+
+### 14.3 Maps not yet converted (`legacy/lib/map/`)
+The pipeline converted only a subset of the original maps. Still available as binary `.map` files:
+
+| Map | Description |
+|-----|-------------|
+| `flag` | Swamp/forest map |
+| `hometown` | Grenades-focused |
+| `sword` | 3 rooms, swords only |
+| `twoperson` | 4 rooms, machine guns |
+| `paradise2` | Huge single-team free-for-all |
+| `hack` / `hack1` | Dark-room maps (require lighting system to be useful) |
+| `flames`, `flash`, `ring`, `shelter`, `shooter`, `three`, `trek`, `tunnel`, `two`, `ivarr`, `outdoor` | Various unported maps |
+
+Maps referenced in `maplist` but with no `.map` file found (may be lost or user-created): `superiority`, `spindizzy`, `schwappo`, `efficiency`, `grenadewars` (3 variants), `berzerkely`, `smashtv`, `mapland`, `megarator`, `twolevel`.
+
+### 14.4 Burt NPC system (`legacy/burt/`)
+Five C source files (`main.c`, `io.c`, `load.c`, `person.c`, `response.c`) implementing the full Eliza-style NPC. The system is self-contained and can run standalone (`testburt`) or be embedded. `load.c` reads `gm.text`, `response.c` does keyword matching and substitution. The logic is straightforward and would port easily to TypeScript.
+
+- **`legacy/lib/gm.text`** (780 lines): Burt's full personality script — keyword matching rules, 150+ response phrases, creator bios, how-to-play explanations. Ready to use.
+- **`legacy/burt/speech.text`** (8.3K): Alternative personality data for testing.
+- **`legacy/lib/messages`** (408 lines): Actual Burt conversation logs from 1990–1991 showing how players talked to him and what he replied — good reference for tone and personality.
+
+The `todo.md` note says "add Burt back somehow, maybe to respond to chats if you address him directly." All the source and data to do this is here.
+
+### 14.5 Categorized object data files (`legacy/lib/obj/*.bin`)
+Pre-categorized binary slices of the object definitions: `exits`, `flags`, `floors`, `foliage`, `magic`, `objects`, `terrain`, `walls`, `weapons`. The modern pipeline reads the full `.obj` binary directly and doesn't use these, but they are a useful reference for what object categories exist and which object IDs fall into each category.
+
+### 14.6 Documentation worth reading (`legacy/doc/`)
+| File | Contents | Why useful |
+|------|----------|------------|
+| `fields` (22K) | Detailed spec of every object field | Most complete reference for object behaviors beyond the header files |
+| `griljor.doc` (7.9K) | Player-facing game instructions | Source material for writing a help/tutorial page |
+| `global.doc` (6.9K) | Global game mechanics | Reference for understanding mechanics not obvious from code |
+| `Wishlist` (1.8K) | Original developers' feature wishlist | Interesting to compare against current todo.md |
+| `magic.doc` (195B) | Notes on the magic system | Reference if magic items are ever implemented |
+| `spell.ideas` (252B) | Spell system brainstorming | Historical context |
+
+### 14.7 Utility tools (`legacy/util/`)
+None of these are ported or needed for the modern rewrite, but some are relevant as reference:
+
+| Tool | Purpose | Status |
+|------|---------|--------|
+| `bmconvert/` | Bitmap format conversion | Superseded by Python pipeline |
+| `mask/` | Auto-generate masks from bitmaps | Superseded by Python pipeline |
+| `obvert/` | Object definition converter | Could help if re-running pipeline against new `.obj` formats |
+| `rotate/` | Rotate/flip bitmaps | Useful if directional sprite variants are needed |
+| `textbit/` | Render text as a bitmap | Not needed for web |
+| `headers/` | Code generators for `plot_order.h`, `circle.h`, `rulepack.h` | These define rendering draw order and raycasting tables — relevant if line-of-sight is ever implemented |
+
+### 14.8 Design specification (`legacy/design/overview`)
+Griljor Design Spec v1.0 (1995 revision). Describes the planned redesign as an object-oriented multiplayer network game support system. Has architectural context for understanding why certain fields exist in the object definitions and what the original team intended the system to eventually become.
+
+---
+
 ## Summary: Highest-Impact Missing Features
 
 Ranked roughly by how much they would affect gameplay feel:
