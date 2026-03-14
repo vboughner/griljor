@@ -595,20 +595,48 @@ export class GameSession {
       // Block if HP already full
       if (player.hp >= player.maxHp) return;
 
-      player.hp = Math.min(player.maxHp, player.hp - (obj.health ?? 0));
+      const healAmount = Math.min(player.maxHp - player.hp, -(obj.health ?? 0));
+      player.hp = Math.min(player.maxHp, player.hp + healAmount);
 
+      // Consume the item: decrement numbered items, remove lost items entirely
+      let handEmptied = false;
       if (obj.numbered) {
         handItem.quantity--;
         if (handItem.quantity <= 0) {
           if (msg.hand === 'left') player.leftHand = null;
           else player.rightHand = null;
+          handEmptied = true;
         }
-        this.sendInventory(player);
+      } else if (obj.lost) {
+        if (msg.hand === 'left') player.leftHand = null;
+        else player.rightHand = null;
+        handEmptied = true;
       }
 
+      // Auto-reload: if hand is now empty, move first matching item from inventory
+      if (handEmptied) {
+        const reloadSlot = player.inventory.findIndex(
+          (item) => item !== null && item.type === handItem.type,
+        );
+        if (reloadSlot !== -1) {
+          if (msg.hand === 'left') player.leftHand = player.inventory[reloadSlot];
+          else player.rightHand = player.inventory[reloadSlot];
+          player.inventory[reloadSlot] = null;
+        }
+      }
+
+      this.sendInventory(player);
       this.sendStats(player);
       this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
-      console.log(`[use] ${player.name} consumed ${obj.name ?? '?'}`);
+      this.broadcastToRoom(player.room, {
+        type: 'PLAYER_HEAL',
+        playerId: player.id,
+        room: player.room,
+        x: player.x,
+        y: player.y,
+        amount: healAmount,
+      });
+      console.log(`[use] ${player.name} consumed ${obj.name ?? '?'} (+${healAmount} HP)`);
       return;
     }
 

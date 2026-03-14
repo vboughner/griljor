@@ -38,6 +38,7 @@ interface HitMarker {
   y: number;
   damage: number;
   startTime: number;
+  color: string;
 }
 
 const HIT_MARKER_DURATION = 600; // ms
@@ -244,14 +245,14 @@ export class Game {
         );
         if (!tileOccupied && this.floorItems.get(this.currentRoom)?.has(key)) {
           this.network?.sendPickup(tx, ty, hand);
+        } else if ((handObj?.health ?? 0) < 0) {
+          // Consumable: use on self regardless of where the player clicked
+          this.network?.sendUseItem(hand, this.px, this.py);
         } else if (
           handObj?.opens &&
           Math.max(Math.abs(tx - this.px), Math.abs(ty - this.py)) === 1
         ) {
           // Holding an opener adjacent to target tile — use it (open/close door)
-          this.network?.sendUseItem(hand, tx, ty);
-        } else if (tx === this.px && ty === this.py && (handObj?.health ?? 0) < 0) {
-          // Consumable: click own tile to use on self
           this.network?.sendUseItem(hand, tx, ty);
         } else if (tx !== this.px || ty !== this.py) {
           this.network?.sendFireWeapon(hand, tx, ty);
@@ -412,11 +413,22 @@ export class Game {
 
     net.onPlayerHit = (msg) => {
       if (msg.room !== this.currentRoom) return;
-      this.hitMarkers.push({ x: msg.x, y: msg.y, damage: msg.damage, startTime: Date.now() });
+      this.hitMarkers.push({ x: msg.x, y: msg.y, damage: msg.damage, startTime: Date.now(), color: '#ff4444' });
       if (msg.victimId === this.myId) {
         this.screenFlashUntil = Date.now() + 200;
       }
       // Schedule cleanup after marker expires
+      setTimeout(() => {
+        const now = Date.now();
+        this.hitMarkers = this.hitMarkers.filter((m) => now - m.startTime < HIT_MARKER_DURATION);
+        void this.render();
+      }, HIT_MARKER_DURATION);
+      void this.render();
+    };
+
+    net.onPlayerHeal = (msg) => {
+      if (msg.room !== this.currentRoom) return;
+      this.hitMarkers.push({ x: msg.x, y: msg.y, damage: msg.amount, startTime: Date.now(), color: '#44ff44' });
       setTimeout(() => {
         const now = Date.now();
         this.hitMarkers = this.hitMarkers.filter((m) => now - m.startTime < HIT_MARKER_DURATION);
@@ -883,8 +895,9 @@ export class Game {
       const cx = BORDER + m.x * TILE + TILE / 2;
       const cy = BORDER + m.y * TILE - rise;
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = '#ff4444';
-      ctx.fillText(`-${m.damage}`, cx, cy);
+      ctx.fillStyle = m.color;
+      const label = m.color === '#44ff44' ? `+${m.damage}` : `-${m.damage}`;
+      ctx.fillText(label, cx, cy);
     }
     ctx.globalAlpha = 1;
     ctx.restore();
