@@ -427,10 +427,6 @@ export class Game {
       void this.render();
     };
 
-    net.onYouDied = async (msg) => {
-      await this.goToRoom(msg.respawnRoom, msg.respawnX, msg.respawnY);
-    };
-
     net.onRoomObjectChanged = async (msg) => {
       const room = this.mapData.rooms[msg.room];
       if (!room) return;
@@ -495,6 +491,7 @@ export class Game {
 
   async goToRoom(index: number, px = 10, py = 10): Promise<void> {
     if (index < 0 || index >= this.mapData.rooms.length) return;
+    this.stopMoving();
     this.currentRoom = index;
     this.px = px;
     this.py = py;

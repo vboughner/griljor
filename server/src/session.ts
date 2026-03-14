@@ -578,6 +578,7 @@ export class GameSession {
   }
 
   private killPlayer(victim: Player, killer: Player | null): void {
+    console.log(`[combat] ${victim.name} killed by ${killer?.name ?? 'void'} at room=${victim.room} (${victim.x},${victim.y})`);
     victim.deaths++;
     this.broadcast({ type: 'PLAYER_STATS', id: victim.id, kills: victim.kills, deaths: victim.deaths });
 
@@ -637,7 +638,11 @@ export class GameSession {
         .map(({ i }) => i);
 
     let candidates = pickRooms(team);
-    if (candidates.length === 0) candidates = pickRooms(-1);
+    console.log(`[respawn] team=${team} candidate rooms: [${candidates.join(',')}]`);
+    if (candidates.length === 0) {
+      candidates = pickRooms(-1);
+      console.log(`[respawn] no team rooms, falling back to all rooms: [${candidates.join(',')}]`);
+    }
     if (candidates.length === 0) return null;
 
     // Shuffle candidates so we try rooms in random order
@@ -648,6 +653,7 @@ export class GameSession {
 
     for (const roomIdx of candidates) {
       const spot = this.randomWalkableTile(roomIdx);
+      console.log(`[respawn] room=${roomIdx} -> walkable tile: ${spot ? `(${spot.x},${spot.y})` : 'null'}`);
       if (spot) return { room: roomIdx, ...spot };
     }
     return null;
@@ -694,22 +700,27 @@ export class GameSession {
 
     const spawn = this.randomSpawnForTeam(victim.team);
     if (spawn) {
+      console.log(`[respawn] ${victim.name} team=${victim.team} spawn found: room=${spawn.room} (${spawn.x},${spawn.y})`);
       victim.room = spawn.room;
       victim.x = spawn.x;
       victim.y = spawn.y;
+    } else {
+      console.warn(`[respawn] ${victim.name} team=${victim.team} NO SPAWN FOUND — staying at room=${victim.room} (${victim.x},${victim.y})`);
     }
 
-    // Tell victim they died and where they respawned
-    this.send(victim.ws, {
-      type: 'YOU_DIED',
+    const youDiedMsg = {
+      type: 'YOU_DIED' as const,
       killedBy: _killer?.id ?? 0,
       killerName: _killer?.name ?? 'the void',
       respawnRoom: victim.room,
       respawnX: victim.x,
       respawnY: victim.y,
-    });
+    };
+    console.log(`[respawn] sending YOU_DIED to ${victim.name} (ws readyState=${victim.ws.readyState}): room=${youDiedMsg.respawnRoom} (${youDiedMsg.respawnX},${youDiedMsg.respawnY})`);
+    this.send(victim.ws, youDiedMsg);
 
     // Broadcast new position to all
+    console.log(`[respawn] broadcasting PLAYER_INFO for ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`);
     this.broadcast({
       type: 'PLAYER_INFO',
       id: victim.id, name: victim.name, avatar: victim.avatar,
@@ -721,7 +732,7 @@ export class GameSession {
     this.sendStats(victim);
     this.sendInventory(victim);
 
-    console.log(`[combat] ${victim.name} respawned at room=${victim.room} (${victim.x},${victim.y})`);
+    console.log(`[respawn] ${victim.name} respawn complete at room=${victim.room} (${victim.x},${victim.y})`);
   }
 
   // ── Leave ─────────────────────────────────────────────────────────────────

@@ -683,6 +683,7 @@ serverList.appendChild(header);
 
       network.onYouDied = (msg) => {
         appendReport(`You were slain by ${msg.killerName}. Respawning…`);
+        void game.goToRoom(msg.respawnRoom, msg.respawnX, msg.respawnY);
       };
 
       network.onAccepted = (msg) => {
