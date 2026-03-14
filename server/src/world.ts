@@ -11,6 +11,7 @@ export interface ObjDef {
   permeable?: boolean;
   movement?: number; // player walkability: absent/0 = blocked, 1–9 = walkable (9=fastest)
   weapon?: boolean;
+  refire?: number; // fire rate modifier: -5 (slow) to 5 (fast); 0 = default 850ms cooldown
   damage?: number;
   range?: number;
   movingobj?: number;

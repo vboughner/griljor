@@ -41,6 +41,7 @@ interface Player {
   maxHp: number;
   dead: boolean;
   respawnTimer: ReturnType<typeof setTimeout> | null;
+  lastFireTime: number;
 }
 
 interface ChatEntry {
@@ -70,6 +71,7 @@ export class GameSession {
   private activeMissiles = new Map<number, ReturnType<typeof setTimeout>>();
 
   private onPlayerCountChange?: () => void;
+  private regenInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
     this.onPlayerCountChange = opts?.onPlayerCountChange;
@@ -78,6 +80,22 @@ export class GameSession {
       r.recorded_objects.map((ro) => ({ ...ro })),
     );
     this.initRoomItems();
+    this.regenInterval = setInterval(() => this.regenTick(), 1000);
+  }
+
+  destroy(): void {
+    if (this.regenInterval !== null) {
+      clearInterval(this.regenInterval);
+      this.regenInterval = null;
+    }
+  }
+
+  private regenTick(): void {
+    for (const player of this.players.values()) {
+      if (player.dead || player.hp >= player.maxHp) continue;
+      player.hp = Math.min(player.maxHp, player.hp + 1);
+      this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
+    }
   }
 
   private initRoomItems(): void {
@@ -204,6 +222,7 @@ export class GameSession {
       maxHp: 100,
       dead: false,
       respawnTimer: null,
+      lastFireTime: 0,
     };
     this.players.set(id, player);
 
@@ -319,6 +338,11 @@ export class GameSession {
     const item = roomMap?.get(key);
     if (!item) return;
 
+    // Block pickup if another player is standing on that tile
+    for (const other of this.players.values()) {
+      if (other.id !== playerId && other.room === player.room && other.x === msg.x && other.y === msg.y) return;
+    }
+
     const obj = this.world.objects[item.type];
     const itemWeight = calcItemWeight(obj, item);
 
@@ -418,6 +442,13 @@ export class GameSession {
 
   // ── Combat ────────────────────────────────────────────────────────────────
 
+  /** Cooldown in ms based on weapon refire field.
+   *  refire=0 → 850ms, refire=5 → 0ms, refire=-5 → 1700ms */
+  private getFireCooldown(refire?: number): number {
+    const x = Math.max(-5, Math.min(5, refire ?? 0));
+    return Math.round(850 * (1 - x / 5));
+  }
+
   private onFireWeapon(playerId: number, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
@@ -431,6 +462,10 @@ export class GameSession {
 
     // For numbered items (guns, staves), require charges
     if (obj.numbered && handItem.quantity <= 0) return;
+
+    // Enforce fire rate cooldown
+    const cooldown = this.getFireCooldown(obj.refire);
+    if (Date.now() - player.lastFireTime < cooldown) return;
 
     // Damage may live on the bullet/projectile object rather than the weapon itself
     const bulletObj = obj.movingobj ? this.world.objects[obj.movingobj] : null;
@@ -447,6 +482,9 @@ export class GameSession {
       }
       this.sendInventory(player);
     }
+
+    // Record fire time now (committed to firing)
+    player.lastFireTime = Date.now();
 
     // Compute unit direction toward target
     const rawDx = msg.targetX - player.x;
@@ -624,15 +662,18 @@ export class GameSession {
   }
 
   private dealDamage(victim: Player, damage: number, attacker: Player | null): void {
+    if (victim.dead) return;
     victim.hp = Math.max(0, victim.hp - damage);
 
     this.broadcast({ type: 'PLAYER_HEALTH', id: victim.id, hp: victim.hp, maxHp: victim.maxHp });
-
-    const atkName = attacker?.name ?? 'something';
-    this.send(victim.ws, { type: 'REPORT', text: `${atkName} hits you for ${damage}!` });
-    if (attacker) {
-      this.send(attacker.ws, { type: 'REPORT', text: `You hit ${victim.name} for ${damage}.` });
-    }
+    this.broadcastToRoom(victim.room, {
+      type: 'PLAYER_HIT',
+      victimId: victim.id,
+      room: victim.room,
+      x: victim.x,
+      y: victim.y,
+      damage,
+    });
 
     if (victim.hp <= 0) {
       this.killPlayer(victim, attacker);

@@ -69,6 +69,7 @@ type S2CMessage =
     }
   | { type: 'MISSILE_END'; id: number }
   | { type: 'REPORT'; text: string }
+  | { type: 'PLAYER_HIT'; victimId: number; room: number; x: number; y: number; damage: number }
   | { type: 'YOU_DIED'; killedBy: number; killerName: string; deadForMs: number }
   | { type: 'YOU_RESPAWNED'; room: number; x: number; y: number }
   | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number };
@@ -93,6 +94,7 @@ export class GameNetwork {
   onMissileStart: (msg: Extract<S2CMessage, { type: 'MISSILE_START' }>) => void = () => {};
   onMissileEnd: (msg: Extract<S2CMessage, { type: 'MISSILE_END' }>) => void = () => {};
   onReport: (msg: Extract<S2CMessage, { type: 'REPORT' }>) => void = () => {};
+  onPlayerHit: (msg: Extract<S2CMessage, { type: 'PLAYER_HIT' }>) => void = () => {};
   onYouDied: (msg: Extract<S2CMessage, { type: 'YOU_DIED' }>) => void = () => {};
   onYouRespawned: (msg: Extract<S2CMessage, { type: 'YOU_RESPAWNED' }>) => void = () => {};
   onRoomObjectChanged: (msg: Extract<S2CMessage, { type: 'ROOM_OBJECT_CHANGED' }>) => void =
@@ -172,6 +174,9 @@ export class GameNetwork {
           break;
         case 'REPORT':
           this.onReport(msg);
+          break;
+        case 'PLAYER_HIT':
+          this.onPlayerHit(msg);
           break;
         case 'YOU_DIED':
           this.onYouDied(msg);

@@ -344,9 +344,12 @@ async function main(): Promise<void> {
     deaths: number;
     joinedAt: number;
     dead: boolean;
+    hp: number;
+    maxHp: number;
     row: HTMLElement;
     timeEl: HTMLElement;
     avatarCanvas: HTMLCanvasElement;
+    hpFill: HTMLElement;
   }
   const playerMap = new Map<number, PlayerEntry>();
 
@@ -403,7 +406,16 @@ async function main(): Promise<void> {
     timeEl.className = 'player-time';
     timeEl.textContent = formatAge(Date.now() - joinedAt);
 
+    const hpTrack = document.createElement('div');
+    hpTrack.className = 'pl-hp-track';
+    const hpFill = document.createElement('div');
+    hpFill.className = 'pl-hp-fill';
+    hpFill.style.width = '100%';
+    hpFill.style.background = '#3a3';
+    hpTrack.appendChild(hpFill);
+
     details.appendChild(nameEl);
+    details.appendChild(hpTrack);
     details.appendChild(kdEl);
     details.appendChild(timeEl);
     row.appendChild(avatarCanvas);
@@ -417,9 +429,12 @@ async function main(): Promise<void> {
       deaths,
       joinedAt,
       dead: false,
+      hp: 100,
+      maxHp: 100,
       row,
       timeEl,
       avatarCanvas,
+      hpFill,
     });
     renderPlayerList();
   }
@@ -459,7 +474,11 @@ async function main(): Promise<void> {
   function updateStats(hp: number, maxHp: number): void {
     const hpBar = document.getElementById('hp-bar');
     const hpText = document.getElementById('hp-text');
-    if (hpBar) hpBar.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
+    if (hpBar) {
+      const pct = Math.max(0, (hp / maxHp) * 100);
+      hpBar.style.width = `${pct}%`;
+      hpBar.style.background = pct > 66 ? '#3a3' : pct > 33 ? '#aa3' : '#a33';
+    }
     if (hpText) hpText.textContent = `${hp}/${maxHp}`;
   }
 
@@ -755,6 +774,23 @@ async function main(): Promise<void> {
 
       network.onYourStats = (msg) => {
         updateStats(msg.hp, msg.maxHp);
+        game.setMyHp(msg.hp, msg.maxHp);
+      };
+
+      network.onPlayerHealth = (msg) => {
+        if (msg.id === localPlayerId) {
+          updateStats(msg.hp, msg.maxHp);
+          game.setMyHp(msg.hp, msg.maxHp);
+        }
+        // Update HP bar in player list
+        const entry = playerMap.get(msg.id);
+        if (entry) {
+          entry.hp = msg.hp;
+          entry.maxHp = msg.maxHp;
+          const pct = Math.max(0, (msg.hp / msg.maxHp) * 100);
+          entry.hpFill.style.width = `${pct}%`;
+          entry.hpFill.style.background = pct > 66 ? '#3a3' : pct > 33 ? '#aa3' : '#a33';
+        }
       };
 
       network.onReport = (msg) => {

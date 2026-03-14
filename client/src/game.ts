@@ -33,6 +33,15 @@ interface MissileAnim {
   timer: ReturnType<typeof setTimeout> | null;
 }
 
+interface HitMarker {
+  x: number;
+  y: number;
+  damage: number;
+  startTime: number;
+}
+
+const HIT_MARKER_DURATION = 600; // ms
+
 interface RemotePlayer {
   id: number;
   name: string;
@@ -73,6 +82,11 @@ export class Game {
   // active missile animations
   private missiles = new Map<number, MissileAnim>();
 
+  // floating damage number markers
+  private hitMarkers: HitMarker[] = [];
+  // screen flash end time (ms) when local player takes damage
+  private screenFlashUntil = 0;
+
   // click-to-move path: walk toward this tile step by step
   private moveTarget: { x: number; y: number } | null = null;
   private movePath: Array<{ x: number; y: number }> = [];
@@ -84,10 +98,18 @@ export class Game {
   private leftHand: InventoryItem | null = null;
   private rightHand: InventoryItem | null = null;
 
+  // local player HP for speed penalty
+  private myHp = 100;
+  private myMaxHp = 100;
+
   // tile hover debug mode (toggled by ?)
   private hoverMode = false;
 
   private destroyed = false;
+
+  // Render concurrency guard: at most one render in flight; queue one more if needed
+  private renderInProgress = false;
+  private renderQueued = false;
 
   constructor(
     mapData: MapFile,
@@ -217,7 +239,10 @@ export class Game {
         const handItem = hand === 'left' ? this.leftHand : this.rightHand;
         const handObj = handItem ? this.objects[handItem.type] : null;
         const key = `${tx},${ty}`;
-        if (this.floorItems.get(this.currentRoom)?.has(key)) {
+        const tileOccupied = [...this.otherPlayers.values()].some(
+          (p) => p.room === this.currentRoom && p.x === tx && p.y === ty,
+        );
+        if (!tileOccupied && this.floorItems.get(this.currentRoom)?.has(key)) {
           this.network?.sendPickup(tx, ty, hand);
         } else if (
           handObj?.opens &&
@@ -385,6 +410,21 @@ export class Game {
       void this.render();
     };
 
+    net.onPlayerHit = (msg) => {
+      if (msg.room !== this.currentRoom) return;
+      this.hitMarkers.push({ x: msg.x, y: msg.y, damage: msg.damage, startTime: Date.now() });
+      if (msg.victimId === this.myId) {
+        this.screenFlashUntil = Date.now() + 200;
+      }
+      // Schedule cleanup after marker expires
+      setTimeout(() => {
+        const now = Date.now();
+        this.hitMarkers = this.hitMarkers.filter((m) => now - m.startTime < HIT_MARKER_DURATION);
+        void this.render();
+      }, HIT_MARKER_DURATION);
+      void this.render();
+    };
+
     net.onRoomObjectChanged = async (msg) => {
       const room = this.mapData.rooms[msg.room];
       if (!room) return;
@@ -406,6 +446,12 @@ export class Game {
   setHands(left: InventoryItem | null, right: InventoryItem | null): void {
     this.leftHand = left;
     this.rightHand = right;
+  }
+
+  /** Update local player HP for movement speed penalty calculation. */
+  setMyHp(hp: number, maxHp: number): void {
+    this.myHp = hp;
+    this.myMaxHp = maxHp;
   }
 
   destroy(): void {
@@ -665,12 +711,16 @@ export class Game {
   }
 
   /** Delay in ms for one step. movement field is a speed 1-9 (9=fastest).
-   *  Absent movement means blocked (0); open tiles with no object default to 9. */
+   *  Absent movement means blocked (0); open tiles with no object default to 9.
+   *  When hurt, movement slows proportionally (at 50% HP → 2× delay). */
   private getMoveDelay(): number {
     const room = this.mapData.rooms[this.currentRoom];
     const flId = room.spot?.[this.px]?.[this.py]?.[0] ?? 0;
     const spd = flId > 0 ? (this.objects[flId]?.movement ?? 0) : 9;
-    return stepDelay(spd);
+    const base = stepDelay(spd);
+    const hpFraction = Math.max(1, this.myHp) / Math.max(1, this.myMaxHp);
+    const penalized = Math.round(base / hpFraction);
+    return Math.min(stepDelay(1), penalized);
   }
 
   // ── Tile hover debug ──────────────────────────────────────────────────────
@@ -736,6 +786,23 @@ export class Game {
 
   private async render(): Promise<void> {
     if (this.destroyed) return;
+    if (this.renderInProgress) {
+      this.renderQueued = true;
+      return;
+    }
+    this.renderInProgress = true;
+    try {
+      do {
+        this.renderQueued = false;
+        await this.doRender();
+      } while (this.renderQueued && !this.destroyed);
+    } finally {
+      this.renderInProgress = false;
+    }
+  }
+
+  private async doRender(): Promise<void> {
+    if (this.destroyed) return;
     const room = this.mapData.rooms[this.currentRoom];
 
     if (!this.roomBg) {
@@ -769,6 +836,8 @@ export class Game {
     );
     this.drawBorderIndicators(room);
     await this.drawMissiles();
+    this.drawHitMarkers();
+    this.drawScreenFlash();
     this.roomInfo.textContent = room.name && room.name !== 'no name' ? room.name : '';
   }
 
@@ -796,6 +865,48 @@ export class Game {
     if (room.exit_south >= 0) drawArrow(mapMid, BORDER + mapPx + halfBorder, 0, 1);
     if (room.exit_west >= 0) drawArrow(halfBorder, mapMid, -1, 0);
     if (room.exit_east >= 0) drawArrow(BORDER + mapPx + halfBorder, mapMid, 1, 0);
+  }
+
+  private drawHitMarkers(): void {
+    if (this.hitMarkers.length === 0) return;
+    const ctx = this.canvas.getContext('2d')!;
+    const now = Date.now();
+    ctx.save();
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'center';
+    for (const m of this.hitMarkers) {
+      const age = now - m.startTime;
+      if (age >= HIT_MARKER_DURATION) continue;
+      const t = age / HIT_MARKER_DURATION; // 0→1
+      const alpha = 1 - t;
+      const rise = t * 16; // float upward by up to 16px
+      const cx = BORDER + m.x * TILE + TILE / 2;
+      const cy = BORDER + m.y * TILE - rise;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#ff4444';
+      ctx.fillText(`-${m.damage}`, cx, cy);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  private drawScreenFlash(): void {
+    const now = Date.now();
+    if (now >= this.screenFlashUntil) return;
+    const ctx = this.canvas.getContext('2d')!;
+    const t = (this.screenFlashUntil - now) / 200; // 1→0
+    ctx.save();
+    ctx.globalAlpha = t * 0.35;
+    ctx.fillStyle = '#ff0000';
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    const thickness = 12;
+    ctx.fillRect(0, 0, w, thickness);
+    ctx.fillRect(0, h - thickness, w, thickness);
+    ctx.fillRect(0, thickness, thickness, h - thickness * 2);
+    ctx.fillRect(w - thickness, thickness, thickness, h - thickness * 2);
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   private async drawMissiles(): Promise<void> {
