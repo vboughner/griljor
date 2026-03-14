@@ -15,6 +15,22 @@ Run multiple isolated dev environments simultaneously. See [`WORKTREES.md`](WORK
 
 ---
 
+## Code Quality (client/ and server/)
+
+Before committing any changes to `client/` or `server/`, always run:
+
+```sh
+cd client && npm run lint && npm run format:check
+cd server && npm run lint && npm run format:check
+```
+
+To auto-fix formatting issues: `npm run format` (in the relevant directory).
+To auto-fix lint issues: `npm run lint -- --fix`.
+
+Both must pass with exit code 0 before committing. The GitHub Actions `Lint` workflow enforces this on every PR.
+
+---
+
 ## Primary Focus: Modern Web Rewrite
 
 **The active development work in this repository is a modern web rewrite of the original game.** The rewrite lives in the `server/` and `client/` directories and is implemented as a Node.js/TypeScript WebSocket server with a Vite/TypeScript browser client.
