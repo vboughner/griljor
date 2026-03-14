@@ -560,7 +560,8 @@
       "set1": true,
       "def1": 5,
       "magic": 1,
-      "_index": 65
+      "_index": 65,
+      "health": -5
     },
     {
       "bitmap": "066_bitmap.png",
@@ -973,7 +974,8 @@
       "set1": true,
       "def1": 30,
       "magic": 1,
-      "_index": 88
+      "_index": 88,
+      "health": -30
     },
     {
       "bitmap": "089_bitmap.png",

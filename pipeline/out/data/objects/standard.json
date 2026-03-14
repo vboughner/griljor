@@ -2593,7 +2593,8 @@
       "set2": true,
       "def2": 2,
       "magic": 4,
-      "_index": 232
+      "_index": 232,
+      "health": -10
     },
     {
       "bitmap": "233_bitmap.png",

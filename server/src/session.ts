@@ -20,6 +20,13 @@ export function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryIt
   return (obj.weight ?? 0) * item.quantity;
 }
 
+/** Cooldown in ms based on weapon refire field.
+ *  refire=0 → 850ms, refire=5 → 0ms, refire=-5 → 1700ms */
+export function calcFireCooldown(refire?: number): number {
+  const x = Math.max(-5, Math.min(5, refire ?? 0));
+  return Math.round(850 * (1 - x / 5));
+}
+
 interface Player {
   id: number;
   name: string;
@@ -41,6 +48,7 @@ interface Player {
   maxHp: number;
   dead: boolean;
   respawnTimer: ReturnType<typeof setTimeout> | null;
+  lastFireTime: number;
 }
 
 interface ChatEntry {
@@ -70,6 +78,7 @@ export class GameSession {
   private activeMissiles = new Map<number, ReturnType<typeof setTimeout>>();
 
   private onPlayerCountChange?: () => void;
+  private regenInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
     this.onPlayerCountChange = opts?.onPlayerCountChange;
@@ -78,6 +87,22 @@ export class GameSession {
       r.recorded_objects.map((ro) => ({ ...ro })),
     );
     this.initRoomItems();
+    this.regenInterval = setInterval(() => this.regenTick(), 1000);
+  }
+
+  destroy(): void {
+    if (this.regenInterval !== null) {
+      clearInterval(this.regenInterval);
+      this.regenInterval = null;
+    }
+  }
+
+  private regenTick(): void {
+    for (const player of this.players.values()) {
+      if (player.dead || player.hp >= player.maxHp) continue;
+      player.hp = Math.min(player.maxHp, player.hp + 1);
+      this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
+    }
   }
 
   private initRoomItems(): void {
@@ -204,6 +229,7 @@ export class GameSession {
       maxHp: 100,
       dead: false,
       respawnTimer: null,
+      lastFireTime: 0,
     };
     this.players.set(id, player);
 
@@ -319,6 +345,17 @@ export class GameSession {
     const item = roomMap?.get(key);
     if (!item) return;
 
+    // Block pickup if another player is standing on that tile
+    for (const other of this.players.values()) {
+      if (
+        other.id !== playerId &&
+        other.room === player.room &&
+        other.x === msg.x &&
+        other.y === msg.y
+      )
+        return;
+    }
+
     const obj = this.world.objects[item.type];
     const itemWeight = calcItemWeight(obj, item);
 
@@ -418,6 +455,17 @@ export class GameSession {
 
   // ── Combat ────────────────────────────────────────────────────────────────
 
+  private autoReloadHand(player: Player, hand: 'left' | 'right', itemType: number): void {
+    const reloadSlot = player.inventory.findIndex(
+      (item) => item !== null && item.type === itemType,
+    );
+    if (reloadSlot !== -1) {
+      if (hand === 'left') player.leftHand = player.inventory[reloadSlot];
+      else player.rightHand = player.inventory[reloadSlot];
+      player.inventory[reloadSlot] = null;
+    }
+  }
+
   private onFireWeapon(playerId: number, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
@@ -432,21 +480,40 @@ export class GameSession {
     // For numbered items (guns, staves), require charges
     if (obj.numbered && handItem.quantity <= 0) return;
 
+    // Enforce fire rate cooldown.
+    // Pipeline emits refire as an unsigned byte; values > 127 are negative in the
+    // original C binary (e.g. 255 → -1, 253 → -3). Sign-extend before use.
+    const refireRaw = obj.refire ?? 0;
+    const refire = refireRaw > 127 ? refireRaw - 256 : refireRaw;
+    const cooldown = calcFireCooldown(refire);
+    if (Date.now() - player.lastFireTime < cooldown) return;
+
     // Damage may live on the bullet/projectile object rather than the weapon itself
     const bulletObj = obj.movingobj ? this.world.objects[obj.movingobj] : null;
     const damage = obj.damage ?? bulletObj?.damage ?? 10;
     const range = obj.range ?? 5;
     const movingObjType = obj.movingobj ?? handItem.type;
 
-    // Decrement ammo/charges for numbered weapons
+    // Decrement ammo/charges for numbered weapons; consume lost (single-use) weapons
     if (obj.numbered) {
       handItem.quantity--;
       if (handItem.quantity <= 0) {
+        player.currentWeight = Math.max(0, player.currentWeight - calcItemWeight(obj, handItem));
         if (msg.hand === 'left') player.leftHand = null;
         else player.rightHand = null;
       }
       this.sendInventory(player);
+    } else if (obj.lost) {
+      player.currentWeight = Math.max(0, player.currentWeight - calcItemWeight(obj, handItem));
+      if (msg.hand === 'left') player.leftHand = null;
+      else player.rightHand = null;
+      // Auto-reload: pull matching item from inventory into the now-empty hand
+      this.autoReloadHand(player, msg.hand, handItem.type);
+      this.sendInventory(player);
     }
+
+    // Record fire time now (committed to firing)
+    player.lastFireTime = Date.now();
 
     // Compute unit direction toward target
     const rawDx = msg.targetX - player.x;
@@ -557,20 +624,43 @@ export class GameSession {
       // Block if HP already full
       if (player.hp >= player.maxHp) return;
 
-      player.hp = Math.min(player.maxHp, player.hp - (obj.health ?? 0));
+      const healAmount = Math.min(player.maxHp - player.hp, -(obj.health ?? 0));
+      player.hp = Math.min(player.maxHp, player.hp + healAmount);
 
+      // Consume the item: decrement numbered items, remove lost items entirely
+      let handEmptied = false;
       if (obj.numbered) {
         handItem.quantity--;
         if (handItem.quantity <= 0) {
+          player.currentWeight = Math.max(0, player.currentWeight - calcItemWeight(obj, handItem));
           if (msg.hand === 'left') player.leftHand = null;
           else player.rightHand = null;
+          handEmptied = true;
         }
-        this.sendInventory(player);
+      } else if (obj.lost) {
+        player.currentWeight = Math.max(0, player.currentWeight - calcItemWeight(obj, handItem));
+        if (msg.hand === 'left') player.leftHand = null;
+        else player.rightHand = null;
+        handEmptied = true;
       }
 
+      // Auto-reload: if hand is now empty, move first matching item from inventory
+      if (handEmptied) {
+        this.autoReloadHand(player, msg.hand, handItem.type);
+      }
+
+      this.sendInventory(player);
       this.sendStats(player);
       this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
-      console.log(`[use] ${player.name} consumed ${obj.name ?? '?'}`);
+      this.broadcastToRoom(player.room, {
+        type: 'PLAYER_HEAL',
+        playerId: player.id,
+        room: player.room,
+        x: player.x,
+        y: player.y,
+        amount: healAmount,
+      });
+      console.log(`[use] ${player.name} consumed ${obj.name ?? '?'} (+${healAmount} HP)`);
       return;
     }
 
@@ -624,15 +714,18 @@ export class GameSession {
   }
 
   private dealDamage(victim: Player, damage: number, attacker: Player | null): void {
+    if (victim.dead) return;
     victim.hp = Math.max(0, victim.hp - damage);
 
     this.broadcast({ type: 'PLAYER_HEALTH', id: victim.id, hp: victim.hp, maxHp: victim.maxHp });
-
-    const atkName = attacker?.name ?? 'something';
-    this.send(victim.ws, { type: 'REPORT', text: `${atkName} hits you for ${damage}!` });
-    if (attacker) {
-      this.send(attacker.ws, { type: 'REPORT', text: `You hit ${victim.name} for ${damage}.` });
-    }
+    this.broadcastToRoom(victim.room, {
+      type: 'PLAYER_HIT',
+      victimId: victim.id,
+      room: victim.room,
+      x: victim.x,
+      y: victim.y,
+      damage,
+    });
 
     if (victim.hp <= 0) {
       this.killPlayer(victim, attacker);

@@ -590,7 +590,8 @@
       "def0": 1,
       "set1": true,
       "def1": 20,
-      "_index": 62
+      "_index": 62,
+      "health": -20
     },
     {
       "bitmap": "063_bitmap.png",
@@ -1485,7 +1486,8 @@
       "def1": 20,
       "set2": true,
       "def2": 1,
-      "_index": 137
+      "_index": 137,
+      "health": -20
     },
     {
       "bitmap": "138_bitmap.png",
@@ -1891,7 +1893,8 @@
       "def1": 60,
       "set2": true,
       "def2": 1,
-      "_index": 178
+      "_index": 178,
+      "health": -60
     },
     {
       "bitmap": "179_bitmap.png",
@@ -2314,7 +2317,8 @@
       "def1": 10,
       "set2": true,
       "def2": 1,
-      "_index": 203
+      "_index": 203,
+      "health": -10
     },
     {
       "bitmap": "204_bitmap.png",
@@ -2337,7 +2341,8 @@
       "def1": 50,
       "set2": true,
       "def2": 1,
-      "_index": 204
+      "_index": 204,
+      "health": -50
     },
     {
       "bitmap": "205_bitmap.png",
@@ -2821,7 +2826,8 @@
       "def1": 60,
       "set2": true,
       "def2": 1,
-      "_index": 242
+      "_index": 242,
+      "health": -60
     },
     {
       "bitmap": "243_bitmap.png",
@@ -2847,7 +2853,8 @@
       "def1": 60,
       "set2": true,
       "def2": 1,
-      "_index": 243
+      "_index": 243,
+      "health": -60
     },
     {
       "bitmap": "244_bitmap.png",

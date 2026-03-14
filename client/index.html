@@ -231,6 +231,8 @@
     .player-name { font-size: 0.85em; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 68px; }
     .player-kd   { font-size: 0.75em; color: #666; }
     .player-time { font-size: 0.75em; color: #555; }
+    .pl-hp-track { height: 4px; background: #222; margin-top: 2px; }
+    .pl-hp-fill  { height: 100%; transition: width 0.3s, background 0.3s; }
 
     /* ── Stats panel ── */
     #stats-panel {
@@ -260,7 +262,7 @@
       border: 1px solid #333;
     }
     .stat-fill { height: 100%; transition: width 0.15s; }
-    .hp-fill  { background: #c33; }
+    .hp-fill  { background: #3a3; transition: width 0.15s, background 0.3s; }
     .stat-val { color: #555; width: 54px; text-align: right; flex-shrink: 0; }
 
     /* ── Inventory panel ── */

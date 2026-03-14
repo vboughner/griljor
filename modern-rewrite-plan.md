@@ -261,6 +261,45 @@ two, twoperson.
 
 ---
 
+## Testing
+
+Vitest is used for both server and client. Run with `npm test` from the repo root.
+
+**Policy**: every bug fix must include a regression test; every new feature must include tests covering its server-side protocol behaviour and any extracted pure functions.
+
+### Server (`server/src/__tests__/`)
+
+**Unit tests** test exported pure functions directly:
+- `calcItemWeight.test.ts` — item weight formula
+- `filter.test.ts` — profanity filter and GM scold
+- `fireRate.test.ts` — `calcFireCooldown` formula (weapon refire field → ms cooldown)
+
+**Integration tests** (`integration/`) use a real `GameSession` with `MockWebSocket` clients.
+Time-dependent tests use `vi.useFakeTimers()`:
+- `join-leave.test.ts` — ACCEPTED, player count, duplicate name rejection, PLAYER_INFO broadcast
+- `chat.test.ts` — broadcast, chat history, profanity GM scold, direct messages
+- `inventory.test.ts` — pickup, drop, INV_SWAP, ITEMS_SYNC
+- `combat.test.ts` — missiles, delayed damage, YOU_DIED, kill counts, respawn
+- `fire-rate.test.ts` — fire rate cooldown enforcement
+- `regen.test.ts` — 1 HP/tick health regen, dead players excluded
+- `consumables.test.ts` — item healing, PLAYER_HIT/HEAL broadcasts, burden, auto-reload, pickup blocking
+
+### Client (`client/src/__tests__/`)
+
+Pure function tests only (no DOM rendering):
+- `utils.test.ts` — `stepDelay`, `formatAge`, `applyHpPenalty`
+- `game-utils.test.ts` — `isTileBlocked`, `computeBresenhamPath`, `findNextStep`, `buildExitMap`
+- `tooltip.test.ts` — `buildItemHtml` HTML output
+- `speedPenalty.test.ts` — HP-based movement speed penalty formula
+
+### Timer rules for integration tests
+
+- Advance **500 ms** to land a missile without triggering a regen tick (regen fires every 1000 ms)
+- Advance **900 ms** between shots to respect the 850 ms fire cooldown without crossing a 1000 ms regen boundary
+- Call `session.destroy()` in `afterEach` to clear the regen interval
+
+---
+
 ## Decisions Made
 
 | Question | Decision |
