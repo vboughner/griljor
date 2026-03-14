@@ -4,6 +4,14 @@ export function stepDelay(spd: number): number {
   return Math.max(50, Math.round((150 * 9) / Math.max(1, spd)));
 }
 
+/** Apply the HP-based movement speed penalty to a base delay.
+ *  At full HP the delay is unchanged; at 50% HP the delay doubles.
+ *  Capped at stepDelay(1) (the slowest possible speed). */
+export function applyHpPenalty(baseDelayMs: number, hp: number, maxHp: number): number {
+  const hpFraction = Math.max(1, hp) / Math.max(1, maxHp);
+  return Math.min(stepDelay(1), Math.round(baseDelayMs / hpFraction));
+}
+
 /** Convert an elapsed duration (ms) to a human-readable age string. */
 export function formatAge(ms: number): string {
   const s = ms / 1000;

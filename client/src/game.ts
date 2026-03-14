@@ -11,7 +11,7 @@ import {
 } from './renderer';
 import { GameNetwork } from './network';
 import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
-import { stepDelay } from './utils';
+import { stepDelay, applyHpPenalty } from './utils';
 import {
   isTileBlocked,
   findNextStep,
@@ -413,7 +413,13 @@ export class Game {
 
     net.onPlayerHit = (msg) => {
       if (msg.room !== this.currentRoom) return;
-      this.hitMarkers.push({ x: msg.x, y: msg.y, damage: msg.damage, startTime: Date.now(), color: '#ff4444' });
+      this.hitMarkers.push({
+        x: msg.x,
+        y: msg.y,
+        damage: msg.damage,
+        startTime: Date.now(),
+        color: '#ff4444',
+      });
       if (msg.victimId === this.myId) {
         this.screenFlashUntil = Date.now() + 200;
       }
@@ -428,7 +434,13 @@ export class Game {
 
     net.onPlayerHeal = (msg) => {
       if (msg.room !== this.currentRoom) return;
-      this.hitMarkers.push({ x: msg.x, y: msg.y, damage: msg.amount, startTime: Date.now(), color: '#44ff44' });
+      this.hitMarkers.push({
+        x: msg.x,
+        y: msg.y,
+        damage: msg.amount,
+        startTime: Date.now(),
+        color: '#44ff44',
+      });
       setTimeout(() => {
         const now = Date.now();
         this.hitMarkers = this.hitMarkers.filter((m) => now - m.startTime < HIT_MARKER_DURATION);
@@ -730,9 +742,7 @@ export class Game {
     const flId = room.spot?.[this.px]?.[this.py]?.[0] ?? 0;
     const spd = flId > 0 ? (this.objects[flId]?.movement ?? 0) : 9;
     const base = stepDelay(spd);
-    const hpFraction = Math.max(1, this.myHp) / Math.max(1, this.myMaxHp);
-    const penalized = Math.round(base / hpFraction);
-    return Math.min(stepDelay(1), penalized);
+    return applyHpPenalty(base, this.myHp, this.myMaxHp);
   }
 
   // ── Tile hover debug ──────────────────────────────────────────────────────

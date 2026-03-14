@@ -5,6 +5,67 @@ the technical details discovered along the way.
 
 ---
 
+## Test Suite
+
+Vitest is used for both server and client. Run from the repo root:
+
+```sh
+npm test               # server + client
+npm run test:server    # server only
+npm run test:client    # client only
+```
+
+**132 tests total** (79 server, 53 client) as of the fire-rate-and-health branch.
+
+### Server test layout (`server/src/__tests__/`)
+
+**Unit tests:**
+
+| File | Exports tested |
+|------|---------------|
+| `calcItemWeight.test.ts` | `calcItemWeight` — weight formula for numbered vs stackable items |
+| `filter.test.ts` | `filterText`, `randomScold` — profanity filtering |
+| `fireRate.test.ts` | `calcFireCooldown` — weapon refire field → ms cooldown formula |
+
+**Integration tests** (`integration/`) instantiate a real `GameSession` and drive it through
+`MockWebSocket` clients defined in `helpers.ts`:
+
+| File | Coverage |
+|------|----------|
+| `join-leave.test.ts` | ACCEPTED, player count, duplicate name rejection, PLAYER_INFO broadcast |
+| `chat.test.ts` | Broadcast messages, chat history for new joiners, profanity → GM scold, direct messages |
+| `inventory.test.ts` | Pickup (hand/inventory overflow), ITEM_REMOVED, drop, INV_SWAP, ITEMS_SYNC |
+| `combat.test.ts` | MISSILE_START/END, delayed damage, YOU_DIED, kill/death counts, respawn |
+| `fire-rate.test.ts` | Cooldown enforcement: second shot within window ignored; allowed after cooldown elapses |
+| `regen.test.ts` | 1 HP/tick regen, PLAYER_HEALTH broadcast, no over-heal, dead players not healed |
+| `consumables.test.ts` | Heal on USE_ITEM, PLAYER_HEAL broadcast, lost item removal, full-HP guard, burden decrement, auto-reload from inventory, PLAYER_HIT broadcast, dead-player damage guard, lost weapon consumed on fire, pickup blocked by occupying player |
+
+**`helpers.ts`** exports:
+- `MockWebSocket` — captures S→C messages; `receive(msg)` to inject C→S; `flush()`, `close()`
+- `buildTestWorld()` — minimal world with floor/sword/potion/wall and two pre-placed items
+- `joinPlayer(session, name, avatar)` — connects, JOINs, returns `{ ws, id, room, x, y }`
+
+### Client test layout (`client/src/__tests__/`)
+
+All client tests cover pure functions only (no canvas or DOM rendering):
+
+| File | Functions tested |
+|------|-----------------|
+| `utils.test.ts` | `stepDelay`, `formatAge`, `applyHpPenalty` |
+| `game-utils.test.ts` | `isTileBlocked`, `computeBresenhamPath`, `findNextStep`, `buildExitMap` |
+| `tooltip.test.ts` | `buildItemHtml` — HTML output for various item types |
+| `speedPenalty.test.ts` | `applyHpPenalty` — HP-based movement penalty, cap, divide-by-zero guards |
+
+### Timer discipline in integration tests
+
+Tests that involve timers (`vi.useFakeTimers()` / `vi.useRealTimers()` in before/afterEach):
+- Call `session.destroy()` in `afterEach` to clear the regen interval.
+- Advance **500 ms** to land a missile without crossing the 1000 ms regen tick boundary.
+- Advance **900 ms** between shots: respects the 850 ms default fire cooldown without triggering a regen tick.
+- The `dealDamageViaFire` / `bobShotsAliceOnce` helpers in integration tests use 500 ms advances deliberately to give tests a clean HP baseline before advancing time further for the feature under test.
+
+---
+
 ## Phase 1 — Asset Pipeline
 
 **Goal**: Extract all game assets from the original binary format and

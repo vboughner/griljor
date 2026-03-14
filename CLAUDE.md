@@ -31,6 +31,34 @@ Both must pass with exit code 0 before committing. The GitHub Actions `Lint` wor
 
 ---
 
+## Testing
+
+Run the full test suite from the repo root:
+
+```sh
+npm test               # runs server + client tests
+npm run test:server    # server only
+npm run test:client    # client only
+```
+
+**Tests must be added for every bug fix and new feature.** This is not optional:
+
+- **Bug fix** → add a regression test that fails before the fix and passes after.
+- **New feature** → add unit tests for any extracted pure functions, plus integration tests covering the server-side protocol behaviour (use `MockWebSocket` + `GameSession` as shown in `server/src/__tests__/integration/`).
+- **Client logic** → pure utility functions go in `client/src/__tests__/`; DOM/game rendering logic does not need tests unless it contains non-trivial logic that can be extracted into a pure function.
+
+Existing test patterns to follow:
+- Server unit tests: `server/src/__tests__/*.test.ts` (import and call exported functions directly)
+- Server integration tests: `server/src/__tests__/integration/*.test.ts` (use `MockWebSocket`, `buildTestWorld`, `joinPlayer` from `helpers.ts`; use `vi.useFakeTimers()` for anything time-dependent)
+- Client unit tests: `client/src/__tests__/*.test.ts` (pure function testing; use `happy-dom` env via the vitest config)
+
+When writing integration tests that involve timers (fire rate, missiles, regen, respawn):
+- Use `vi.useFakeTimers()` in `beforeEach` and `vi.useRealTimers()` in `afterEach`
+- Call `session.destroy()` in `afterEach` to clear the regen interval
+- Advance time in small increments (e.g. 500ms) to land missiles without triggering regen ticks; advance in 900ms increments between shots to respect the 850ms fire-rate cooldown without crossing the 1000ms regen boundary
+
+---
+
 ## Primary Focus: Modern Web Rewrite
 
 **The active development work in this repository is a modern web rewrite of the original game.** The rewrite lives in the `server/` and `client/` directories and is implemented as a Node.js/TypeScript WebSocket server with a Vite/TypeScript browser client.

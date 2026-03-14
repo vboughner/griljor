@@ -20,6 +20,13 @@ export function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryIt
   return (obj.weight ?? 0) * item.quantity;
 }
 
+/** Cooldown in ms based on weapon refire field.
+ *  refire=0 → 850ms, refire=5 → 0ms, refire=-5 → 1700ms */
+export function calcFireCooldown(refire?: number): number {
+  const x = Math.max(-5, Math.min(5, refire ?? 0));
+  return Math.round(850 * (1 - x / 5));
+}
+
 interface Player {
   id: number;
   name: string;
@@ -448,11 +455,8 @@ export class GameSession {
 
   // ── Combat ────────────────────────────────────────────────────────────────
 
-  /** Cooldown in ms based on weapon refire field.
-   *  refire=0 → 850ms, refire=5 → 0ms, refire=-5 → 1700ms */
   private getFireCooldown(refire?: number): number {
-    const x = Math.max(-5, Math.min(5, refire ?? 0));
-    return Math.round(850 * (1 - x / 5));
+    return calcFireCooldown(refire);
   }
 
   private onFireWeapon(playerId: number, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
