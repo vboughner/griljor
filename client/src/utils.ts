@@ -3,3 +3,17 @@
 export function stepDelay(spd: number): number {
   return Math.max(50, Math.round((150 * 9) / Math.max(1, spd)));
 }
+
+/** Convert an elapsed duration (ms) to a human-readable age string. */
+export function formatAge(ms: number): string {
+  const s = ms / 1000;
+  const m = s / 60;
+  const h = m / 60;
+  if (s < 45) return 'just joined';
+  if (s < 90) return 'a minute';
+  if (m < 45) return `${Math.round(m)} minutes`;
+  if (m < 90) return 'an hour';
+  if (h < 22) return `${Math.round(h)} hours`;
+  if (h < 36) return 'a day';
+  return `${Math.round(h / 24)} days`;
+}

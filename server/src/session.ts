@@ -14,7 +14,7 @@ const RESPAWN_DELAY_MS = 5000;
  * per-item, not per-charge.  For non-numbered stackable items, multiply by
  * the stack size.
  */
-function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryItem): number {
+export function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryItem): number {
   if (!obj) return 0;
   if (obj.numbered) return obj.weight ?? 0;
   return (obj.weight ?? 0) * item.quantity;
