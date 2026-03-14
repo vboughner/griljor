@@ -17,7 +17,8 @@ type S2CMessage =
   | { type: 'REJECTED';      msg: string }
   | { type: 'PLAYER_INFO';   id: number; name: string; avatar: string;
                              room: number; x: number; y: number;
-                             kills: number; deaths: number; joinedAt: number }
+                             kills: number; deaths: number; joinedAt: number;
+                             dead: boolean }
   | { type: 'PLAYER_STATS';  id: number; kills: number; deaths: number }
   | { type: 'MY_LOCATION';   id: number; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME';  id: number }
@@ -39,8 +40,8 @@ type S2CMessage =
                              dx: number; dy: number }
   | { type: 'MISSILE_END';   id: number }
   | { type: 'REPORT';        text: string }
-  | { type: 'YOU_DIED';      killedBy: number; killerName: string;
-                             respawnRoom: number; respawnX: number; respawnY: number }
+  | { type: 'YOU_DIED';      killedBy: number; killerName: string; deadForMs: number }
+  | { type: 'YOU_RESPAWNED'; room: number; x: number; y: number }
   | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number };
 
 export class GameNetwork {
@@ -64,6 +65,7 @@ export class GameNetwork {
   onMissileEnd:  (msg: Extract<S2CMessage, { type: 'MISSILE_END' }>) => void    = () => {};
   onReport:             (msg: Extract<S2CMessage, { type: 'REPORT' }>) => void              = () => {};
   onYouDied:            (msg: Extract<S2CMessage, { type: 'YOU_DIED' }>) => void             = () => {};
+  onYouRespawned:       (msg: Extract<S2CMessage, { type: 'YOU_RESPAWNED' }>) => void        = () => {};
   onRoomObjectChanged:  (msg: Extract<S2CMessage, { type: 'ROOM_OBJECT_CHANGED' }>) => void = () => {};
   onClose:              () => void                                                            = () => {};
 
@@ -105,6 +107,7 @@ export class GameNetwork {
         case 'MISSILE_END':    this.onMissileEnd(msg);   break;
         case 'REPORT':               this.onReport(msg);            break;
         case 'YOU_DIED':             this.onYouDied(msg);           break;
+        case 'YOU_RESPAWNED':        this.onYouRespawned(msg);      break;
         case 'ROOM_OBJECT_CHANGED':  this.onRoomObjectChanged(msg); break;
       }
     });

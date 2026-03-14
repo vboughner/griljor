@@ -134,6 +134,7 @@ interface RemotePlayer {
   x: number;
   y: number;
   sprite: ImageData | null;
+  dead: boolean;
 }
 
 export class Game {
@@ -146,6 +147,8 @@ export class Game {
   private exitMap: Map<string, ExitTile> = new Map();
   private roomBg: OffscreenCanvas | null = null;
   private playerSprite: ImageData | null = null;
+  private tombstoneSprite: ImageData | null = null;
+  private isDead = false;
   private avatarName: string = 'crom';
   private canvas: HTMLCanvasElement;
   private roomInfo: HTMLElement;
@@ -265,12 +268,14 @@ export class Game {
 
       // Border click → walk toward that exit (any button)
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
+        if (this.isDead) return;
         this.startMovingTo(tx, ty);
         return;
       }
 
       if (e.button === 0 || e.button === 1) {
         // Left/middle: pick up, use opener, or fire weapon
+        if (this.isDead) return;
         const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
         const handItem = hand === 'left' ? this.leftHand : this.rightHand;
         const handObj = handItem ? this.objects[handItem.type] : null;
@@ -297,6 +302,7 @@ export class Game {
 
       // Right-click: walk toward clicked tile
       if (e.button === 2) {
+        if (this.isDead) return;
         this.startMovingTo(tx, ty);
       }
     });
@@ -335,6 +341,7 @@ export class Game {
       this.otherPlayers.set(msg.id, {
         id: msg.id, name: msg.name, avatar: msg.avatar,
         room: msg.room, x: msg.x, y: msg.y, sprite,
+        dead: msg.dead,
       });
       await this.render();
     };
@@ -489,6 +496,17 @@ export class Game {
     this.myId = id;
   }
 
+  public notifyDied(): void {
+    this.isDead = true;
+    this.stopMoving();
+    void this.render();
+  }
+
+  public async notifyRespawned(room: number, x: number, y: number): Promise<void> {
+    this.isDead = false;
+    await this.goToRoom(room, x, y);
+  }
+
   async goToRoom(index: number, px = 10, py = 10): Promise<void> {
     if (index < 0 || index >= this.mapData.rooms.length) return;
     this.stopMoving();
@@ -497,11 +515,19 @@ export class Game {
     this.py = py;
     this.roomBg = null;
     this.exitMap = buildExitMap(this.mapData.rooms[index], this.objects);
+    // Load tombstone sprite on first room load if not already loaded
+    if (!this.tombstoneSprite) {
+      this.tombstoneSprite = await loadMaskedSprite(
+        '/sprites/bitmaps/tombbit.png',
+        '/sprites/bitmaps/tombmask.png'
+      );
+    }
     this.network?.sendLocation(this.currentRoom, this.px, this.py);
     await this.render();
   }
 
   private async move(dx: number, dy: number): Promise<void> {
+    if (this.isDead) return;
     const room = this.mapData.rooms[this.currentRoom];
     let nx = this.px + dx;
     let ny = this.py + dy;
@@ -583,6 +609,7 @@ export class Game {
   }
 
   private async doMoveStep(): Promise<void> {
+    if (this.isDead) { this.stopMoving(); return; }
     if (!this.moveTarget) return;
     const target = this.moveTarget;
 
@@ -731,15 +758,18 @@ export class Game {
     const others: OtherPlayer[] = [];
     for (const p of this.otherPlayers.values()) {
       if (p.room === this.currentRoom) {
-        others.push({ px: p.x, py: p.y, sprite: p.sprite });
+        others.push({ px: p.x, py: p.y, sprite: p.sprite, dead: p.dead });
       }
     }
 
     const floorItems = this.floorItems.get(this.currentRoom) ?? new Map<string, InventoryItem>();
 
     await renderFrame(
-      this.canvas, this.roomBg, this.playerSprite, this.px, this.py,
-      others, floorItems, this.objects, this.objset
+      this.canvas, this.roomBg,
+      this.isDead ? this.tombstoneSprite : this.playerSprite,
+      this.px, this.py,
+      others, floorItems, this.objects, this.objset,
+      this.tombstoneSprite
     );
     this.drawBorderIndicators(room);
     await this.drawMissiles();
