@@ -1,7 +1,7 @@
 import { InventoryItem } from './types';
 
 type C2SMessage =
-  | { type: 'JOIN'; name: string; avatar: string }
+  | { type: 'JOIN'; name: string; avatar: string; team: number }
   | { type: 'MY_LOCATION'; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME' }
   | { type: 'MESSAGE'; to: number | 'all'; text: string }
@@ -196,9 +196,9 @@ export class GameNetwork {
     });
   }
 
-  join(name: string, avatar: string): void {
-    console.log(`[network] joining as "${name}" (avatar: ${avatar})`);
-    this.send({ type: 'JOIN', name, avatar });
+  join(name: string, avatar: string, team: number): void {
+    console.log(`[network] joining as "${name}" (avatar: ${avatar}) team=${team}`);
+    this.send({ type: 'JOIN', name, avatar, team });
   }
 
   sendLocation(room: number, x: number, y: number): void {

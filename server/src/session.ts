@@ -134,8 +134,12 @@ export class GameSession {
   get playerCount(): number {
     return this.players.size;
   }
-  get playerAvatars(): Array<{ avatar: string; name: string }> {
-    return [...this.players.values()].map((p) => ({ avatar: p.avatar, name: p.name }));
+  get playerAvatars(): Array<{ avatar: string; name: string; team: number }> {
+    return [...this.players.values()].map((p) => ({
+      avatar: p.avatar,
+      name: p.name,
+      team: p.team,
+    }));
   }
 
   handleConnection(ws: WebSocket): void {
@@ -208,7 +212,8 @@ export class GameSession {
     }
 
     const id = this.nextId++;
-    const team = 1; // default to team 1 until team selection is implemented
+    const team =
+      typeof msg.team === 'number' && msg.team >= 1 && msg.team <= this.world.teams ? msg.team : 1;
     const player: Player = {
       id,
       name: msg.name,

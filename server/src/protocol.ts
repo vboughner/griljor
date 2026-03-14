@@ -5,7 +5,7 @@ export interface InventoryItem {
 
 // Client → Server messages
 export type C2SMessage =
-  | { type: 'JOIN'; name: string; avatar: string }
+  | { type: 'JOIN'; name: string; avatar: string; team: number }
   | { type: 'MY_LOCATION'; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME' }
   | { type: 'MESSAGE'; to: number | 'all'; text: string }

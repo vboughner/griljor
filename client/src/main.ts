@@ -634,10 +634,10 @@ async function main(): Promise<void> {
     header.className = 'server-header';
     header.innerHTML = `
       <span class="server-map">Map</span>
-      <span class="server-avatars-hdr">Players</span>
-      <span class="server-count-hdr">Count</span>
-      <span class="server-teams-hdr">Teams</span>
       <span class="server-rooms-hdr">Rooms</span>
+      <span class="server-teams-hdr">Teams</span>
+      <span class="server-count-hdr">Players</span>
+      <span class="server-avatars-hdr">In Game</span>
       <span class="server-join-hdr"></span>
     `;
     serverList.appendChild(header);
@@ -645,38 +645,124 @@ async function main(): Promise<void> {
       const row = document.createElement('div');
       row.className = 'server-row';
       const avatarKeys = (game.avatars ?? []).map((a) => a.avatar).join(',');
-      const full = game.players >= game.maxPlayers;
       const teamsVal = (game.teams ?? 0) === 0 ? 'FFA' : String(game.teams);
-      // Use static structure only in innerHTML; server-supplied strings set via textContent/dataset
-      row.innerHTML = `
-        <span class="server-map"></span>
-        <span class="server-avatars"></span>
-        <span class="server-players">${game.players}/${game.maxPlayers}</span>
-        <span class="server-teams">${teamsVal}</span>
-        <span class="server-rooms">${game.rooms ?? '?'}</span>
-        <button class="join-btn">Join</button>
-      `;
-      row.querySelector<HTMLElement>('.server-map')!.textContent = game.title ?? game.mapName;
-      const joinBtn = row.querySelector<HTMLButtonElement>('.join-btn')!;
-      joinBtn.dataset.wsurl = game.wsUrl;
-      joinBtn.dataset.avatars = avatarKeys;
-      joinBtn.dataset.full = String(full);
-      const avatarStrip = row.querySelector<HTMLElement>('.server-avatars')!;
-      for (const entry of game.avatars ?? []) {
-        const c = document.createElement('canvas');
-        c.width = 32;
-        c.height = 32;
-        void drawAvatarOnCanvas(c, entry.avatar);
-        c.addEventListener('mouseenter', (e) =>
-          showTooltip(`<div class="tip-name">${entry.name}</div>`, e.clientX, e.clientY),
-        );
-        c.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
-        c.addEventListener('mouseleave', () => hideTooltip());
-        avatarStrip.appendChild(c);
+
+      const mapSpan = document.createElement('span');
+      mapSpan.className = 'server-map';
+      mapSpan.textContent = game.title ?? game.mapName;
+      row.appendChild(mapSpan);
+
+      if ((game.teams ?? 0) > 1) {
+        // Multi-team: avatar lines | rooms | teams | per-team counts | join buttons
+        const perTeamMax = Math.floor(game.maxPlayers / game.teams);
+        const teamLines = document.createElement('div');
+        teamLines.className = 'server-team-lines';
+        const countSpans: HTMLSpanElement[] = [];
+        const joinBtns: HTMLButtonElement[] = [];
+        for (let t = 1; t <= game.teams; t++) {
+          const teamAvatars = (game.avatars ?? []).filter((a) => a.team === t);
+          const teamCount = teamAvatars.length;
+          const teamFull = teamCount >= perTeamMax;
+
+          const line = document.createElement('div');
+          line.className = 'server-team-line';
+
+          const avatarStrip = document.createElement('span');
+          avatarStrip.className = 'server-avatars';
+          for (const entry of teamAvatars) {
+            const c = document.createElement('canvas');
+            c.width = 32;
+            c.height = 32;
+            void drawAvatarOnCanvas(c, entry.avatar);
+            c.addEventListener('mouseenter', (e) =>
+              showTooltip(`<div class="tip-name">${entry.name}</div>`, e.clientX, e.clientY),
+            );
+            c.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
+            c.addEventListener('mouseleave', () => hideTooltip());
+            avatarStrip.appendChild(c);
+          }
+
+          line.appendChild(avatarStrip);
+          teamLines.appendChild(line);
+
+          const countSpan = document.createElement('span');
+          countSpan.className = 'server-players';
+          countSpan.textContent = `${teamCount}/${perTeamMax}`;
+          countSpans.push(countSpan);
+
+          const btn = document.createElement('button');
+          btn.className = 'join-btn';
+          btn.textContent = `Join Team ${t}`;
+          btn.dataset.wsurl = game.wsUrl;
+          btn.dataset.avatars = avatarKeys;
+          btn.dataset.full = String(teamFull);
+          btn.dataset.team = String(t);
+          btn.addEventListener('click', () => joinServer(game, t));
+          joinBtns.push(btn);
+        }
+        const roomsSpan = document.createElement('span');
+        roomsSpan.className = 'server-rooms';
+        roomsSpan.textContent = String(game.rooms ?? '?');
+        const teamsSpan = document.createElement('span');
+        teamsSpan.className = 'server-teams';
+        teamsSpan.textContent = teamsVal;
+        row.appendChild(roomsSpan);
+        row.appendChild(teamsSpan);
+
+        const countCol = document.createElement('div');
+        countCol.className = 'server-team-counts';
+        for (const s of countSpans) countCol.appendChild(s);
+        row.appendChild(countCol);
+
+        row.appendChild(teamLines);
+
+        const joinCol = document.createElement('div');
+        joinCol.className = 'server-join-btns';
+        for (const btn of joinBtns) joinCol.appendChild(btn);
+        row.appendChild(joinCol);
+      } else {
+        // Single-team: original column order (avatars, count, teams, rooms, join)
+        const full = game.players >= game.maxPlayers;
+        const avatarStrip = document.createElement('span');
+        avatarStrip.className = 'server-avatars';
+        for (const entry of game.avatars ?? []) {
+          const c = document.createElement('canvas');
+          c.width = 32;
+          c.height = 32;
+          void drawAvatarOnCanvas(c, entry.avatar);
+          c.addEventListener('mouseenter', (e) =>
+            showTooltip(`<div class="tip-name">${entry.name}</div>`, e.clientX, e.clientY),
+          );
+          c.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
+          c.addEventListener('mouseleave', () => hideTooltip());
+          avatarStrip.appendChild(c);
+        }
+        const playersSpan = document.createElement('span');
+        playersSpan.className = 'server-players';
+        playersSpan.textContent = `${game.players}/${game.maxPlayers}`;
+
+        const roomsSpan = document.createElement('span');
+        roomsSpan.className = 'server-rooms';
+        roomsSpan.textContent = String(game.rooms ?? '?');
+        const teamsSpan = document.createElement('span');
+        teamsSpan.className = 'server-teams';
+        teamsSpan.textContent = teamsVal;
+
+        const btn = document.createElement('button');
+        btn.className = 'join-btn';
+        btn.textContent = 'Join';
+        btn.dataset.wsurl = game.wsUrl;
+        btn.dataset.avatars = avatarKeys;
+        btn.dataset.full = String(full);
+        btn.addEventListener('click', () => joinServer(game));
+
+        row.appendChild(roomsSpan);
+        row.appendChild(teamsSpan);
+        row.appendChild(playersSpan);
+        row.appendChild(avatarStrip);
+        row.appendChild(btn);
       }
-      row
-        .querySelector<HTMLButtonElement>('.join-btn')!
-        .addEventListener('click', () => joinServer(game));
+
       serverList.appendChild(row);
     }
     updateJoinButtons();
@@ -693,9 +779,10 @@ async function main(): Promise<void> {
     renderServerList(games);
   }
 
-  async function joinServer(gameInfo: GameInfo): Promise<void> {
+  async function joinServer(gameInfo: GameInfo, team = 1): Promise<void> {
     if (isJoining) return;
     isJoining = true;
+    const joinTeam = team;
     setInputsDisabled(true);
     lobbyStatus.textContent = `Connecting to ${gameInfo.mapName}\u2026`;
 
@@ -825,7 +912,7 @@ async function main(): Promise<void> {
       };
 
       await game.setAvatar(selectedAvatar);
-      network.join(playerName, selectedAvatar);
+      network.join(playerName, selectedAvatar, joinTeam);
     } catch (err) {
       lobbyStatus.textContent = `Error: ${err}`;
       setInputsDisabled(false);
