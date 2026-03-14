@@ -25,6 +25,7 @@ interface ExitTile {
 
 /** Returns true if the tile at (x, y) cannot be entered by players.
  *  movement>0 means walkable; movement=0/absent means blocked.
+ *  Void tiles [0,0] are always walkable (speed 9); respawn exclusion is server-side.
  *  permeable controls missile passage only (not player movement). */
 function isTileBlocked(
   x: number,
@@ -37,10 +38,9 @@ function isTileBlocked(
   const cell = room.spot?.[x]?.[y];
   if (cell) {
     const [flId, wlId] = cell;
-    // Void tile: if room has a floor tile, void = outside walls = blocked;
-    // otherwise (battle-style floor=0) void = open floor = walkable.
+    // Void tile [0,0]: always walkable (speed 9). Respawn exclusion is handled server-side.
     if (!flId && !wlId) {
-      if (room.floor) return true;
+      // nothing — fall through to return false (walkable)
     } else {
       // Non-void: block if any object lacks movement (absent = blocked)
       if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
