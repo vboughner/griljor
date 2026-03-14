@@ -62,7 +62,7 @@ export function buildTestWorld(): World {
 
   const objects: Array<ObjDef | null> = [
     null, // index 0
-    { _index: 1, name: 'floor', movement: 5 }, // walkable floor
+    { _index: 1, name: 'floor', movement: 5, permeable: true }, // walkable, missile-passable floor
     { _index: 2, name: 'sword', takeable: true, weight: 5, weapon: true, damage: 30, range: 5 },
     { _index: 3, name: 'potion', takeable: true, weight: 1, health: -20 },
     { _index: 4, name: 'wall', movement: 0 }, // impassable wall
