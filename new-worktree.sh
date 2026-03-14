@@ -48,19 +48,19 @@ echo ""
 # Add worktree (create branch if it doesn't exist)
 if git -C "$REPO_DIR" show-ref --verify --quiet "refs/heads/$BRANCH"; then
   echo "Branch '$BRANCH' exists — checking it out."
-  git -C "$REPO_DIR" worktree add "$TARGET_DIR" "$BRANCH"
+  git -C "$REPO_DIR" worktree add -q "$TARGET_DIR" "$BRANCH"
 else
   echo "Branch '$BRANCH' does not exist — creating it."
-  git -C "$REPO_DIR" worktree add "$TARGET_DIR" -b "$BRANCH"
+  git -C "$REPO_DIR" worktree add -q "$TARGET_DIR" -b "$BRANCH"
 fi
 
 echo ""
 echo "Installing server dependencies..."
-(cd "$TARGET_DIR/server" && npm install)
+(cd "$TARGET_DIR/server" && npm install --silent)
 
 echo ""
 echo "Installing client dependencies..."
-(cd "$TARGET_DIR/client" && npm install)
+(cd "$TARGET_DIR/client" && npm install --silent)
 
 echo ""
 echo "Done! Worktree ready at: $TARGET_DIR"
