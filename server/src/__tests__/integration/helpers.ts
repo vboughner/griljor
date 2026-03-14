@@ -31,17 +31,11 @@ export class MockWebSocket extends EventEmitter {
     return this._sent.map((s) => JSON.parse(s) as S2CMessage);
   }
 
-  messagesOfType<T extends S2CMessage['type']>(
-    type: T,
-  ): Extract<S2CMessage, { type: T }>[] {
-    return this.messages().filter(
-      (m): m is Extract<S2CMessage, { type: T }> => m.type === type,
-    );
+  messagesOfType<T extends S2CMessage['type']>(type: T): Extract<S2CMessage, { type: T }>[] {
+    return this.messages().filter((m): m is Extract<S2CMessage, { type: T }> => m.type === type);
   }
 
-  lastOfType<T extends S2CMessage['type']>(
-    type: T,
-  ): Extract<S2CMessage, { type: T }> | undefined {
+  lastOfType<T extends S2CMessage['type']>(type: T): Extract<S2CMessage, { type: T }> | undefined {
     return this.messagesOfType(type).at(-1);
   }
 
@@ -109,11 +103,7 @@ export interface TestPlayer {
   y: number;
 }
 
-export function joinPlayer(
-  session: GameSession,
-  name = 'Alice',
-  avatar = 'a',
-): TestPlayer {
+export function joinPlayer(session: GameSession, name = 'Alice', avatar = 'a'): TestPlayer {
   const ws = new MockWebSocket();
   session.handleConnection(ws as unknown as WebSocket);
   ws.receive({ type: 'JOIN', name, avatar });
