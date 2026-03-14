@@ -467,6 +467,31 @@ Griljor Design Spec v1.0 (1995 revision). Describes the planned redesign as an o
 
 ---
 
+## 15. Map and Object Editors
+
+The original game shipped two full GUI editors built as X11 applications. Neither has been ported to the modern rewrite. Both are noted in `modern-rewrite-plan.md` as a stretch goal ("Port eventually, Phase 7+, not blocking the game port").
+
+### 15.1 Map Editor (`editmap`)
+Source files in `legacy/src/`: `editmap.c`, `editorX11.c`, `emap.c`, `ranroom.c`, plus headers `emap.h` and `ranroom.h`. Built as its own executable via `make editmap`.
+
+Reference material:
+- `legacy/doc/editmap.doc` (7.9K) — full editor documentation
+- `legacy/lib/editor.help` (18 lines) — in-game command reference covering misc commands, cut buffer operations, and room linking
+
+### 15.2 Object Definition Editor (`obtor`)
+Source files in `legacy/src/`: `obtorX11.c`, `editobj.c`, `pixmapedit.c`, plus headers `editobj.h`, `obtor.h`, `MassEdit.h`. A historical variant of `obtorX11.c` (20K) also exists in `legacy/changes/`. Built as its own executable via `make obtor`.
+
+Reference material:
+- `legacy/lib/obtor.help` (13 lines) — command reference for bitmap editing, file operations, and object editing
+
+### 15.3 Object Format Converter (`legacy/util/obvert/`)
+A standalone utility (`obvert.c`, 6.5K) with its own `makefile` and `oldobj.h` (4.3K defining the old object format). Used to convert object definitions between old and new formats. Has symlinks back into `legacy/src/` for shared dependencies. Potentially relevant if the pipeline ever needs to handle `.obj` files with format differences from the current version.
+
+### 15.4 Password Editor (`editpass`)
+Source files in `legacy/src/`: `editpass.c`, `xx.c`, `processorx.c`, `bitmapx.c`. The runtime bitmaps it needs live in `legacy/lib/bit/` (`slider.bit`, `icon.bit`, `disc_icon.bit`, `grey.bit`, `pict.bit`, `title.bit`). Not relevant to the modern rewrite (no persistent player accounts).
+
+---
+
 ## Summary: Highest-Impact Missing Features
 
 Ranked roughly by how much they would affect gameplay feel:
