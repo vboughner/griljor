@@ -337,6 +337,7 @@ export class Game {
 
   private wireNetwork(net: GameNetwork): void {
     net.onPlayerInfo = async (msg) => {
+      if (msg.id === this.myId) return; // don't store self in otherPlayers
       const sprite = await this.loadAvatarSprite(msg.avatar);
       this.otherPlayers.set(msg.id, {
         id: msg.id, name: msg.name, avatar: msg.avatar,
