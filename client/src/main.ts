@@ -606,13 +606,16 @@ async function main(): Promise<void> {
       const full = btn.dataset.full === 'true';
       const avatarTaken = taken.includes(selected);
       btn.disabled = full || avatarTaken;
-      if (avatarTaken && !full) {
-        btn.onmouseenter = (e) =>
-          showTooltip(
-            'Your avatar is already in use in this game. Pick a different one to join.',
-            e.clientX,
-            e.clientY,
-          );
+      const isTeamBtn = btn.dataset.team !== undefined;
+      let tipText: string | null = null;
+      if (full) {
+        tipText = isTeamBtn ? 'This team is full.' : 'This game is full.';
+      } else if (avatarTaken) {
+        tipText = 'Your avatar is already in use in this game. Pick a different one to join.';
+      }
+      if (tipText) {
+        const msg = tipText;
+        btn.onmouseenter = (e) => showTooltip(msg, e.clientX, e.clientY);
         btn.onmousemove = (e) => moveTooltip(e.clientX, e.clientY);
         btn.onmouseleave = () => hideTooltip();
       } else {
