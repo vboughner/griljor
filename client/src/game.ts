@@ -38,7 +38,7 @@ interface HitMarker {
   y: number;
   damage: number;
   startTime: number;
-  color: string;
+  isHeal: boolean;
 }
 
 const HIT_MARKER_DURATION = 600; // ms
@@ -413,40 +413,15 @@ export class Game {
 
     net.onPlayerHit = (msg) => {
       if (msg.room !== this.currentRoom) return;
-      this.hitMarkers.push({
-        x: msg.x,
-        y: msg.y,
-        damage: msg.damage,
-        startTime: Date.now(),
-        color: '#ff4444',
-      });
+      this.addHitMarker(msg.x, msg.y, msg.damage, false);
       if (msg.victimId === this.myId) {
         this.screenFlashUntil = Date.now() + 200;
       }
-      // Schedule cleanup after marker expires
-      setTimeout(() => {
-        const now = Date.now();
-        this.hitMarkers = this.hitMarkers.filter((m) => now - m.startTime < HIT_MARKER_DURATION);
-        void this.render();
-      }, HIT_MARKER_DURATION);
-      void this.render();
     };
 
     net.onPlayerHeal = (msg) => {
       if (msg.room !== this.currentRoom) return;
-      this.hitMarkers.push({
-        x: msg.x,
-        y: msg.y,
-        damage: msg.amount,
-        startTime: Date.now(),
-        color: '#44ff44',
-      });
-      setTimeout(() => {
-        const now = Date.now();
-        this.hitMarkers = this.hitMarkers.filter((m) => now - m.startTime < HIT_MARKER_DURATION);
-        void this.render();
-      }, HIT_MARKER_DURATION);
-      void this.render();
+      this.addHitMarker(msg.x, msg.y, msg.amount, true);
     };
 
     net.onRoomObjectChanged = async (msg) => {
@@ -476,6 +451,16 @@ export class Game {
   setMyHp(hp: number, maxHp: number): void {
     this.myHp = hp;
     this.myMaxHp = maxHp;
+  }
+
+  private addHitMarker(x: number, y: number, damage: number, isHeal: boolean): void {
+    this.hitMarkers.push({ x, y, damage, startTime: Date.now(), isHeal });
+    setTimeout(() => {
+      const now = Date.now();
+      this.hitMarkers = this.hitMarkers.filter((m) => now - m.startTime < HIT_MARKER_DURATION);
+      void this.render();
+    }, HIT_MARKER_DURATION);
+    void this.render();
   }
 
   destroy(): void {
@@ -905,8 +890,8 @@ export class Game {
       const cx = BORDER + m.x * TILE + TILE / 2;
       const cy = BORDER + m.y * TILE - rise;
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = m.color;
-      const label = m.color === '#44ff44' ? `+${m.damage}` : `-${m.damage}`;
+      ctx.fillStyle = m.isHeal ? '#44ff44' : '#ff4444';
+      const label = m.isHeal ? `+${m.damage}` : `-${m.damage}`;
       ctx.fillText(label, cx, cy);
     }
     ctx.globalAlpha = 1;

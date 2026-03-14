@@ -470,6 +470,10 @@ async function main(): Promise<void> {
     }, 1000);
   }
 
+  function hpBarColor(pct: number): string {
+    return pct > 66 ? '#3a3' : pct > 33 ? '#aa3' : '#a33';
+  }
+
   // ── Stats panel ──────────────────────────────────────────────────
   function updateStats(hp: number, maxHp: number): void {
     const hpBar = document.getElementById('hp-bar');
@@ -477,7 +481,7 @@ async function main(): Promise<void> {
     if (hpBar) {
       const pct = Math.max(0, (hp / maxHp) * 100);
       hpBar.style.width = `${pct}%`;
-      hpBar.style.background = pct > 66 ? '#3a3' : pct > 33 ? '#aa3' : '#a33';
+      hpBar.style.background = hpBarColor(pct);
     }
     if (hpText) hpText.textContent = `${hp}/${maxHp}`;
   }
@@ -789,7 +793,7 @@ async function main(): Promise<void> {
           entry.maxHp = msg.maxHp;
           const pct = Math.max(0, (msg.hp / msg.maxHp) * 100);
           entry.hpFill.style.width = `${pct}%`;
-          entry.hpFill.style.background = pct > 66 ? '#3a3' : pct > 33 ? '#aa3' : '#a33';
+          entry.hpFill.style.background = hpBarColor(pct);
         }
       };
 

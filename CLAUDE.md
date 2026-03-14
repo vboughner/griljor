@@ -29,6 +29,8 @@ To auto-fix lint issues: `npm run lint -- --fix`.
 
 Both must pass with exit code 0 before committing. The GitHub Actions `Lint` workflow enforces this on every PR.
 
+Before opening a pull request, run `/simplify` to review changed code for duplication, quality, and efficiency issues, and fix anything found.
+
 ---
 
 ## Testing

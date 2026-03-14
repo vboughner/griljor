@@ -455,8 +455,15 @@ export class GameSession {
 
   // ── Combat ────────────────────────────────────────────────────────────────
 
-  private getFireCooldown(refire?: number): number {
-    return calcFireCooldown(refire);
+  private autoReloadHand(player: Player, hand: 'left' | 'right', itemType: number): void {
+    const reloadSlot = player.inventory.findIndex(
+      (item) => item !== null && item.type === itemType,
+    );
+    if (reloadSlot !== -1) {
+      if (hand === 'left') player.leftHand = player.inventory[reloadSlot];
+      else player.rightHand = player.inventory[reloadSlot];
+      player.inventory[reloadSlot] = null;
+    }
   }
 
   private onFireWeapon(playerId: number, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
@@ -474,7 +481,7 @@ export class GameSession {
     if (obj.numbered && handItem.quantity <= 0) return;
 
     // Enforce fire rate cooldown
-    const cooldown = this.getFireCooldown(obj.refire);
+    const cooldown = calcFireCooldown(obj.refire);
     if (Date.now() - player.lastFireTime < cooldown) return;
 
     // Damage may live on the bullet/projectile object rather than the weapon itself
@@ -497,14 +504,7 @@ export class GameSession {
       if (msg.hand === 'left') player.leftHand = null;
       else player.rightHand = null;
       // Auto-reload: pull matching item from inventory into the now-empty hand
-      const reloadSlot = player.inventory.findIndex(
-        (item) => item !== null && item.type === handItem.type,
-      );
-      if (reloadSlot !== -1) {
-        if (msg.hand === 'left') player.leftHand = player.inventory[reloadSlot];
-        else player.rightHand = player.inventory[reloadSlot];
-        player.inventory[reloadSlot] = null;
-      }
+      this.autoReloadHand(player, msg.hand, handItem.type);
       this.sendInventory(player);
     }
 
@@ -642,14 +642,7 @@ export class GameSession {
 
       // Auto-reload: if hand is now empty, move first matching item from inventory
       if (handEmptied) {
-        const reloadSlot = player.inventory.findIndex(
-          (item) => item !== null && item.type === handItem.type,
-        );
-        if (reloadSlot !== -1) {
-          if (msg.hand === 'left') player.leftHand = player.inventory[reloadSlot];
-          else player.rightHand = player.inventory[reloadSlot];
-          player.inventory[reloadSlot] = null;
-        }
+        this.autoReloadHand(player, msg.hand, handItem.type);
       }
 
       this.sendInventory(player);
