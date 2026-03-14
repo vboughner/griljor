@@ -13,7 +13,8 @@
     "execute_file": "none",
     "startup_file": "paradise3.sta",
     "placement_file": "paradise3.pla",
-    "neutrals_allowed": true
+    "neutrals_allowed": true,
+    "maxPlayers": 16
   },
   "rooms": [
     {

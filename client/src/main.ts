@@ -8,6 +8,9 @@ import { initMouseWidget, setHandItem } from './mouse-widget';
 import { runTitleScreen, drawLogo } from './title';
 import { showTooltip, hideTooltip, moveTooltip, buildItemHtml } from './tooltip';
 
+const TOMBSTONE_BIT  = '/sprites/bitmaps/tombbit.png';
+const TOMBSTONE_MASK = '/sprites/bitmaps/tombmask.png';
+
 const AVATARS = [
   'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
   'crom', 'drustan', 'duel', 'eric', 'gm', 'mahatma', 'mcelhoe', 'mel',
@@ -323,9 +326,21 @@ async function main(): Promise<void> {
   interface PlayerEntry {
     id: number; name: string; avatar: string;
     kills: number; deaths: number; joinedAt: number;
-    row: HTMLElement; timeEl: HTMLElement;
+    dead: boolean;
+    row: HTMLElement; timeEl: HTMLElement; avatarCanvas: HTMLCanvasElement;
   }
   const playerMap = new Map<number, PlayerEntry>();
+
+  async function setPlayerDeadDisplay(id: number, dead: boolean): Promise<void> {
+    const p = playerMap.get(id);
+    if (!p || p.dead === dead) return; // skip if unchanged
+    p.dead = dead;
+    if (dead) {
+      await drawImageDataOnCanvas(p.avatarCanvas, await loadMaskedSprite(TOMBSTONE_BIT, TOMBSTONE_MASK));
+    } else {
+      await drawAvatarOnCanvas(p.avatarCanvas, p.avatar);
+    }
+  }
   let playerTickInterval: ReturnType<typeof setInterval> | null = null;
 
   function renderPlayerList(): void {
@@ -366,7 +381,7 @@ async function main(): Promise<void> {
     row.appendChild(avatarCanvas);
     row.appendChild(details);
 
-    playerMap.set(id, { id, name, avatar, kills, deaths, joinedAt, row, timeEl });
+    playerMap.set(id, { id, name, avatar, kills, deaths, joinedAt, dead: false, row, timeEl, avatarCanvas });
     renderPlayerList();
   }
 
@@ -646,6 +661,8 @@ serverList.appendChild(header);
       const game = new Game(mapData, objFile, canvas, roomInfo, status, navBtns, network);
       currentGame = game;
 
+      let localPlayerId = -1;
+
       // Wrap the callbacks Game.wireNetwork() just installed so both game
       // rendering and the player list stay in sync.
       const gameOnPlayerInfo = network.onPlayerInfo;
@@ -656,6 +673,7 @@ serverList.appendChild(header);
         } else {
           void addPlayerRow(msg.id, msg.name, msg.avatar, msg.kills, msg.deaths, msg.joinedAt);
         }
+        void setPlayerDeadDisplay(msg.id, msg.dead);
       };
 
       const gameOnLeave = network.onLeave;
@@ -682,20 +700,27 @@ serverList.appendChild(header);
       };
 
       network.onYouDied = (msg) => {
-        appendReport(`You were slain by ${msg.killerName}. Respawning…`);
+        appendReport(`You were slain by ${msg.killerName}. Respawning in ${Math.round(msg.deadForMs / 1000)} seconds…`);
+        game.notifyDied();
+        void setPlayerDeadDisplay(localPlayerId, true);
+      };
+      network.onYouRespawned = (msg) => {
+        void game.notifyRespawned(msg.room, msg.x, msg.y);
+        void setPlayerDeadDisplay(localPlayerId, false);
       };
 
       network.onAccepted = (msg) => {
+        localPlayerId = msg.id;
         showGame();
         startPlayerTick();
         status.textContent = `Connected as ${playerName} (id=${msg.id})`;
         game.setMyId(msg.id);
         // Server doesn't send PLAYER_INFO for the local player back to themselves
         void addPlayerRow(msg.id, playerName, selectedAvatar, 0, 0, Date.now());
+        void game.goToRoom(msg.room, msg.x, msg.y);
       };
 
       await game.setAvatar(selectedAvatar);
-      await game.goToRoom(0);
       network.join(playerName, selectedAvatar);
     } catch (err) {
       lobbyStatus.textContent = `Error: ${err}`;

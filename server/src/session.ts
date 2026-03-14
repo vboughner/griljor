@@ -6,6 +6,7 @@ import { filterText, randomScold } from './filter';
 const INV_SIZE = 35;
 const MAX_WEIGHT = 150;
 const GRID = 20;
+const RESPAWN_DELAY_MS = 5000;
 
 /**
  * For numbered items (guns, potions with charges), quantity represents the
@@ -35,9 +36,12 @@ interface Player {
   rightHand: InventoryItem | null;
   inventory: Array<InventoryItem | null>;
   currentWeight: number;
+  team: number; // 1-based team number (0 = neutral)
   // combat stats
   hp: number;
   maxHp: number;
+  dead: boolean;
+  respawnTimer: ReturnType<typeof setTimeout> | null;
 }
 
 interface ChatEntry {
@@ -159,15 +163,22 @@ export class GameSession {
     }
 
     const id = this.nextId++;
+    const team = 1; // default to team 1 until team selection is implemented
     const player: Player = {
       id, name: msg.name, avatar: msg.avatar, room: 0, x: 10, y: 10, ws,
       kills: 0, deaths: 0, joinedAt: Date.now(),
       leftHand: null, rightHand: null,
       inventory: new Array<InventoryItem | null>(INV_SIZE).fill(null),
       currentWeight: 0,
+      team,
       hp: 100, maxHp: 100,
+      dead: false, respawnTimer: null,
     };
     this.players.set(id, player);
+
+    // Place player in a random walkable tile in their team's room
+    const spawn = this.randomSpawnForTeam(team);
+    if (spawn) { player.room = spawn.room; player.x = spawn.x; player.y = spawn.y; }
     this.wsToId.set(ws, id);
     this.onPlayerCountChange?.();
 
@@ -178,39 +189,20 @@ export class GameSession {
       msg: `Welcome to Griljor, ${msg.name}!`,
       mapName: this.world.mapName,
       rooms: this.world.roomCount,
+      room: player.room,
+      x: player.x,
+      y: player.y,
     });
 
     for (const other of this.players.values()) {
       if (other.id === id) continue;
-      this.send(ws, {
-        type: 'PLAYER_INFO',
-        id: other.id,
-        name: other.name,
-        avatar: other.avatar,
-        room: other.room,
-        x: other.x,
-        y: other.y,
-        kills: other.kills,
-        deaths: other.deaths,
-        joinedAt: other.joinedAt,
-      });
+      this.send(ws, this.makePlayerInfo(other));
       // Also send their current HP so the new player sees health bars
       this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
     }
 
     // Tell everyone else about the new player
-    this.broadcast({
-      type: 'PLAYER_INFO',
-      id,
-      name: player.name,
-      avatar: player.avatar,
-      room: player.room,
-      x: player.x,
-      y: player.y,
-      kills: player.kills,
-      deaths: player.deaths,
-      joinedAt: player.joinedAt,
-    }, id);
+    this.broadcast(this.makePlayerInfo(player), id);
 
     // Replay chat history for the new player
     for (const entry of this.chatHistory) {
@@ -237,6 +229,7 @@ export class GameSession {
   private onLocation(playerId: number, msg: Extract<C2SMessage, { type: 'MY_LOCATION' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
+    if (player.dead) return;
     player.room = msg.room;
     player.x = msg.x;
     player.y = msg.y;
@@ -266,6 +259,7 @@ export class GameSession {
   private onPickup(playerId: number, msg: Extract<C2SMessage, { type: 'PICKUP' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
+    if (player.dead) return;
 
     const roomMap = this.roomItems.get(player.room);
     const key = `${msg.x},${msg.y}`;
@@ -312,6 +306,7 @@ export class GameSession {
   private onDrop(playerId: number, msg: Extract<C2SMessage, { type: 'DROP' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
+    if (player.dead) return;
 
     let item: InventoryItem | null = null;
     if (msg.source === 'left') {
@@ -347,6 +342,7 @@ export class GameSession {
   private onInvSwap(playerId: number, msg: Extract<C2SMessage, { type: 'INV_SWAP' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
+    if (player.dead) return;
     if (msg.slot < 0 || msg.slot >= INV_SIZE) return;
 
     const slotItem = player.inventory[msg.slot];
@@ -364,6 +360,7 @@ export class GameSession {
   private onFireWeapon(playerId: number, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
+    if (player.dead) return;
 
     const handItem = msg.hand === 'left' ? player.leftHand : player.rightHand;
     if (!handItem) return;
@@ -469,12 +466,12 @@ export class GameSession {
     }, travelMs);
     this.activeMissiles.set(id, timer);
 
-    console.log(`[combat] ${player.name} fired ${obj.name ?? '?'} (${finalPath.length} steps @ ${msPerStep}ms)${hitPlayer ? ` → hits ${hitPlayer.name}` : ''}`);
   }
 
   private onUseItem(playerId: number, msg: Extract<C2SMessage, { type: 'USE_ITEM' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
+    if (player.dead) return;
 
     const handItem = msg.hand === 'left' ? player.leftHand : player.rightHand;
     if (!handItem) return;
@@ -568,6 +565,7 @@ export class GameSession {
   }
 
   private killPlayer(victim: Player, killer: Player | null): void {
+    console.log(`[combat] ${victim.name} killed by ${killer?.name ?? 'void'} at room=${victim.room} (${victim.x},${victim.y})`);
     victim.deaths++;
     this.broadcast({ type: 'PLAYER_STATS', id: victim.id, kills: victim.kills, deaths: victim.deaths });
 
@@ -590,8 +588,8 @@ export class GameSession {
     // Drop all inventory items
     this.dropPlayerItems(victim);
 
-    // Respawn
-    this.respawnPlayer(victim, killer);
+    // Schedule respawn after tombstone delay
+    this.scheduleRespawn(victim, killer);
   }
 
   private dropPlayerItems(player: Player): void {
@@ -603,9 +601,15 @@ export class GameSession {
     player.inventory.fill(null);
     player.currentWeight = 0;
 
+    // Build occupied set once; re-use for each drop in this batch
+    const playerOccupied = new Set<string>();
+    for (const p of this.players.values()) {
+      if (p.room === player.room) playerOccupied.add(`${p.x},${p.y}`);
+    }
+
     for (const item of items) {
       if (!item) continue;
-      const tile = this.nearbyFreeTile(player.room, player.x, player.y);
+      const tile = this.nearbyFreeTile(player.room, player.x, player.y, playerOccupied);
       if (tile) {
         const roomMap = this.roomItems.get(player.room) ?? new Map<string, InventoryItem>();
         roomMap.set(`${tile.x},${tile.y}`, item);
@@ -615,38 +619,121 @@ export class GameSession {
     }
   }
 
-  private respawnPlayer(victim: Player, _killer: Player | null): void {
-    victim.hp = victim.maxHp;
+  // Return a random walkable, unoccupied tile in any room belonging to the
+  // given team (matching the original game's select_person_place logic).
+  // Falls back to any room if no team room found.
+  private randomSpawnForTeam(team: number): { room: number; x: number; y: number } | null {
+    // Collect candidate room indices for this team, then fall back to all rooms
+    const pickRooms = (t: number) =>
+      this.world.rooms
+        .map((r, i) => ({ r, i }))
+        .filter(({ r }) => t === -1 || r.team === t)
+        .map(({ i }) => i);
 
-    // Find a free spawn tile near (10,10) in room 0
-    const spawn = this.nearbyFreeTile(0, 10, 10) ?? { x: 10, y: 10 };
-    victim.room = 0;
-    victim.x = spawn.x;
-    victim.y = spawn.y;
+    let candidates = pickRooms(team);
+    if (candidates.length === 0) candidates = pickRooms(-1);
+    if (candidates.length === 0) return null;
 
-    // Tell victim they died and where they respawned
+    // Shuffle candidates so we try rooms in random order
+    for (let i = candidates.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+
+    for (const roomIdx of candidates) {
+      const spot = this.randomWalkableTile(roomIdx);
+      if (spot) return { room: roomIdx, ...spot };
+    }
+    console.warn(`[respawn] team=${team} no walkable tile found in any of [${candidates.join(',')}]`);
+    return null;
+  }
+
+  // Pick a random walkable, unoccupied tile in a room.
+  private randomWalkableTile(roomIdx: number): { x: number; y: number } | null {
+    const room = this.world.rooms[roomIdx];
+    if (!room?.spot) return null;
+
+    const playerOccupied = new Set<string>();
+    for (const p of this.players.values()) {
+      if (p.room === roomIdx) playerOccupied.add(`${p.x},${p.y}`);
+    }
+
+    // Collect all walkable, unoccupied tiles
+    const walkable: Array<{ x: number; y: number }> = [];
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        if (playerOccupied.has(`${x},${y}`)) continue;
+        const cell = room.spot[x]?.[y];
+        if (!cell) continue;
+        const [flId, wlId] = cell;
+        // If room has a floor tile, void tiles are outside the room walls — not walkable.
+        // If room.floor === 0 (battle-style), void tiles are open floor — walkable.
+        if (!flId && !wlId) {
+          if (!room.floor) walkable.push({ x, y });
+          continue;
+        }
+        const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+        const floorObj = flId > 0 ? this.world.objects[flId] : null;
+        // Non-void: walkable only if objects allow movement (absent = blocked)
+        if (wallObj  && !wallObj.movement)  continue;
+        if (floorObj && !floorObj.movement) continue;
+        walkable.push({ x, y });
+      }
+    }
+    if (walkable.length === 0) return null;
+    return walkable[Math.floor(Math.random() * walkable.length)];
+  }
+
+  private scheduleRespawn(victim: Player, killer: Player | null): void {
+    victim.dead = true;
+    const killerName = killer?.name ?? 'the void'; // capture now; killer may disconnect before timer fires
+
+    // Broadcast tombstone state at death location
+    console.log(`[respawn] ${victim.name} is dead; broadcasting tombstone at room=${victim.room} (${victim.x},${victim.y})`);
+    this.broadcast(this.makePlayerInfo(victim));
+
+    console.log(`[respawn] sending YOU_DIED to ${victim.name} (ws readyState=${victim.ws.readyState}): deadForMs=${RESPAWN_DELAY_MS}`);
     this.send(victim.ws, {
       type: 'YOU_DIED',
-      killedBy: _killer?.id ?? 0,
-      killerName: _killer?.name ?? 'the void',
-      respawnRoom: victim.room,
-      respawnX: victim.x,
-      respawnY: victim.y,
+      killedBy: killer?.id ?? 0,
+      killerName,
+      deadForMs: RESPAWN_DELAY_MS,
     });
 
-    // Broadcast new position to all
-    this.broadcast({
-      type: 'PLAYER_INFO',
-      id: victim.id, name: victim.name, avatar: victim.avatar,
-      room: victim.room, x: victim.x, y: victim.y,
-      kills: victim.kills, deaths: victim.deaths, joinedAt: victim.joinedAt,
-    });
+    victim.respawnTimer = setTimeout(() => {
+      this.doRespawn(victim, killerName);
+    }, RESPAWN_DELAY_MS);
+  }
+
+  private doRespawn(victim: Player, killerName: string): void {
+    victim.respawnTimer = null;
+    victim.hp = victim.maxHp; // restore HP at respawn, not at death
+
+    const spawn = this.randomSpawnForTeam(victim.team);
+    if (spawn) {
+      console.log(`[respawn] ${victim.name} team=${victim.team} spawn found: room=${spawn.room} (${spawn.x},${spawn.y})`);
+      victim.room = spawn.room;
+      victim.x = spawn.x;
+      victim.y = spawn.y;
+    } else {
+      console.warn(`[respawn] ${victim.name} team=${victim.team} NO SPAWN FOUND — staying at room=${victim.room} (${victim.x},${victim.y})`);
+    }
+
+    victim.dead = false;
+
+    // Broadcast alive state at new location
+    console.log(`[respawn] broadcasting PLAYER_INFO for ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`);
+    this.broadcast(this.makePlayerInfo(victim));
+
+    // Tell the victim where they respawned
+    console.log(`[respawn] sending YOU_RESPAWNED to ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`);
+    this.send(victim.ws, { type: 'YOU_RESPAWNED', room: victim.room, x: victim.x, y: victim.y });
 
     this.broadcast({ type: 'PLAYER_HEALTH', id: victim.id, hp: victim.hp, maxHp: victim.maxHp });
     this.sendStats(victim);
     this.sendInventory(victim);
 
-    console.log(`[combat] ${victim.name} respawned at room=${victim.room} (${victim.x},${victim.y})`);
+    console.log(`[respawn] ${victim.name} respawn complete at room=${victim.room} (${victim.x},${victim.y}) (killed by ${killerName})`);
   }
 
   // ── Leave ─────────────────────────────────────────────────────────────────
@@ -654,6 +741,11 @@ export class GameSession {
   private onLeave(playerId: number): void {
     const player = this.players.get(playerId);
     if (!player) return;
+
+    if (player.respawnTimer !== null) {
+      clearTimeout(player.respawnTimer);
+      player.respawnTimer = null;
+    }
 
     this.dropPlayerItems(player);
 
@@ -698,15 +790,20 @@ export class GameSession {
     });
   }
 
-  private nearbyFreeTile(roomIdx: number, px: number, py: number): { x: number; y: number } | null {
+  private nearbyFreeTile(
+    roomIdx: number, px: number, py: number,
+    playerOccupied?: Set<string>,
+  ): { x: number; y: number } | null {
     const room = this.world.rooms[roomIdx];
     if (!room) return null;
     const roomMap = this.roomItems.get(roomIdx) ?? new Map<string, InventoryItem>();
 
-    // Build player-occupied set once to avoid repeated Map iteration per tile
-    const playerOccupied = new Set<string>();
-    for (const p of this.players.values()) {
-      if (p.room === roomIdx) playerOccupied.add(`${p.x},${p.y}`);
+    // Build player-occupied set if caller didn't supply one
+    if (!playerOccupied) {
+      playerOccupied = new Set<string>();
+      for (const p of this.players.values()) {
+        if (p.room === roomIdx) playerOccupied.add(`${p.x},${p.y}`);
+      }
     }
 
     // Spiral search outward from player position
@@ -722,16 +819,30 @@ export class GameSession {
           const cell = room.spot?.[tx]?.[ty];
           if (cell) {
             const [flId, wlId] = cell;
-            const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
-            const floorObj = flId > 0 ? this.world.objects[flId] : null;
-            if (wallObj  && !wallObj.movement)  continue;
-            if (floorObj && !floorObj.movement) continue;
+            // Void tile: not walkable when room has a floor (ring-style map)
+            if (!flId && !wlId) { if (room.floor) continue; }
+            else {
+              const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+              const floorObj = flId > 0 ? this.world.objects[flId] : null;
+              if (wallObj  && !wallObj.movement)  continue;
+              if (floorObj && !floorObj.movement) continue;
+            }
           }
           return { x: tx, y: ty };
         }
       }
     }
     return null;
+  }
+
+  private makePlayerInfo(p: Player): Extract<S2CMessage, { type: 'PLAYER_INFO' }> {
+    return {
+      type: 'PLAYER_INFO',
+      id: p.id, name: p.name, avatar: p.avatar,
+      room: p.room, x: p.x, y: p.y,
+      kills: p.kills, deaths: p.deaths, joinedAt: p.joinedAt,
+      dead: p.dead,
+    };
   }
 
   private send(ws: WebSocket, msg: S2CMessage): void {

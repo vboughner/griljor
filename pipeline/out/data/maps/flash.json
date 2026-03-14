@@ -13,7 +13,8 @@
     "execute_file": "none",
     "startup_file": "none",
     "placement_file": "flash.pla",
-    "neutrals_allowed": true
+    "neutrals_allowed": true,
+    "maxPlayers": 10
   },
   "rooms": [
     {

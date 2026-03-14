@@ -6,6 +6,8 @@ import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
 import { stepDelay } from './utils';
 
 const GRID = 20;
+const TOMBSTONE_BIT  = '/sprites/bitmaps/tombbit.png';
+const TOMBSTONE_MASK = '/sprites/bitmaps/tombmask.png';
 
 interface ExitTile { destRoom: number; landX: number; landY: number; }
 
@@ -17,10 +19,14 @@ function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[], 
   const cell = room.spot?.[x]?.[y];
   if (cell) {
     const [flId, wlId] = cell;
-    // Wall layer: blocks unless movement > 0
-    if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
-    // Floor layer: absent movement defaults to 0 (blocked), same as wall layer
-    if (flId > 0 && !((objects[flId]?.movement ?? 0) > 0)) return true;
+    // Void tile: if room has a floor tile, void = outside walls = blocked;
+    // otherwise (battle-style floor=0) void = open floor = walkable.
+    if (!flId && !wlId) { if (room.floor) return true; }
+    else {
+      // Non-void: block if any object lacks movement (absent = blocked)
+      if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
+      if (flId > 0 && !((objects[flId]?.movement ?? 0) > 0)) return true;
+    }
   }
   // Recorded objects (doors, etc.): block if movement absent (=0) or explicitly 0
   for (const ro of room.recorded_objects ?? []) {
@@ -130,6 +136,7 @@ interface RemotePlayer {
   x: number;
   y: number;
   sprite: ImageData | null;
+  dead: boolean;
 }
 
 export class Game {
@@ -140,8 +147,11 @@ export class Game {
   private px: number = 10;
   private py: number = 10;
   private exitMap: Map<string, ExitTile> = new Map();
+  private exitKeys: Set<string> = new Set();
   private roomBg: OffscreenCanvas | null = null;
   private playerSprite: ImageData | null = null;
+  private tombstoneSprite: ImageData | null = null;
+  private isDead = false;
   private avatarName: string = 'crom';
   private canvas: HTMLCanvasElement;
   private roomInfo: HTMLElement;
@@ -244,10 +254,10 @@ export class Game {
       }
 
       // Item actions
-      if (e.key === 's') { e.preventDefault(); this.network?.sendPickup(this.px, this.py, 'left'); return; }
-      if (e.key === 'S') { e.preventDefault(); this.network?.sendPickup(this.px, this.py, 'right'); return; }
-      if (e.key === 'Z') { e.preventDefault(); this.network?.sendDrop('left'); return; }
-      if (e.key === 'X') { e.preventDefault(); this.network?.sendDrop('right'); return; }
+      if (e.key === 's') { e.preventDefault(); if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'left'); return; }
+      if (e.key === 'S') { e.preventDefault(); if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'right'); return; }
+      if (e.key === 'Z') { e.preventDefault(); if (!this.isDead) this.network?.sendDrop('left'); return; }
+      if (e.key === 'X') { e.preventDefault(); if (!this.isDead) this.network?.sendDrop('right'); return; }
     };
     window.addEventListener('keydown', this.onKeyDown);
 
@@ -261,12 +271,14 @@ export class Game {
 
       // Border click → walk toward that exit (any button)
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
+        if (this.isDead) return;
         this.startMovingTo(tx, ty);
         return;
       }
 
       if (e.button === 0 || e.button === 1) {
         // Left/middle: pick up, use opener, or fire weapon
+        if (this.isDead) return;
         const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
         const handItem = hand === 'left' ? this.leftHand : this.rightHand;
         const handObj = handItem ? this.objects[handItem.type] : null;
@@ -293,6 +305,7 @@ export class Game {
 
       // Right-click: walk toward clicked tile
       if (e.button === 2) {
+        if (this.isDead) return;
         this.startMovingTo(tx, ty);
       }
     });
@@ -327,10 +340,12 @@ export class Game {
 
   private wireNetwork(net: GameNetwork): void {
     net.onPlayerInfo = async (msg) => {
+      if (msg.id === this.myId) return; // don't store self in otherPlayers
       const sprite = await this.loadAvatarSprite(msg.avatar);
       this.otherPlayers.set(msg.id, {
         id: msg.id, name: msg.name, avatar: msg.avatar,
         room: msg.room, x: msg.x, y: msg.y, sprite,
+        dead: msg.dead,
       });
       await this.render();
     };
@@ -423,10 +438,6 @@ export class Game {
       void this.render();
     };
 
-    net.onYouDied = async (msg) => {
-      await this.goToRoom(msg.respawnRoom, msg.respawnX, msg.respawnY);
-    };
-
     net.onRoomObjectChanged = async (msg) => {
       const room = this.mapData.rooms[msg.room];
       if (!room) return;
@@ -489,18 +500,33 @@ export class Game {
     this.myId = id;
   }
 
+  public notifyDied(): void {
+    this.isDead = true;
+    this.stopMoving();
+    void this.render();
+  }
+
+  public async notifyRespawned(room: number, x: number, y: number): Promise<void> {
+    this.isDead = false;
+    await this.goToRoom(room, x, y);
+  }
+
   async goToRoom(index: number, px = 10, py = 10): Promise<void> {
     if (index < 0 || index >= this.mapData.rooms.length) return;
+    this.stopMoving();
     this.currentRoom = index;
     this.px = px;
     this.py = py;
     this.roomBg = null;
     this.exitMap = buildExitMap(this.mapData.rooms[index], this.objects);
+    this.exitKeys = new Set(this.exitMap.keys());
+    this.tombstoneSprite = await loadMaskedSprite(TOMBSTONE_BIT, TOMBSTONE_MASK);
     this.network?.sendLocation(this.currentRoom, this.px, this.py);
     await this.render();
   }
 
   private async move(dx: number, dy: number): Promise<void> {
+    if (this.isDead) return;
     const room = this.mapData.rooms[this.currentRoom];
     let nx = this.px + dx;
     let ny = this.py + dy;
@@ -582,6 +608,7 @@ export class Game {
   }
 
   private async doMoveStep(): Promise<void> {
+    if (this.isDead) { this.stopMoving(); return; }
     if (!this.moveTarget) return;
     const target = this.moveTarget;
 
@@ -595,7 +622,7 @@ export class Game {
         const next = this.movePath[0];
         const ex = Math.max(0, Math.min(GRID - 1, target.x));
         const ey = Math.max(0, Math.min(GRID - 1, target.y));
-        const exitKeys = new Set(this.exitMap.keys());
+        const exitKeys = this.exitKeys;
         if (isTileBlocked(next.x, next.y, room, this.objects, exitKeys)) {
           const step = findNextStep(this.px, this.py, ex, ey, room, this.objects, exitKeys);
           if (!step) { this.stopMoving(); return; }
@@ -616,7 +643,7 @@ export class Game {
 
       const room = this.mapData.rooms[this.currentRoom];
       const next = this.movePath[0];
-      const exitKeys = new Set(this.exitMap.keys());
+      const exitKeys = this.exitKeys;
 
       // If the next Bresenham tile is blocked, fall back to BFS for one step
       // then recompute a fresh Bresenham path from the redirected position onward
@@ -730,15 +757,18 @@ export class Game {
     const others: OtherPlayer[] = [];
     for (const p of this.otherPlayers.values()) {
       if (p.room === this.currentRoom) {
-        others.push({ px: p.x, py: p.y, sprite: p.sprite });
+        others.push({ px: p.x, py: p.y, sprite: p.sprite, dead: p.dead });
       }
     }
 
     const floorItems = this.floorItems.get(this.currentRoom) ?? new Map<string, InventoryItem>();
 
     await renderFrame(
-      this.canvas, this.roomBg, this.playerSprite, this.px, this.py,
-      others, floorItems, this.objects, this.objset
+      this.canvas, this.roomBg,
+      this.isDead ? this.tombstoneSprite : this.playerSprite,
+      this.px, this.py,
+      others, floorItems, this.objects, this.objset,
+      this.tombstoneSprite
     );
     this.drawBorderIndicators(room);
     await this.drawMissiles();

@@ -1407,3 +1407,167 @@ const rows: string[] = [
   `<div class="tip-name">Tile (${tx}, ${ty})</div>`,
 ];
 ```
+
+---
+
+## Team Spawn and Walkability
+
+### Team-Based Respawn
+
+Players are assigned to a team on join (currently hardcoded to team 1 until
+team selection UI is implemented). On spawn or respawn, the server calls
+`randomSpawnForTeam(team)` which:
+
+1. Collects all rooms whose `room.team` matches the player's team.
+2. Shuffles that candidate list.
+3. For each candidate room, calls `randomWalkableTile(roomIdx)` to find an
+   unoccupied walkable tile.
+4. Falls back to any room (team=-1) if no team room has walkable space.
+
+The spawn position is sent in the `ACCEPTED` message so the client navigates
+to the correct room immediately on join.
+
+### Walkable Tile Classification
+
+Two map conventions exist, distinguished by `room.floor`:
+
+**Void-floor maps** (`room.floor === 0`, e.g. battle): tiles `[0, 0]` are
+open floor (no object at all). All void tiles are walkable.
+
+**Floor-tile maps** (`room.floor > 0`, e.g. ring): tile `[floorId, 0]` is
+the real floor inside the room; void tiles `[0, 0]` represent the space
+*outside* the room walls and are **not walkable**.
+
+The rule applied in both `randomWalkableTile` (server, `session.ts`) and
+`isTileBlocked` (client, `game.ts`):
+
+```typescript
+if (!flId && !wlId) {
+  // void tile: walkable only on void-floor maps (floor === 0)
+  if (!room.floor) walkable.push({ x, y });
+  continue;
+}
+// non-void: walkable only if all objects present allow movement
+if (wallObj  && !wallObj.movement)  /* blocked */;
+if (floorObj && !floorObj.movement) /* blocked */;
+```
+
+`room.floor` is loaded from the map JSON and stored in `RoomData` on both
+the server (`world.ts`) and client (`types.ts`, already present).
+
+---
+
+## Dead State and Respawn Timer
+
+### Overview
+
+When a player is killed they enter a **dead state** for 5 seconds before
+respawning. During this time:
+- Their sprite appears as a tombstone at the death location (visible to all)
+- They cannot move, pick up or drop items, fire weapons, or use items
+- They can still send chat messages or leave the game
+- After 5 seconds the server picks a spawn tile and teleports them there
+
+The delay constant is `RESPAWN_DELAY_MS = 5000` in `server/src/session.ts`.
+
+### Protocol Changes
+
+`PLAYER_INFO` gained a required `dead: boolean` field. Every broadcast of
+this message now includes the player's dead state so all clients can render
+the tombstone correctly.
+
+`YOU_DIED` was changed: the respawn coords (`respawnRoom/X/Y`) were removed
+and replaced with `deadForMs: number` (how long to show the tombstone). The
+client uses this only to display a countdown message; the actual respawn
+position arrives later.
+
+New `YOU_RESPAWNED` message: `{ type: 'YOU_RESPAWNED'; room: number; x: number; y: number }`.
+Sent to the victim after the timer expires with the final spawn location.
+
+### Server (`session.ts`)
+
+`respawnPlayer` was split into two functions:
+
+**`scheduleRespawn(victim, killer)`** — called immediately on death:
+- Restores `victim.hp` to full (HP bar resets)
+- Sets `victim.dead = true`
+- Broadcasts `PLAYER_INFO` with `dead: true` at the death location
+- Sends `YOU_DIED` with `deadForMs`
+- Schedules `setTimeout(RESPAWN_DELAY_MS)` → `doRespawn`
+
+**`doRespawn(victim, killer)`** — called after the timer fires:
+- Calls `randomSpawnForTeam` to find a spawn tile
+- Updates `victim.room/x/y`, sets `victim.dead = false`
+- Broadcasts `PLAYER_INFO` with `dead: false` at the new location
+- Sends `YOU_RESPAWNED` to the victim
+- Broadcasts `PLAYER_HEALTH`, sends stats and inventory
+
+Dead-state guards (`if (player.dead) return;`) were added to `onLocation`,
+`onPickup`, `onDrop`, `onInvSwap`, `onFireWeapon`, and `onUseItem` so the
+server ignores all positional/action messages from a dead player.
+
+`onLeave` calls `clearTimeout(player.respawnTimer)` if a timer is pending.
+
+### Tombstone Sprite
+
+The original game's `legacy/bitmaps/tombbit` + `tombmask` pair was already
+converted by the pipeline to:
+- `pipeline/out/sprites/bitmaps/tombbit.png`
+- `pipeline/out/sprites/bitmaps/tombmask.png`
+
+Served as `/sprites/bitmaps/tombbit.png` and `/sprites/bitmaps/tombmask.png`
+(Vite `publicDir` is `pipeline/out`).
+
+Loaded lazily in `game.ts` via `loadMaskedSprite` on the first `goToRoom`
+call and stored as `this.tombstoneSprite`.
+
+### Client — Game Canvas (`game.ts`, `renderer.ts`)
+
+`RemotePlayer` gained `dead: boolean`. `onPlayerInfo` stores this field
+(and now skips self — see duplicate sprite fix below).
+
+`OtherPlayer` in `renderer.ts` gained `dead?: boolean`. `renderFrame` takes
+an additional `tombstoneSprite` parameter; dead remote players draw the
+tombstone instead of their avatar sprite.
+
+For the local player, `render()` passes
+`this.isDead ? this.tombstoneSprite : this.playerSprite` as the player sprite.
+
+`notifyDied()` — public method: sets `isDead = true`, calls `stopMoving()`,
+triggers a re-render.
+
+`notifyRespawned(room, x, y)` — public method: sets `isDead = false`, calls
+`goToRoom` to teleport to the spawn location.
+
+`move()` and `doMoveStep()` return early when `isDead`. Canvas mouse handlers
+(border clicks, left/middle/right-click for fire/pickup/move) also return
+early when `isDead`.
+
+### Client — Player List (`main.ts`)
+
+`PlayerEntry` stores `avatarCanvas: HTMLCanvasElement` so it can be updated
+after creation.
+
+`setPlayerDeadDisplay(id, dead)` swaps the canvas content between the
+player's avatar sprite and the tombstone sprite. Called:
+- From the `onPlayerInfo` wrapper (for all players including remote)
+- From `onYouDied` for the local player (`localPlayerId`)
+- From `onYouRespawned` for the local player
+
+The tombstone `ImageData` is loaded once and cached in `tombstoneImageData`.
+
+### Bug Fixes in This Session
+
+**`goToRoom` didn't clear the movement timer**: added `this.stopMoving()` at
+the start of `goToRoom` so any in-progress click-to-move path is cancelled
+before teleporting.
+
+**`onYouDied` in `main.ts` overrode the `game.ts` handler**: the `main.ts`
+handler was setting only the report text and not calling `goToRoom`. Fixed
+by having `main.ts` call `game.notifyDied()` and a separate `onYouRespawned`
+handler call `game.notifyRespawned()`.
+
+**Duplicate sprite after respawn**: `onPlayerInfo` in `game.ts` was storing
+the local player in `otherPlayers`, causing a second sprite stuck at the
+last known PLAYER_INFO position. Fixed with `if (msg.id === this.myId) return;`
+at the top of the handler (matching the existing guard in `onLocation`).

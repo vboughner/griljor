@@ -122,6 +122,7 @@ export interface OtherPlayer {
   px: number;
   py: number;
   sprite: ImageData | null;
+  dead?: boolean;
 }
 
 /**
@@ -137,7 +138,8 @@ export async function renderFrame(
   others: OtherPlayer[] = [],
   floorItems: Map<string, InventoryItem> = new Map(),
   objects: ObjDef[] = [],
-  objset: string = ''
+  objset: string = '',
+  tombstoneSprite: ImageData | null = null
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bg, 0, 0);
@@ -156,8 +158,9 @@ export async function renderFrame(
 
   // Draw other players first (behind local player)
   for (const other of others) {
-    if (other.sprite) {
-      const bm = await getBitmap(other.sprite);
+    const effectiveSprite = (other.dead && tombstoneSprite) ? tombstoneSprite : other.sprite;
+    if (effectiveSprite) {
+      const bm = await getBitmap(effectiveSprite);
       ctx.drawImage(bm, BORDER + other.px * TILE, BORDER + other.py * TILE, TILE, TILE);
     } else {
       ctx.fillStyle = getColorMode() === 'dark' ? '#aaa' : '#666';

@@ -18,11 +18,12 @@ export type C2SMessage =
 
 // Server → Client messages
 export type S2CMessage =
-  | { type: 'ACCEPTED';      id: number; msg: string; mapName: string; rooms: number }
+  | { type: 'ACCEPTED';      id: number; msg: string; mapName: string; rooms: number; room: number; x: number; y: number }
   | { type: 'REJECTED';      msg: string }
   | { type: 'PLAYER_INFO';   id: number; name: string; avatar: string;
                              room: number; x: number; y: number;
-                             kills: number; deaths: number; joinedAt: number }
+                             kills: number; deaths: number; joinedAt: number;
+                             dead: boolean }
   | { type: 'PLAYER_STATS';  id: number; kills: number; deaths: number }
   | { type: 'MY_LOCATION';   id: number; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME';  id: number }
@@ -44,6 +45,6 @@ export type S2CMessage =
                              dx: number; dy: number }
   | { type: 'MISSILE_END';   id: number }
   | { type: 'REPORT';        text: string }
-  | { type: 'YOU_DIED';      killedBy: number; killerName: string;
-                             respawnRoom: number; respawnX: number; respawnY: number }
+  | { type: 'YOU_DIED';      killedBy: number; killerName: string; deadForMs: number }
+  | { type: 'YOU_RESPAWNED'; room: number; x: number; y: number }
   | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number };
