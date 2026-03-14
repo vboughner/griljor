@@ -45,6 +45,22 @@ Make teams work:
 - [ ] consider friendly fire options for teammates (i.e. cannot hurt members of your own team)
 
 
+## Remaining Differences with Legacy
+- [ ] **fire rate limiting** — legacy has an ~850ms cooldown between shots (adjustable per weapon via a `refire` field); currently you can fire infinitely fast
+- [ ] **health regeneration** — in the original, players slowly heal between fights (1 HP/sec baseline, faster at higher levels); without it, consumables are the only way to recover HP
+- [ ] **periodic item placement (`.pla` files)** — weapons and items respawn on a timer per map script; the game gets stale without this
+- [ ] **team UI + friendly fire** — teams exist in data but have no visible UI selection or enforcement; see also "Make teams work" section above
+- [ ] **win conditions** — no game ever ends; the original had capture-the-flag mechanics (`flag`/`flagteams` on objects) and a game timer with rewards
+- [ ] **diagonal movement** — original game supported 8-direction movement; modern is 4-direction only
+- [ ] **speed penalty when hurt** — in the original, players moved proportionally slower as they took damage (25% HP = 25% speed); creates tactical depth
+- [ ] **dark rooms + flashlight** — several maps (castle, hack, outdoor) have rooms that are dark by default; flashlight items illuminate a radius around the bearer
+- [ ] **day/night cycle** — some rooms are lit during the day and dark at night based on in-game time
+- [ ] **wearable items** — armor, rings, helmets with a slot system exist in item definitions but cannot be equipped
+- [ ] **spread/arc weapons** — shotguns, wide-arc blasters, and 360° explosions fire multiple projectiles; a whole weapon category is missing
+- [ ] **explosion system** — grenades and certain weapons are supposed to spawn explosion objects that deal area damage; flammable map objects can chain-react; currently everything is point-damage only
+- [ ] **ammo reload from quiver** — bows should reload from arrows carried in inventory; currently they just run out
+- [ ] **object look/examine messages** — each item in the original had flavor text shown when looking at or examining it; currently only a name tooltip is shown
+
 ## Later / Polish / Maintainability
 - [ ] add unit testing
 - [ ] make it possible for other collaborators to deploy a production release (give them access to the VPS)
