@@ -74,16 +74,35 @@ describe('fire rate limiting', () => {
     const objects: Array<ObjDef | null> = [
       null,
       { _index: 1, name: 'floor', movement: 5, permeable: true },
-      { _index: 2, name: 'grenade', takeable: true, weight: 5, weapon: true, lost: true, damage: 20, range: 5, refire: 255 },
+      {
+        _index: 2,
+        name: 'grenade',
+        takeable: true,
+        weight: 5,
+        weapon: true,
+        lost: true,
+        damage: 20,
+        range: 5,
+        refire: 255,
+      },
     ];
     const room: RoomData = {
-      name: 'test', floor: 0, team: 0,
+      name: 'test',
+      floor: 0,
+      team: 0,
       recorded_objects: [{ x: 5, y: 5, type: 2, detail: 0 }],
       spot,
     };
     const world: World = {
-      mapName: 'test', title: 'Test', teams: 0, roomCount: 1,
-      rooms: [room], objects, resetOnEmpty: false, resetAfterSeconds: 30, maxPlayers: 16,
+      mapName: 'test',
+      title: 'Test',
+      teams: 0,
+      roomCount: 1,
+      rooms: [room],
+      objects,
+      resetOnEmpty: false,
+      resetAfterSeconds: 30,
+      maxPlayers: 16,
     };
     const grenadeSession = new GameSession(world);
     const alice = joinPlayer(grenadeSession, 'Alice');
