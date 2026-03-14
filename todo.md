@@ -1,33 +1,51 @@
-# Griljor Web Rewrite — TODO
-
-## Client / Server
-
-- [x] Keep-alive pings — client sends a ping every 60 seconds while idle so a player can remain in-game with browser open; server uses this to avoid disconnecting motionless players
-- [ ] Consumables — items with health/power effects beyond the door mechanism
-- [ ] Teams — lobby team selection + server-side enforcement (friendly fire, spawn zones)
-- [ ] 8-direction movement — currently 4-directional only
-- [x] Fix `nearbyFreeTile` in `session.ts` — currently uses `permeable` instead of `movement` for free-tile checks
-- [x] When everyone leaves a map, it should respawn and reset to original state
-- [ ] Research how the original screen was laid out so the UI matches better
-- [ ] Make the frontend much nicer to look at (consider a frontend design pass / design tool)
-- [ ] Figure out how to use ammo — numbered weapon items should consume charges on fire
-- [ ] Audit pickup and drop mechanisms — verify they are working correctly end-to-end
-- [ ] Decide whether to show the border arrow indicators that reveal adjacent rooms
-
-## Networking / Deployment
-
-- [ ] Figure out how to set up a free VM on Oracle Cloud
-- [ ] Review the deployment plan in `deployment-plan.md` and execute it
-- [ ] Figure out what can be demoed next Sunday night (use Chrome + screen share in Google Meet); ideally have it deployed so others can join from their browser
+# Griljor Web Rewrite — ToDo list
 
 ## Maps
+- [ ] fix initial spawn in locked room without a key in castle map
 
-- [ ] Test unlocking a door or repairing a broken one (they appear normal on the castle map — investigate)
-- [ ] Pick the best maps for showcasing in the demo
+## Bugs in Play
+- [ ] figure out how to use ammo — numbered weapon items should consume charges on fire
+- [ ] there's a bug in burden, it doesn't go back to zero, and not sure it is counting what is in the hands properly
+- [ ] need to test grenades, and other things that you throw and which blow up (at a distance or on hitting something?)
+- [ ] eating food does not work and/or health bar does not work
+- [ ] make hit markers show up momentarily, consider removing the message on every hit (or summarizing when someone dies who did the dmg to them)
+- [ ] figure out how to use ammo, make it work, quiver doesn't work right for reloading the bow
+- [ ] the bow disappears when empty and probably should not
+- [ ] grenades don't get depleted properly from your inventory as you fire them
+- [ ] add something to the title screen that mentions it is an old school game from 1989 and has been modernized, include a link to the repository
+- [ ] player should only be able to take things that are near it and not across the room
+- [ ] time people out of AFK games so that they don't stay on the server forever if they leave their browser tab open
+- [ ] wait a little longer to reset the map after no one is left in it, and consider a timer in the lobby that tells you how long until the map resets (30 seconds?)
+- [ ] get punching to work
+- [ ] let the chat history be taller, contain more text, perhaps use up space that is not needed by the player list
+- [ ] make the mouse graphic not so tall, figure out a better way to display what the mouse buttons are for, it kind of needs a redesign for the modern era
+- [ ] need the border boxes around other player (or to make them a different color than everything else? team colors?)
+- [ ] there's still a display glitch when you have joined a 2nd or 3rd map sometimes, is everything getting cleared?
+- [ ] when you leave the browser open too long and there are hot reloads, chrome has to be restarted?
+- [ ] when you try to use the repair kit and there is nothing to repair you should get a message
+- [ ] keep the chat history for up to 10 or 20 minutes so you can return and see it
+- [ ] put timestamps on chat messages?
+- [ ] help users in the lobby know when server is going to get reset (when no one is left in it)
+- [ ] there probably isn't anything keeping a 17th player from joining a max 16 player game
+- [ ] consider making the limited lighting feature work properly (where you can only see things near you and you have a flashlight)
+- [ ] need a tutorial to help teach how to pickup and manipulate inventory and learn shortcut keys (or at least a help page)
+- [ ] do something different with the mouse controls (the big mouse looks funny)
+- [ ] add hot key setting and mouse changes settings (but how will they save these, do we need profiles, or maybe just 3 good hotkey setting choices)
+- [ ] consider placing player list at the top of the display to make them more prominent
+- [ ] consider including health bars on player list display so people can hunt weak players
+- [ ] consider making it possible to know which room other players are in
+- [ ] ask the AI to compare the old code and check systematically for differences in implementation and point them out
+- [ ] there might be a bug when player reappears after death, they spawn in another room, appear then jump to another location in the same room quickly
+- [ ] when a player spawns in a locked room they cannot escape, maybe give them a give-up key that will give them a 5-second countdown to go to a new spawn location, and maybe that doesn't count as a death
 
-## Later / Polish
+Make teams work:
+- [x] players start in their team room
+- [ ] add join team buttons (2 of them, and double the height of that map row for the avatars?)
+- [ ] display which team people are in the player list, make your team more obvious on the map (in colors?)
+- [ ] consider friendly fire options for teammates (i.e. cannot hurt members of your own team)
 
-- [ ] Title screen and game listing refinements before public release
-- [ ] Make it possible for others to deploy a production release (if they have VM access)
-- [ ] Consider whether a code refactor is worthwhile to improve clarity and maintainability
+
+## Later / Polish / Maintainability
+- [ ] add unit testing
+- [ ] make it possible for other collaborators to deploy a production release (give them access to the VPS)
 - [ ] add Burt back into the plan somehow, maybe to respond to chats if you address him directly?

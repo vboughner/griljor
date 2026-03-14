@@ -1431,25 +1431,34 @@ to the correct room immediately on join.
 
 Two map conventions exist, distinguished by `room.floor`:
 
-**Void-floor maps** (`room.floor === 0`, e.g. battle): tiles `[0, 0]` are
-open floor (no object at all). All void tiles are walkable.
+**Void tiles `[0, 0]`** are always walkable at speed 9 (movement = 9),
+regardless of `room.floor`. A map may use void tiles as a road or open
+area even in a floor-tile room.
 
-**Floor-tile maps** (`room.floor > 0`, e.g. ring): tile `[floorId, 0]` is
-the real floor inside the room; void tiles `[0, 0]` represent the space
-*outside* the room walls and are **not walkable**.
+**Respawn exclusion**: void tiles are excluded from random spawn/respawn
+when `room.floor > 0`, because they often represent space outside the
+visible room walls. On void-floor maps (`room.floor === 0`, e.g. battle),
+void tiles are also valid spawn locations.
 
-The rule applied in both `randomWalkableTile` (server, `session.ts`) and
-`isTileBlocked` (client, `game.ts`):
+Client (`isTileBlocked` in `game.ts`): void tiles always return `false`
+(walkable). Server (`randomWalkableTile` in `session.ts`): void tiles are
+only added to the spawn pool when `room.floor === 0`.
 
 ```typescript
+// client — isTileBlocked
 if (!flId && !wlId) {
-  // void tile: walkable only on void-floor maps (floor === 0)
-  if (!room.floor) walkable.push({ x, y });
-  continue;
+  // void tile: always walkable; fall through to return false
+} else {
+  // non-void: blocked if any object lacks movement
+  if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
+  if (flId > 0 && !((objects[flId]?.movement ?? 0) > 0)) return true;
 }
-// non-void: walkable only if all objects present allow movement
-if (wallObj  && !wallObj.movement)  /* blocked */;
-if (floorObj && !floorObj.movement) /* blocked */;
+
+// server — randomWalkableTile
+if (!flId && !wlId) {
+  if (!room.floor) walkable.push({ x, y }); // spawn only on void-floor maps
+  continue; // skip for respawn on floor-tile maps; movement still allowed
+}
 ```
 
 `room.floor` is loaded from the map JSON and stored in `RoomData` on both

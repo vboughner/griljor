@@ -760,10 +760,11 @@ export class GameSession {
         const cell = room.spot[x]?.[y];
         if (!cell) continue;
         const [flId, wlId] = cell;
-        // If room has a floor tile, void tiles are outside the room walls — not walkable.
-        // If room.floor === 0 (battle-style), void tiles are open floor — walkable.
+        // Void tile [0,0]: walkable but not a valid respawn point when the room
+        // has a defined floor (it may be outside the walls).
         if (!flId && !wlId) {
           if (!room.floor) walkable.push({ x, y });
+          // When room.floor !== 0, skip void tiles for respawn (but movement is allowed).
           continue;
         }
         const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
