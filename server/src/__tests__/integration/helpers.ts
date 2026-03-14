@@ -103,10 +103,15 @@ export interface TestPlayer {
   y: number;
 }
 
-export function joinPlayer(session: GameSession, name = 'Alice', avatar = 'a'): TestPlayer {
+export function joinPlayer(
+  session: GameSession,
+  name = 'Alice',
+  avatar = 'a',
+  team = 1,
+): TestPlayer {
   const ws = new MockWebSocket();
   session.handleConnection(ws as unknown as WebSocket);
-  ws.receive({ type: 'JOIN', name, avatar });
+  ws.receive({ type: 'JOIN', name, avatar, team });
   const accepted = ws.lastOfType('ACCEPTED');
   if (!accepted) throw new Error(`JOIN was rejected for ${name}`);
   return { ws, id: accepted.id, room: accepted.room, x: accepted.x, y: accepted.y };

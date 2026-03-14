@@ -614,8 +614,7 @@ async function main(): Promise<void> {
         tipText = 'Your avatar is already in use in this game. Pick a different one to join.';
       }
       if (tipText) {
-        const msg = tipText;
-        btn.onmouseenter = (e) => showTooltip(msg, e.clientX, e.clientY);
+        btn.onmouseenter = (e) => showTooltip(tipText, e.clientX, e.clientY);
         btn.onmousemove = (e) => moveTooltip(e.clientX, e.clientY);
         btn.onmouseleave = () => hideTooltip();
       } else {
@@ -624,6 +623,23 @@ async function main(): Promise<void> {
         btn.onmouseleave = null;
       }
     }
+  }
+
+  function appendAvatarCanvas(
+    container: HTMLElement,
+    avatarName: string,
+    playerName: string,
+  ): void {
+    const c = document.createElement('canvas');
+    c.width = 32;
+    c.height = 32;
+    void drawAvatarOnCanvas(c, avatarName);
+    c.addEventListener('mouseenter', (e) =>
+      showTooltip(`<div class="tip-name">${playerName}</div>`, e.clientX, e.clientY),
+    );
+    c.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
+    c.addEventListener('mouseleave', () => hideTooltip());
+    container.appendChild(c);
   }
 
   function renderServerList(games: GameInfo[]): void {
@@ -659,7 +675,7 @@ async function main(): Promise<void> {
         // Multi-team: avatar lines | rooms | teams | per-team counts | join buttons
         const perTeamMax = Math.floor(game.maxPlayers / game.teams);
         const teamLines = document.createElement('div');
-        teamLines.className = 'server-team-lines';
+        teamLines.className = 'server-team-col server-team-lines';
         const countSpans: HTMLSpanElement[] = [];
         const joinBtns: HTMLButtonElement[] = [];
         for (let t = 1; t <= game.teams; t++) {
@@ -673,16 +689,7 @@ async function main(): Promise<void> {
           const avatarStrip = document.createElement('span');
           avatarStrip.className = 'server-avatars';
           for (const entry of teamAvatars) {
-            const c = document.createElement('canvas');
-            c.width = 32;
-            c.height = 32;
-            void drawAvatarOnCanvas(c, entry.avatar);
-            c.addEventListener('mouseenter', (e) =>
-              showTooltip(`<div class="tip-name">${entry.name}</div>`, e.clientX, e.clientY),
-            );
-            c.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
-            c.addEventListener('mouseleave', () => hideTooltip());
-            avatarStrip.appendChild(c);
+            appendAvatarCanvas(avatarStrip, entry.avatar, entry.name);
           }
 
           line.appendChild(avatarStrip);
@@ -713,14 +720,14 @@ async function main(): Promise<void> {
         row.appendChild(teamsSpan);
 
         const countCol = document.createElement('div');
-        countCol.className = 'server-team-counts';
+        countCol.className = 'server-team-col server-team-counts';
         for (const s of countSpans) countCol.appendChild(s);
         row.appendChild(countCol);
 
         row.appendChild(teamLines);
 
         const joinCol = document.createElement('div');
-        joinCol.className = 'server-join-btns';
+        joinCol.className = 'server-team-col server-join-btns';
         for (const btn of joinBtns) joinCol.appendChild(btn);
         row.appendChild(joinCol);
       } else {
@@ -729,16 +736,7 @@ async function main(): Promise<void> {
         const avatarStrip = document.createElement('span');
         avatarStrip.className = 'server-avatars';
         for (const entry of game.avatars ?? []) {
-          const c = document.createElement('canvas');
-          c.width = 32;
-          c.height = 32;
-          void drawAvatarOnCanvas(c, entry.avatar);
-          c.addEventListener('mouseenter', (e) =>
-            showTooltip(`<div class="tip-name">${entry.name}</div>`, e.clientX, e.clientY),
-          );
-          c.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
-          c.addEventListener('mouseleave', () => hideTooltip());
-          avatarStrip.appendChild(c);
+          appendAvatarCanvas(avatarStrip, entry.avatar, entry.name);
         }
         const playersSpan = document.createElement('span');
         playersSpan.className = 'server-players';
@@ -785,7 +783,6 @@ async function main(): Promise<void> {
   async function joinServer(gameInfo: GameInfo, team = 1): Promise<void> {
     if (isJoining) return;
     isJoining = true;
-    const joinTeam = team;
     setInputsDisabled(true);
     lobbyStatus.textContent = `Connecting to ${gameInfo.mapName}\u2026`;
 
@@ -915,7 +912,7 @@ async function main(): Promise<void> {
       };
 
       await game.setAvatar(selectedAvatar);
-      network.join(playerName, selectedAvatar, joinTeam);
+      network.join(playerName, selectedAvatar, team);
     } catch (err) {
       lobbyStatus.textContent = `Error: ${err}`;
       setInputsDisabled(false);
