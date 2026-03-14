@@ -9,7 +9,7 @@ interface GameEntry {
   wsUrl: string;
   players: number;
   maxPlayers: number;
-  avatars: Array<{ avatar: string; name: string }>;
+  avatars: Array<{ avatar: string; name: string; team: number }>;
   lastSeen: number;
 }
 
@@ -65,9 +65,11 @@ function isRegisterBody(b: unknown): b is {
   );
 }
 
-function isHeartbeatBody(
-  b: unknown,
-): b is { wsUrl: string; players: number; avatars?: Array<{ avatar: string; name: string }> } {
+function isHeartbeatBody(b: unknown): b is {
+  wsUrl: string;
+  players: number;
+  avatars?: Array<{ avatar: string; name: string; team: number }>;
+} {
   return (
     typeof b === 'object' &&
     b !== null &&

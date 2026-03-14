@@ -27,7 +27,7 @@ describe('join / leave', () => {
     joinPlayer(session, 'Alice');
     const ws2 = new MockWebSocket();
     session.handleConnection(ws2 as unknown as WebSocket);
-    ws2.receive({ type: 'JOIN', name: 'Alice', avatar: 'b' });
+    ws2.receive({ type: 'JOIN', name: 'Alice', avatar: 'b', team: 1 });
     expect(ws2.lastOfType('REJECTED')).toBeDefined();
   });
 

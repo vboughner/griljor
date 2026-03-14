@@ -6,7 +6,7 @@ export interface GameInfo {
   wsUrl: string;
   players: number;
   maxPlayers: number;
-  avatars: Array<{ avatar: string; name: string }>;
+  avatars: Array<{ avatar: string; name: string; team: number }>;
 }
 
 const LOBBY_HTTP =

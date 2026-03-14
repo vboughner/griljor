@@ -27,7 +27,7 @@
     #title-canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
 
     /* ── Lobby ── */
-    #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 800px; }
+    #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 900px; }
     #lobby-logo { border: none; margin-top: -20px; margin-bottom: 24px; }
     .lobby-panel { width: 100%; border: 1px solid #303030; margin-bottom: 40px; }
     .lobby-panel-hdr {
@@ -74,7 +74,7 @@
     #server-list { width: 100%; min-height: 60px; }
     .server-row {
       display: flex; align-items: center; gap: 12px;
-      padding: 10px 16px; min-height: 54px; border-bottom: 1px solid #282828; font-size: 15px;
+      padding: 10px 16px; min-height: 56px; border-bottom: 1px solid #282828; font-size: 15px;
     }
     .server-row:last-child { border-bottom: none; }
     .server-header {
@@ -85,7 +85,7 @@
     }
     .server-map        { width: 160px; flex-shrink: 0; word-break: break-word; }
     .server-row .server-map { color: #bbb; }
-    .server-avatars    { display: flex; flex-wrap: wrap; gap: 4px; width: 300px; flex-shrink: 0; }
+    .server-avatars    { display: flex; flex-wrap: wrap; gap: 4px; width: 300px; flex-shrink: 0; min-height: 32px; }
     .server-avatars-hdr{ width: 300px; flex-shrink: 0; }
     .server-players    { color: #888; white-space: nowrap; width: 55px; text-align: center; flex-shrink: 0; }
     .server-count-hdr  { width: 55px; text-align: center; flex-shrink: 0; }
@@ -93,9 +93,16 @@
     .server-teams-hdr  { width: 50px; text-align: center; flex-shrink: 0; }
     .server-rooms      { color: #888; white-space: nowrap; width: 50px; text-align: center; flex-shrink: 0; }
     .server-rooms-hdr  { width: 50px; text-align: center; flex-shrink: 0; }
-    .server-join-hdr   { width: 50px; flex-shrink: 0; }
+    .server-join-hdr   { width: 130px; flex-shrink: 0; }
+    .server-team-col   { display: flex; flex-direction: column; justify-content: center; gap: 10px; align-self: stretch; }
+    .server-team-lines { width: 300px; flex-shrink: 0; }
+    .server-team-line  { display: flex; align-items: center; gap: 12px; height: 32px; }
+    .server-team-counts{ width: 55px; flex-shrink: 0; align-items: center; }
+    .server-team-counts .server-players { display: flex; align-items: center; justify-content: center; height: 32px; }
+    .server-join-btns  { margin-left: auto; }
     .join-btn {
       margin-left: auto;
+      min-width: 130px;
       background: #1e1910; border: 1px solid #52380e; color: #b8842a;
       padding: 6px 12px; cursor: pointer; font-family: monospace; font-size: 15px;
       transition: background 0.1s, border-color 0.1s;
