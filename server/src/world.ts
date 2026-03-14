@@ -4,22 +4,22 @@ import { join } from 'path';
 export interface ObjDef {
   _index: number;
   name?: string;
-  type?: number;        // bitmask for opens-matching (0 if absent = matches all openers)
+  type?: number; // bitmask for opens-matching (0 if absent = matches all openers)
   takeable?: boolean;
   weight?: number;
   numbered?: boolean;
   permeable?: boolean;
-  movement?: number;    // player walkability: absent/0 = blocked, 1–9 = walkable (9=fastest)
+  movement?: number; // player walkability: absent/0 = blocked, 1–9 = walkable (9=fastest)
   weapon?: boolean;
   damage?: number;
   range?: number;
   movingobj?: number;
   speed?: number;
-  opens?: number;       // non-zero: item can open swinging objects (bitmask)
-  swings?: boolean;     // true: this object can be toggled open/closed
-  alternate?: number;   // object type this becomes when toggled
-  health?: number;      // negative = restores HP on use
-  lost?: boolean;       // consumed on use (remove from inventory)
+  opens?: number; // non-zero: item can open swinging objects (bitmask)
+  swings?: boolean; // true: this object can be toggled open/closed
+  alternate?: number; // object type this becomes when toggled
+  health?: number; // negative = restores HP on use
+  lost?: boolean; // consumed on use (remove from inventory)
 }
 
 export interface RecObj {
@@ -54,12 +54,34 @@ export async function loadWorld(mapName: string): Promise<World> {
   const mapPath = join(__dirname, '..', '..', 'pipeline', 'out', 'data', 'maps', `${mapName}.json`);
   const raw = await readFile(mapPath, 'utf-8');
   const data = JSON.parse(raw) as {
-    map: { name?: string; objfilename: string; teams_supported?: number; resetOnEmpty?: boolean; resetAfterSeconds?: number; maxPlayers?: number };
-    rooms: Array<{ name?: string; floor?: number; team?: number; recorded_objects?: RecObj[]; spot: number[][][] }>;
+    map: {
+      name?: string;
+      objfilename: string;
+      teams_supported?: number;
+      resetOnEmpty?: boolean;
+      resetAfterSeconds?: number;
+      maxPlayers?: number;
+    };
+    rooms: Array<{
+      name?: string;
+      floor?: number;
+      team?: number;
+      recorded_objects?: RecObj[];
+      spot: number[][][];
+    }>;
   };
 
   const objName = data.map.objfilename.replace(/\.obj$/, '');
-  const objPath = join(__dirname, '..', '..', 'pipeline', 'out', 'data', 'objects', `${objName}.json`);
+  const objPath = join(
+    __dirname,
+    '..',
+    '..',
+    'pipeline',
+    'out',
+    'data',
+    'objects',
+    `${objName}.json`,
+  );
   const objRaw = await readFile(objPath, 'utf-8');
   const objData = JSON.parse(objRaw) as { objects: Array<ObjDef | null> };
 

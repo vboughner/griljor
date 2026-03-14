@@ -1,16 +1,26 @@
 const BAD_WORDS = [
-  'fuck', 'shit', 'bitch', 'asshole', 'bastard', 'damn', 'crap',
-  'piss', 'cunt', 'dick', 'cock', 'pussy', 'ass', 'hell',
+  'fuck',
+  'shit',
+  'bitch',
+  'asshole',
+  'bastard',
+  'damn',
+  'crap',
+  'piss',
+  'cunt',
+  'dick',
+  'cock',
+  'pussy',
+  'ass',
+  'hell',
 ];
 
-const PATTERNS = BAD_WORDS.map(
-  (w) => ({ re: new RegExp(`\\b${w}\\b`, 'gi') })
-);
+const PATTERNS = BAD_WORDS.map((w) => ({ re: new RegExp(`\\b${w}\\b`, 'gi') }));
 
 const SCOLDS = [
   'Come on, get a clue, watch your language.',
   "Gimme a break, you needn't swear.",
-  "Come on now, what would your mother say?",
+  'Come on now, what would your mother say?',
   'Please keep it civil in here.',
   "There's no need for that kind of talk.",
 ];

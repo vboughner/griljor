@@ -58,7 +58,11 @@ async function main(): Promise<void> {
   const wsUrl = process.env.PUBLIC_WS_URL ?? `ws://localhost:${PORT}/ws`;
 
   function sendHeartbeat(): void {
-    postJson(`${LOBBY_URL}/heartbeat`, { wsUrl, players: game.playerCount, avatars: game.playerAvatars });
+    postJson(`${LOBBY_URL}/heartbeat`, {
+      wsUrl,
+      players: game.playerCount,
+      avatars: game.playerAvatars,
+    });
   }
 
   const game = new GameSession(world, { onPlayerCountChange: sendHeartbeat });
@@ -73,7 +77,14 @@ async function main(): Promise<void> {
   console.log(`Griljor server on :${PORT}, map: ${world.mapName} (${world.roomCount} rooms)`);
 
   // Register with lobby
-  postJson(`${LOBBY_URL}/register`, { mapName, title: world.title, teams: world.teams, rooms: world.roomCount, wsUrl, maxPlayers: world.maxPlayers });
+  postJson(`${LOBBY_URL}/register`, {
+    mapName,
+    title: world.title,
+    teams: world.teams,
+    rooms: world.roomCount,
+    wsUrl,
+    maxPlayers: world.maxPlayers,
+  });
 
   // Heartbeat every 5s (safety net; immediate heartbeats are sent on join/leave)
   setInterval(sendHeartbeat, 5_000);

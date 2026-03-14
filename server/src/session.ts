@@ -20,7 +20,6 @@ function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryItem): nu
   return (obj.weight ?? 0) * item.quantity;
 }
 
-
 interface Player {
   id: number;
   name: string;
@@ -76,7 +75,7 @@ export class GameSession {
     this.onPlayerCountChange = opts?.onPlayerCountChange;
     this.world = world;
     this.originalRecordedObjects = world.rooms.map((r) =>
-      r.recorded_objects.map((ro) => ({ ...ro }))
+      r.recorded_objects.map((ro) => ({ ...ro })),
     );
     this.initRoomItems();
   }
@@ -98,14 +97,18 @@ export class GameSession {
 
   private resetWorldState(): void {
     for (let i = 0; i < this.world.rooms.length; i++) {
-      this.world.rooms[i].recorded_objects = this.originalRecordedObjects[i].map((ro) => ({ ...ro }));
+      this.world.rooms[i].recorded_objects = this.originalRecordedObjects[i].map((ro) => ({
+        ...ro,
+      }));
     }
     this.roomItems.clear();
     this.initRoomItems();
     this.chatHistory = [];
   }
 
-  get playerCount(): number { return this.players.size; }
+  get playerCount(): number {
+    return this.players.size;
+  }
   get playerAvatars(): Array<{ avatar: string; name: string }> {
     return [...this.players.values()].map((p) => ({ avatar: p.avatar, name: p.name }));
   }
@@ -125,15 +128,32 @@ export class GameSession {
         this.onJoin(ws, msg);
       } else if (playerId !== undefined) {
         switch (msg.type) {
-          case 'MY_LOCATION':  this.onLocation(playerId, msg);   break;
-          case 'MESSAGE':      this.onMessage(playerId, msg);    break;
-          case 'LEAVING_GAME': this.onLeave(playerId);           break;
-          case 'PICKUP':       this.onPickup(playerId, msg);     break;
-          case 'DROP':         this.onDrop(playerId, msg);       break;
-          case 'INV_SWAP':     this.onInvSwap(playerId, msg);   break;
-          case 'FIRE_WEAPON':  this.onFireWeapon(playerId, msg); break;
-          case 'USE_ITEM':     this.onUseItem(playerId, msg);    break;
-          case 'PING':         break; // no-op: keeps the connection alive
+          case 'MY_LOCATION':
+            this.onLocation(playerId, msg);
+            break;
+          case 'MESSAGE':
+            this.onMessage(playerId, msg);
+            break;
+          case 'LEAVING_GAME':
+            this.onLeave(playerId);
+            break;
+          case 'PICKUP':
+            this.onPickup(playerId, msg);
+            break;
+          case 'DROP':
+            this.onDrop(playerId, msg);
+            break;
+          case 'INV_SWAP':
+            this.onInvSwap(playerId, msg);
+            break;
+          case 'FIRE_WEAPON':
+            this.onFireWeapon(playerId, msg);
+            break;
+          case 'USE_ITEM':
+            this.onUseItem(playerId, msg);
+            break;
+          case 'PING':
+            break; // no-op: keeps the connection alive
         }
       }
     });
@@ -165,20 +185,35 @@ export class GameSession {
     const id = this.nextId++;
     const team = 1; // default to team 1 until team selection is implemented
     const player: Player = {
-      id, name: msg.name, avatar: msg.avatar, room: 0, x: 10, y: 10, ws,
-      kills: 0, deaths: 0, joinedAt: Date.now(),
-      leftHand: null, rightHand: null,
+      id,
+      name: msg.name,
+      avatar: msg.avatar,
+      room: 0,
+      x: 10,
+      y: 10,
+      ws,
+      kills: 0,
+      deaths: 0,
+      joinedAt: Date.now(),
+      leftHand: null,
+      rightHand: null,
       inventory: new Array<InventoryItem | null>(INV_SIZE).fill(null),
       currentWeight: 0,
       team,
-      hp: 100, maxHp: 100,
-      dead: false, respawnTimer: null,
+      hp: 100,
+      maxHp: 100,
+      dead: false,
+      respawnTimer: null,
     };
     this.players.set(id, player);
 
     // Place player in a random walkable tile in their team's room
     const spawn = this.randomSpawnForTeam(team);
-    if (spawn) { player.room = spawn.room; player.x = spawn.x; player.y = spawn.y; }
+    if (spawn) {
+      player.room = spawn.room;
+      player.x = spawn.x;
+      player.y = spawn.y;
+    }
     this.wsToId.set(ws, id);
     this.onPlayerCountChange?.();
 
@@ -206,7 +241,13 @@ export class GameSession {
 
     // Replay chat history for the new player
     for (const entry of this.chatHistory) {
-      this.send(ws, { type: 'MESSAGE', from: entry.from, name: entry.name, to: 'all', text: entry.text });
+      this.send(ws, {
+        type: 'MESSAGE',
+        from: entry.from,
+        name: entry.name,
+        to: 'all',
+        text: entry.text,
+      });
     }
 
     // Send current floor items to new player
@@ -240,12 +281,24 @@ export class GameSession {
     const sender = this.players.get(playerId);
     if (!sender) return;
     const { filtered, triggered } = filterText(msg.text);
-    const s2c: S2CMessage = { type: 'MESSAGE', from: playerId, name: sender.name, to: msg.to, text: filtered };
+    const s2c: S2CMessage = {
+      type: 'MESSAGE',
+      from: playerId,
+      name: sender.name,
+      to: msg.to,
+      text: filtered,
+    };
     if (msg.to === 'all') {
       this.chatHistory.push({ from: playerId, name: sender.name, text: filtered });
       this.broadcast(s2c);
       if (triggered) {
-        const gmMsg: S2CMessage = { type: 'MESSAGE', from: 0, name: 'GM', to: 'all', text: randomScold() };
+        const gmMsg: S2CMessage = {
+          type: 'MESSAGE',
+          from: 0,
+          name: 'GM',
+          to: 'all',
+          text: randomScold(),
+        };
         this.broadcast(gmMsg);
         this.chatHistory.push({ from: 0, name: 'GM', text: gmMsg.text });
       }
@@ -271,7 +324,10 @@ export class GameSession {
 
     if (player.currentWeight + itemWeight > MAX_WEIGHT) {
       this.send(player.ws, {
-        type: 'MESSAGE', from: 0, name: 'GM', to: player.id,
+        type: 'MESSAGE',
+        from: 0,
+        name: 'GM',
+        to: player.id,
         text: 'That is too heavy to carry.',
       });
       return;
@@ -288,7 +344,10 @@ export class GameSession {
       const freeSlot = player.inventory.indexOf(null);
       if (freeSlot === -1) {
         this.send(player.ws, {
-          type: 'MESSAGE', from: 0, name: 'GM', to: player.id,
+          type: 'MESSAGE',
+          from: 0,
+          name: 'GM',
+          to: player.id,
           text: 'Your hands are full.',
         });
         return;
@@ -333,7 +392,9 @@ export class GameSession {
       this.roomItems.set(player.room, roomMap);
       this.broadcast({ type: 'ITEM_ADDED', room: player.room, x: tile.x, y: tile.y, item });
     } else {
-      console.log(`[inv] item type=${item.type} lost — no free tile near (${player.x},${player.y}) in room ${player.room}`);
+      console.log(
+        `[inv] item type=${item.type} lost — no free tile near (${player.x},${player.y}) in room ${player.room}`,
+      );
     }
 
     this.sendInventory(player);
@@ -374,15 +435,15 @@ export class GameSession {
     // Damage may live on the bullet/projectile object rather than the weapon itself
     const bulletObj = obj.movingobj ? this.world.objects[obj.movingobj] : null;
     const damage = obj.damage ?? bulletObj?.damage ?? 10;
-    const range  = obj.range  ?? 5;
+    const range = obj.range ?? 5;
     const movingObjType = obj.movingobj ?? handItem.type;
 
     // Decrement ammo/charges for numbered weapons
     if (obj.numbered) {
       handItem.quantity--;
       if (handItem.quantity <= 0) {
-        if (msg.hand === 'left') player.leftHand  = null;
-        else                     player.rightHand = null;
+        if (msg.hand === 'left') player.leftHand = null;
+        else player.rightHand = null;
       }
       this.sendInventory(player);
     }
@@ -398,25 +459,36 @@ export class GameSession {
     if (!room) return;
 
     // Compute Bresenham path from player to target, capped at range
-    const path: Array<{x: number, y: number}> = [];
+    const path: Array<{ x: number; y: number }> = [];
     {
-      const x0 = player.x, y0 = player.y;
-      const x1 = msg.targetX, y1 = msg.targetY;
-      const adx = Math.abs(x1 - x0), ady = Math.abs(y1 - y0);
-      const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+      const x0 = player.x,
+        y0 = player.y;
+      const x1 = msg.targetX,
+        y1 = msg.targetY;
+      const adx = Math.abs(x1 - x0),
+        ady = Math.abs(y1 - y0);
+      const sx = x0 < x1 ? 1 : -1,
+        sy = y0 < y1 ? 1 : -1;
       let err = adx - ady;
-      let cx = x0, cy = y0;
+      let cx = x0,
+        cy = y0;
       while (path.length < range) {
         const e2 = 2 * err;
-        if (e2 > -ady) { err -= ady; cx += sx; }
-        if (e2 <  adx) { err += adx; cy += sy; }
+        if (e2 > -ady) {
+          err -= ady;
+          cx += sx;
+        }
+        if (e2 < adx) {
+          err += adx;
+          cy += sy;
+        }
         if (cx < 0 || cx >= GRID || cy < 0 || cy >= GRID) break;
         const cell = room.spot?.[cx]?.[cy];
         if (cell) {
           const [flId, wlId] = cell;
-          const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+          const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
           const floorObj = flId > 0 ? this.world.objects[flId] : null;
-          if (wallObj  && !wallObj.permeable)  break;
+          if (wallObj && !wallObj.permeable) break;
           if (floorObj && !floorObj.permeable) break;
         }
         path.push({ x: cx, y: cy });
@@ -450,11 +522,13 @@ export class GameSession {
 
     this.broadcastToRoom(player.room, {
       type: 'MISSILE_START',
-      id, room: player.room,
+      id,
+      room: player.room,
       path: finalPath,
       objType: movingObjType,
       msPerStep,
-      dx, dy,
+      dx,
+      dy,
     });
 
     // Apply damage when missile arrives; also signal clients to clear the sprite
@@ -465,7 +539,6 @@ export class GameSession {
       if (hitPlayer) this.dealDamage(hitPlayer, damage, player);
     }, travelMs);
     this.activeMissiles.set(id, timer);
-
   }
 
   private onUseItem(playerId: number, msg: Extract<C2SMessage, { type: 'USE_ITEM' }>): void {
@@ -489,8 +562,8 @@ export class GameSession {
       if (obj.numbered) {
         handItem.quantity--;
         if (handItem.quantity <= 0) {
-          if (msg.hand === 'left') player.leftHand  = null;
-          else                     player.rightHand = null;
+          if (msg.hand === 'left') player.leftHand = null;
+          else player.rightHand = null;
         }
         this.sendInventory(player);
       }
@@ -537,14 +610,16 @@ export class GameSession {
     if (toggled && obj.numbered) {
       handItem.quantity--;
       if (handItem.quantity <= 0) {
-        if (msg.hand === 'left') player.leftHand  = null;
-        else                     player.rightHand = null;
+        if (msg.hand === 'left') player.leftHand = null;
+        else player.rightHand = null;
       }
       this.sendInventory(player);
     }
 
     if (toggled) {
-      console.log(`[use] ${player.name} used ${obj.name ?? '?'} on (${msg.targetX},${msg.targetY})`);
+      console.log(
+        `[use] ${player.name} used ${obj.name ?? '?'} on (${msg.targetX},${msg.targetY})`,
+      );
     }
   }
 
@@ -565,21 +640,36 @@ export class GameSession {
   }
 
   private killPlayer(victim: Player, killer: Player | null): void {
-    console.log(`[combat] ${victim.name} killed by ${killer?.name ?? 'void'} at room=${victim.room} (${victim.x},${victim.y})`);
+    console.log(
+      `[combat] ${victim.name} killed by ${killer?.name ?? 'void'} at room=${victim.room} (${victim.x},${victim.y})`,
+    );
     victim.deaths++;
-    this.broadcast({ type: 'PLAYER_STATS', id: victim.id, kills: victim.kills, deaths: victim.deaths });
+    this.broadcast({
+      type: 'PLAYER_STATS',
+      id: victim.id,
+      kills: victim.kills,
+      deaths: victim.deaths,
+    });
 
     if (killer) {
       killer.kills++;
       this.send(killer.ws, { type: 'REPORT', text: `You killed ${victim.name}!` });
-      this.broadcast({ type: 'PLAYER_STATS', id: killer.id, kills: killer.kills, deaths: killer.deaths });
+      this.broadcast({
+        type: 'PLAYER_STATS',
+        id: killer.id,
+        kills: killer.kills,
+        deaths: killer.deaths,
+      });
       this.sendStats(killer);
     }
 
     // Announce death in global chat
     const killerDesc = killer ? killer.name : 'the void';
     const deathMsg: S2CMessage = {
-      type: 'MESSAGE', from: 0, name: 'GM', to: 'all',
+      type: 'MESSAGE',
+      from: 0,
+      name: 'GM',
+      to: 'all',
       text: `${victim.name} was slain by ${killerDesc}.`,
     };
     this.broadcast(deathMsg);
@@ -594,7 +684,9 @@ export class GameSession {
 
   private dropPlayerItems(player: Player): void {
     const items: Array<InventoryItem | null> = [
-      player.leftHand, player.rightHand, ...player.inventory
+      player.leftHand,
+      player.rightHand,
+      ...player.inventory,
     ];
     player.leftHand = null;
     player.rightHand = null;
@@ -644,7 +736,9 @@ export class GameSession {
       const spot = this.randomWalkableTile(roomIdx);
       if (spot) return { room: roomIdx, ...spot };
     }
-    console.warn(`[respawn] team=${team} no walkable tile found in any of [${candidates.join(',')}]`);
+    console.warn(
+      `[respawn] team=${team} no walkable tile found in any of [${candidates.join(',')}]`,
+    );
     return null;
   }
 
@@ -672,10 +766,10 @@ export class GameSession {
           if (!room.floor) walkable.push({ x, y });
           continue;
         }
-        const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+        const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
         const floorObj = flId > 0 ? this.world.objects[flId] : null;
         // Non-void: walkable only if objects allow movement (absent = blocked)
-        if (wallObj  && !wallObj.movement)  continue;
+        if (wallObj && !wallObj.movement) continue;
         if (floorObj && !floorObj.movement) continue;
         walkable.push({ x, y });
       }
@@ -689,10 +783,14 @@ export class GameSession {
     const killerName = killer?.name ?? 'the void'; // capture now; killer may disconnect before timer fires
 
     // Broadcast tombstone state at death location
-    console.log(`[respawn] ${victim.name} is dead; broadcasting tombstone at room=${victim.room} (${victim.x},${victim.y})`);
+    console.log(
+      `[respawn] ${victim.name} is dead; broadcasting tombstone at room=${victim.room} (${victim.x},${victim.y})`,
+    );
     this.broadcast(this.makePlayerInfo(victim));
 
-    console.log(`[respawn] sending YOU_DIED to ${victim.name} (ws readyState=${victim.ws.readyState}): deadForMs=${RESPAWN_DELAY_MS}`);
+    console.log(
+      `[respawn] sending YOU_DIED to ${victim.name} (ws readyState=${victim.ws.readyState}): deadForMs=${RESPAWN_DELAY_MS}`,
+    );
     this.send(victim.ws, {
       type: 'YOU_DIED',
       killedBy: killer?.id ?? 0,
@@ -711,29 +809,39 @@ export class GameSession {
 
     const spawn = this.randomSpawnForTeam(victim.team);
     if (spawn) {
-      console.log(`[respawn] ${victim.name} team=${victim.team} spawn found: room=${spawn.room} (${spawn.x},${spawn.y})`);
+      console.log(
+        `[respawn] ${victim.name} team=${victim.team} spawn found: room=${spawn.room} (${spawn.x},${spawn.y})`,
+      );
       victim.room = spawn.room;
       victim.x = spawn.x;
       victim.y = spawn.y;
     } else {
-      console.warn(`[respawn] ${victim.name} team=${victim.team} NO SPAWN FOUND — staying at room=${victim.room} (${victim.x},${victim.y})`);
+      console.warn(
+        `[respawn] ${victim.name} team=${victim.team} NO SPAWN FOUND — staying at room=${victim.room} (${victim.x},${victim.y})`,
+      );
     }
 
     victim.dead = false;
 
     // Broadcast alive state at new location
-    console.log(`[respawn] broadcasting PLAYER_INFO for ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`);
+    console.log(
+      `[respawn] broadcasting PLAYER_INFO for ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`,
+    );
     this.broadcast(this.makePlayerInfo(victim));
 
     // Tell the victim where they respawned
-    console.log(`[respawn] sending YOU_RESPAWNED to ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`);
+    console.log(
+      `[respawn] sending YOU_RESPAWNED to ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`,
+    );
     this.send(victim.ws, { type: 'YOU_RESPAWNED', room: victim.room, x: victim.x, y: victim.y });
 
     this.broadcast({ type: 'PLAYER_HEALTH', id: victim.id, hp: victim.hp, maxHp: victim.maxHp });
     this.sendStats(victim);
     this.sendInventory(victim);
 
-    console.log(`[respawn] ${victim.name} respawn complete at room=${victim.room} (${victim.x},${victim.y}) (killed by ${killerName})`);
+    console.log(
+      `[respawn] ${victim.name} respawn complete at room=${victim.room} (${victim.x},${victim.y}) (killed by ${killerName})`,
+    );
   }
 
   // ── Leave ─────────────────────────────────────────────────────────────────
@@ -755,7 +863,9 @@ export class GameSession {
     if (this.players.size === 0) {
       if (this.world.resetOnEmpty) {
         const delay = this.world.resetAfterSeconds * 1000;
-        console.log(`[reset] scheduled in ${this.world.resetAfterSeconds}s (${this.world.mapName} is empty)`);
+        console.log(
+          `[reset] scheduled in ${this.world.resetAfterSeconds}s (${this.world.mapName} is empty)`,
+        );
         this.resetTimer = setTimeout(() => {
           this.resetTimer = null;
           this.resetWorldState();
@@ -786,12 +896,15 @@ export class GameSession {
   private sendStats(player: Player): void {
     this.send(player.ws, {
       type: 'YOUR_STATS',
-      hp: player.hp, maxHp: player.maxHp,
+      hp: player.hp,
+      maxHp: player.maxHp,
     });
   }
 
   private nearbyFreeTile(
-    roomIdx: number, px: number, py: number,
+    roomIdx: number,
+    px: number,
+    py: number,
     playerOccupied?: Set<string>,
   ): { x: number; y: number } | null {
     const room = this.world.rooms[roomIdx];
@@ -820,11 +933,12 @@ export class GameSession {
           if (cell) {
             const [flId, wlId] = cell;
             // Void tile: not walkable when room has a floor (ring-style map)
-            if (!flId && !wlId) { if (room.floor) continue; }
-            else {
-              const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+            if (!flId && !wlId) {
+              if (room.floor) continue;
+            } else {
+              const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
               const floorObj = flId > 0 ? this.world.objects[flId] : null;
-              if (wallObj  && !wallObj.movement)  continue;
+              if (wallObj && !wallObj.movement) continue;
               if (floorObj && !floorObj.movement) continue;
             }
           }
@@ -838,9 +952,15 @@ export class GameSession {
   private makePlayerInfo(p: Player): Extract<S2CMessage, { type: 'PLAYER_INFO' }> {
     return {
       type: 'PLAYER_INFO',
-      id: p.id, name: p.name, avatar: p.avatar,
-      room: p.room, x: p.x, y: p.y,
-      kills: p.kills, deaths: p.deaths, joinedAt: p.joinedAt,
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar,
+      room: p.room,
+      x: p.x,
+      y: p.y,
+      kills: p.kills,
+      deaths: p.deaths,
+      joinedAt: p.joinedAt,
       dead: p.dead,
     };
   }
