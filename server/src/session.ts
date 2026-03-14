@@ -479,12 +479,27 @@ export class GameSession {
     const range = obj.range ?? 5;
     const movingObjType = obj.movingobj ?? handItem.type;
 
-    // Decrement ammo/charges for numbered weapons
+    // Decrement ammo/charges for numbered weapons; consume lost (single-use) weapons
     if (obj.numbered) {
       handItem.quantity--;
       if (handItem.quantity <= 0) {
+        player.currentWeight = Math.max(0, player.currentWeight - calcItemWeight(obj, handItem));
         if (msg.hand === 'left') player.leftHand = null;
         else player.rightHand = null;
+      }
+      this.sendInventory(player);
+    } else if (obj.lost) {
+      player.currentWeight = Math.max(0, player.currentWeight - calcItemWeight(obj, handItem));
+      if (msg.hand === 'left') player.leftHand = null;
+      else player.rightHand = null;
+      // Auto-reload: pull matching item from inventory into the now-empty hand
+      const reloadSlot = player.inventory.findIndex(
+        (item) => item !== null && item.type === handItem.type,
+      );
+      if (reloadSlot !== -1) {
+        if (msg.hand === 'left') player.leftHand = player.inventory[reloadSlot];
+        else player.rightHand = player.inventory[reloadSlot];
+        player.inventory[reloadSlot] = null;
       }
       this.sendInventory(player);
     }

@@ -1580,3 +1580,224 @@ handler call `game.notifyRespawned()`.
 the local player in `otherPlayers`, causing a second sprite stuck at the
 last known PLAYER_INFO position. Fixed with `if (msg.id === this.myId) return;`
 at the top of the handler (matching the existing guard in `onLocation`).
+
+---
+
+## Phase 13 — Fire Rate, Health Regen, Speed Penalty, Hit Markers, HP Bars
+
+### Fire Rate Limiting (server-side)
+
+**Formula** (from `legacy/src/missile.c` + `config.h`):
+```
+cooldown_ms = 850 * (1 - clamp(refire, -5, 5) / 5)
+```
+Examples: `refire=0` → 850 ms, `refire=5` → 0 ms, `refire=-5` → 1700 ms.
+
+`refire` values in the binary object data are stored as unsigned bytes in
+the range 251–255 for negative values (e.g. 255 = -1, 253 = -3). The pipeline
+parser interprets these as unsigned, so stored values above 250 must be
+treated as `value - 256` to recover the signed refire. The `getFireCooldown`
+helper clamps the signed value to [-5, 5] before applying the formula.
+
+**`server/src/world.ts`**: `refire?: number` added to `ObjDef`.
+
+**`server/src/session.ts`**:
+- `lastFireTime: number = 0` added to the `Player` interface initialiser.
+- `getFireCooldown(refire?: number): number` helper.
+- `onFireWeapon`: check `Date.now() - player.lastFireTime < cooldown` before
+  firing; set `player.lastFireTime = Date.now()` on successful fire.
+
+### Health Regeneration (server-side)
+
+1 HP per second for all living players below `maxHp`.
+
+**`server/src/session.ts`**:
+- `regenInterval` stored as `ReturnType<typeof setInterval>`.
+- `regenTick()`: iterates all non-dead players; if `hp < maxHp`, increments
+  `hp` by 1 and broadcasts `PLAYER_HEALTH`.
+- Interval started in the session constructor; cleared in `destroy()`.
+
+### Speed Penalty When Hurt (client-side)
+
+**Formula**: `effectiveDelay = baseDelay / (hp / maxHp)`. At 50% HP the
+player moves 2× slower. Capped at `stepDelay(1)` (the slowest valid speed).
+
+**`client/src/game.ts`**:
+- `private myHp = 100` and `private myMaxHp = 100` fields.
+- `setMyHp(hp, maxHp)` public method.
+- `getMoveDelay()`: after computing `base = stepDelay(spd)`, multiplies by
+  `myMaxHp / Math.max(1, myHp)` and clamps to `stepDelay(1)`.
+
+**`client/src/main.ts`**: `onYourStats` and `onPlayerHealth` (when
+`msg.id === localPlayerId`) both call `game.setMyHp(hp, maxHp)`.
+
+### Fix: PLAYER_HEALTH Not Updating Local HP Bar
+
+**Root cause**: after eating food or taking damage, the server sends
+`PLAYER_HEALTH`. The client's `onPlayerHealth` handler updated the player
+list for other players but never called `updateStats()` for the local player.
+`YOUR_STATS` was the only path to update the HP bar, and it wasn't sent on
+every heal.
+
+**Fix** (`client/src/main.ts`): `onPlayerHealth` now calls
+`updateStats(msg.hp, msg.maxHp)` when `msg.id === localPlayerId`.
+
+### Protocol: PLAYER_HIT and PLAYER_HEAL
+
+Two new S→C broadcast messages replace the per-hit REPORT chat spam:
+
+```typescript
+| { type: 'PLAYER_HIT'; victimId: number; room: number; x: number; y: number; damage: number }
+| { type: 'PLAYER_HEAL'; playerId: number; room: number; x: number; y: number; amount: number }
+```
+
+`PLAYER_HIT` is broadcast to all players in the room whenever `dealDamage`
+deals damage. `PLAYER_HEAL` is broadcast when `onUseItem` heals a player.
+The two `REPORT` messages previously sent per hit ("X hits you for N!" / "You
+hit X for N.") were removed.
+
+Both types added to `server/src/protocol.ts` and `client/src/network.ts`
+(with matching `onPlayerHit` / `onPlayerHeal` handler fields).
+
+### Hit Markers — Floating Damage/Heal Numbers
+
+**`HitMarker` interface** (`game.ts`):
+```typescript
+{ x: number; y: number; damage: number; startTime: number; color: string }
+```
+
+**`onPlayerHit`**: pushes `{ color: '#ff4444', ... }` marker.
+**`onPlayerHeal`**: pushes `{ color: '#44ff44', ... }` marker.
+
+**`drawHitMarkers(ctx, now)`**: for each active marker (lifetime 600 ms):
+- `age = now - startTime`, `progress = age / 600`
+- Alpha fades from 1 → 0; text floats upward by `progress * 24` pixels.
+- Red markers display `"-N"`; green markers display `"+N"`.
+- Font: bold 14px monospace, text-shadowed for legibility over sprites.
+- Called in `doRender()` **after** player sprites so numbers always appear
+  on top.
+
+**Screen flash**: when a `PLAYER_HIT` targets the local player, a red
+semi-transparent border is drawn around the room canvas for 200 ms. The
+four sides are drawn as separate non-overlapping rectangles (top/bottom full
+width; left/right trimmed by `thickness` top and bottom) to prevent corners
+being double-drawn and appearing darker.
+
+### Render Concurrency Guard
+
+**Problem**: `render()` was called with `void` from multiple async paths
+(network message handlers, timers, input events). Two concurrent renders
+could interleave — the first render's hit markers could be cleared before
+the second render painted sprites, causing numbers to appear behind players.
+
+**Fix** (`game.ts`):
+- `renderInProgress: boolean` and `renderQueued: boolean` flags.
+- `render()` becomes a guard: if a render is already running it sets
+  `renderQueued = true` and returns; otherwise sets `renderInProgress = true`
+  and calls `doRender()`.
+- `doRender()` is the actual work; it clears `renderInProgress` on completion
+  and starts another `doRender()` if `renderQueued` was set.
+
+### Player List HP Bars
+
+**`PlayerEntry`** interface gains `hp: number`, `maxHp: number`,
+`hpFill: HTMLElement`.
+
+**`addPlayerRow`**: inserts a `.pl-hp-track` / `.pl-hp-fill` element between
+the player name and the K/D line.
+
+**`onPlayerHealth`**: updates `entry.hpFill.style.width` to
+`(hp/maxHp * 100)%` and sets background color:
+- `> 66%` HP → green (`#3a8a3a`)
+- `33–66%` → yellow (`#8a8a22`)
+- `< 33%` → red (`#8a2222`)
+
+**CSS** (`index.html`):
+- `.pl-hp-track`: `height: 4px; background: #333; margin: 2px 0`
+  (no border-radius — matches the squared UI aesthetic throughout).
+- `.pl-hp-fill`: `height: 100%; transition: width 0.3s, background-color 0.3s`.
+
+### HP Bar Color: Main Stats Panel
+
+`updateStats()` now applies the same three-threshold color logic to the
+main `#hp-fill` bar so it turns yellow and red as health decreases, matching
+the player-list bars.
+
+### Dead Players Cannot Take Damage
+
+`dealDamage()` in `session.ts` returns immediately if `victim.dead === true`.
+This prevents the tombstone-state player from accumulating `PLAYER_HIT`
+broadcasts, hit marker animations, and spurious double-kill events.
+
+### Pickup Blocked When Tile Occupied by Another Player
+
+**Server** (`session.ts :: onPickup`): before processing a pickup, iterates
+all players in the session. If any player other than the requester occupies
+`(msg.x, msg.y)` in the same room, the pickup is silently rejected.
+
+**Client** (`game.ts`): the left/middle click handler now checks whether the
+target tile is occupied by a remote player (`otherPlayers` map). If occupied,
+the pickup branch is skipped and the click falls through to the fire-weapon
+branch instead. This means clicking on a player standing on an item correctly
+fires a weapon at them rather than attempting a pickup.
+
+### Fix: Food Healing Not Working
+
+Two bugs were found and fixed:
+
+**Bug 1 — Pipeline data**: The `health` field (binary offset 390 in the
+`.obj` record) was zero for many consumable items including all food in
+`default.json`. The actual heal amount for these items was encoded only in
+the `def1` scripting field. All items with `magic=1 or magic=4`, `takeable`,
+`lost`, `def1 > 0`, and no existing `health` field were patched across all
+object files with `health: -def1`. Items with `magic=12` (Teleporter Cloak,
+fist) were excluded because their `def1` is an object type reference, not
+an HP amount. Affected files: `default.json`, `flames.json`, `main.json`,
+`trek.json` (17 items total).
+
+**Bug 2 — Server consumption logic**: `onUseItem` consumed items only when
+`obj.numbered === true`. Food items in `default.json` are `lost: true` but
+not `numbered`, so they were healed but never removed. Added an
+`else if (obj.lost)` branch that clears the hand slot and decrements
+`currentWeight` when a single-use item is consumed.
+
+### Consumable Use: Click Anywhere
+
+Previously consuming a held healing item required clicking on the player's
+own tile. The click handler now uses this priority order:
+
+1. Floor item at target tile AND tile not occupied by another player → `sendPickup`
+2. Hand item has `health < 0` → `sendUseItem(hand, player.x, player.y)`
+   (always targets self regardless of where the player clicked)
+3. Hand item has `opens > 0` AND target is Chebyshev-adjacent → `sendUseItem` (door)
+4. Target differs from player tile → `sendFireWeapon`
+
+The consumable branch was intentionally placed below pickup so that clicking
+on an item on the floor picks it up rather than consuming the held item.
+
+### Fix: Burden Indicator Never Reaching Zero
+
+`currentWeight` was decremented on item drop but never on item consumption
+(`onUseItem`). After eating food the item disappeared but the weight remained.
+
+**Fix** (`session.ts :: onUseItem`): before clearing the hand slot, subtract
+`calcItemWeight(obj, handItem)` from `player.currentWeight` (clamped to 0).
+Applied to both the `numbered` (when charges reach 0) and `lost` branches.
+Auto-reload from inventory does not change `currentWeight` since the reloaded
+item's weight was already counted when it was originally picked up.
+
+### Fix: Lost Weapons (Grenades) Not Consumed on Fire
+
+`onFireWeapon` only decremented `numbered` items (charge-based weapons like
+guns). `lost` items (grenades, thrown weapons) have `weapon: true` and
+`lost: true` but are not `numbered`, so they fired indefinitely.
+
+**Fix** (`session.ts :: onFireWeapon`): added an `else if (obj.lost)` branch
+after the `numbered` block that clears the hand slot, decrements
+`currentWeight`, auto-reloads from inventory (same logic as `onUseItem`),
+and calls `sendInventory(player)` after a successful shot.
+
+**Object data note**: grenade `refire` values in `default.json` are stored as
+unsigned bytes (e.g. hand grenade: 255 = signed -1, neutron grenade: 253 =
+signed -3). These produce very long cooldowns (1020–1190 ms). This is
+intentional — grenades are single-use, slow-reload weapons.
