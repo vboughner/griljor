@@ -480,8 +480,12 @@ export class GameSession {
     // For numbered items (guns, staves), require charges
     if (obj.numbered && handItem.quantity <= 0) return;
 
-    // Enforce fire rate cooldown
-    const cooldown = calcFireCooldown(obj.refire);
+    // Enforce fire rate cooldown.
+    // Pipeline emits refire as an unsigned byte; values > 127 are negative in the
+    // original C binary (e.g. 255 → -1, 253 → -3). Sign-extend before use.
+    const refireRaw = obj.refire ?? 0;
+    const refire = refireRaw > 127 ? refireRaw - 256 : refireRaw;
+    const cooldown = calcFireCooldown(refire);
     if (Date.now() - player.lastFireTime < cooldown) return;
 
     // Damage may live on the bullet/projectile object rather than the weapon itself
