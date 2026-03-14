@@ -12,7 +12,13 @@ import {
 import { GameNetwork } from './network';
 import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
 import { stepDelay } from './utils';
-import { isTileBlocked, findNextStep, computeBresenhamPath, buildExitMap, ExitTile } from './game-utils';
+import {
+  isTileBlocked,
+  findNextStep,
+  computeBresenhamPath,
+  buildExitMap,
+  ExitTile,
+} from './game-utils';
 
 const GRID = 20;
 const TOMBSTONE_BIT = '/sprites/bitmaps/tombbit.png';

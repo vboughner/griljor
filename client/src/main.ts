@@ -53,7 +53,6 @@ async function loadMap(name: string): Promise<{ mapData: MapFile; objFile: Objec
   return { mapData, objFile };
 }
 
-
 async function drawImageDataOnCanvas(
   canvas: HTMLCanvasElement,
   imgData: ImageData | null,

@@ -20,7 +20,14 @@ function makeObjects(defs: Record<number, Partial<ObjDef>>): ObjDef[] {
   return arr;
 }
 
-function makeRecObj(x: number, y: number, type: number, detail: number, infox: number, infoy: number) {
+function makeRecObj(
+  x: number,
+  y: number,
+  type: number,
+  detail: number,
+  infox: number,
+  infoy: number,
+) {
   return { x, y, type, detail, infox, infoy, zinger: 0, extra: [] };
 }
 
@@ -70,17 +77,28 @@ describe('isTileBlocked', () => {
 describe('computeBresenhamPath', () => {
   it('horizontal line', () => {
     const path = computeBresenhamPath(0, 0, 3, 0);
-    expect(path).toEqual([{ x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }]);
+    expect(path).toEqual([
+      { x: 1, y: 0 },
+      { x: 2, y: 0 },
+      { x: 3, y: 0 },
+    ]);
   });
 
   it('vertical line', () => {
     const path = computeBresenhamPath(0, 0, 0, 3);
-    expect(path).toEqual([{ x: 0, y: 1 }, { x: 0, y: 2 }, { x: 0, y: 3 }]);
+    expect(path).toEqual([
+      { x: 0, y: 1 },
+      { x: 0, y: 2 },
+      { x: 0, y: 3 },
+    ]);
   });
 
   it('diagonal line (45°)', () => {
     const path = computeBresenhamPath(0, 0, 2, 2);
-    expect(path).toEqual([{ x: 1, y: 1 }, { x: 2, y: 2 }]);
+    expect(path).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 2 },
+    ]);
   });
 
   it('same point returns empty path', () => {
@@ -115,7 +133,16 @@ describe('findNextStep', () => {
     const room = emptyRoom();
     const objects = makeObjects({ 99: { movement: 0 } });
     // Wall off target (10,10) completely
-    for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    for (const [dx, dy] of [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ]) {
       room.spot![10 + dx][10 + dy] = [0, 99];
     }
     room.spot![10][10] = [99, 0]; // target itself is open but surrounded
