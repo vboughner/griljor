@@ -3,4 +3,7 @@ import path from 'path';
 
 export default defineConfig({
   publicDir: path.resolve(__dirname, '../pipeline/out'),
+  server: {
+    port: 5073,
+  },
 });

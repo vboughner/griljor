@@ -41,11 +41,11 @@ cd server && npm run lobby
 # Terminal 2 — map/game server (registers itself with the lobby, default map is battle and port is 3001)
 cd server && npm run dev <map-name> <port-number>
 
-# Terminal 3 — Vite dev server (client, port 5173)
+# Terminal 3 — Vite dev server (client, port 5073)
 cd client && npm run dev
 ```
 
-Then open your browser to **http://localhost:5173**. The title screen will appear and connect to the lobby at `localhost:3000`. Click a game to join.
+Then open your browser to **http://localhost:5073**. The title screen will appear and connect to the lobby at `localhost:3000`. Click a game to join.
 
 ---
 
