@@ -28,6 +28,7 @@ The game is being rewritten as a browser-playable web application. The goal is t
 | [`implementation-notes.md`](implementation-notes.md) | Detailed record of what was built, phase by phase, with technical decisions |
 | [`todo.md`](todo.md) | Remaining work |
 | [`deployment-plan.md`](deployment-plan.md) | Hosting plan (Hetzner VM, nginx, PM2, HTTPS) |
+| [`scripts/`](scripts/) | Production server scripts: rebuild, add-map, remove-map |
 
 ### Running locally
 
