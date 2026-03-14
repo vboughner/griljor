@@ -1,7 +1,6 @@
 # Griljor Web Rewrite — ToDo list
 
 ## Maps
-- [ ] fix void road walk problem in paradise map
 - [ ] fix initial spawn in locked room without a key in castle map
 
 ## Bugs in Play
