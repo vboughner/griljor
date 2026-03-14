@@ -340,7 +340,13 @@ export class GameSession {
 
     // Block pickup if another player is standing on that tile
     for (const other of this.players.values()) {
-      if (other.id !== playerId && other.room === player.room && other.x === msg.x && other.y === msg.y) return;
+      if (
+        other.id !== playerId &&
+        other.room === player.room &&
+        other.x === msg.x &&
+        other.y === msg.y
+      )
+        return;
     }
 
     const obj = this.world.objects[item.type];
@@ -603,11 +609,13 @@ export class GameSession {
       if (obj.numbered) {
         handItem.quantity--;
         if (handItem.quantity <= 0) {
+          player.currentWeight = Math.max(0, player.currentWeight - calcItemWeight(obj, handItem));
           if (msg.hand === 'left') player.leftHand = null;
           else player.rightHand = null;
           handEmptied = true;
         }
       } else if (obj.lost) {
+        player.currentWeight = Math.max(0, player.currentWeight - calcItemWeight(obj, handItem));
         if (msg.hand === 'left') player.leftHand = null;
         else player.rightHand = null;
         handEmptied = true;
