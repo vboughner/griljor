@@ -35,30 +35,51 @@ function purgeStale(): void {
 async function readBody(req: http.IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let raw = '';
-    req.on('data', (chunk) => { raw += chunk; });
+    req.on('data', (chunk) => {
+      raw += chunk;
+    });
     req.on('end', () => {
-      try { resolve(JSON.parse(raw)); }
-      catch { reject(new Error('Invalid JSON')); }
+      try {
+        resolve(JSON.parse(raw));
+      } catch {
+        reject(new Error('Invalid JSON'));
+      }
     });
     req.on('error', reject);
   });
 }
 
-function isRegisterBody(b: unknown): b is { mapName: string; title?: string; teams?: number; rooms?: number; wsUrl: string; maxPlayers?: number } {
-  return typeof b === 'object' && b !== null &&
+function isRegisterBody(b: unknown): b is {
+  mapName: string;
+  title?: string;
+  teams?: number;
+  rooms?: number;
+  wsUrl: string;
+  maxPlayers?: number;
+} {
+  return (
+    typeof b === 'object' &&
+    b !== null &&
     typeof (b as Record<string, unknown>).mapName === 'string' &&
-    typeof (b as Record<string, unknown>).wsUrl === 'string';
+    typeof (b as Record<string, unknown>).wsUrl === 'string'
+  );
 }
 
-function isHeartbeatBody(b: unknown): b is { wsUrl: string; players: number; avatars?: Array<{ avatar: string; name: string }> } {
-  return typeof b === 'object' && b !== null &&
+function isHeartbeatBody(
+  b: unknown,
+): b is { wsUrl: string; players: number; avatars?: Array<{ avatar: string; name: string }> } {
+  return (
+    typeof b === 'object' &&
+    b !== null &&
     typeof (b as Record<string, unknown>).wsUrl === 'string' &&
-    typeof (b as Record<string, unknown>).players === 'number';
+    typeof (b as Record<string, unknown>).players === 'number'
+  );
 }
 
 function isUnregisterBody(b: unknown): b is { wsUrl: string } {
-  return typeof b === 'object' && b !== null &&
-    typeof (b as Record<string, unknown>).wsUrl === 'string';
+  return (
+    typeof b === 'object' && b !== null && typeof (b as Record<string, unknown>).wsUrl === 'string'
+  );
 }
 
 const CORS = {
@@ -86,7 +107,10 @@ const server = http.createServer(async (req, res) => {
   if (method === 'POST' && url === '/register') {
     try {
       const body = await readBody(req);
-      if (!isRegisterBody(body)) { send(400, { error: 'Bad body' }); return; }
+      if (!isRegisterBody(body)) {
+        send(400, { error: 'Bad body' });
+        return;
+      }
       games.set(body.wsUrl, {
         mapName: body.mapName,
         title: body.title ?? body.mapName,
@@ -101,14 +125,19 @@ const server = http.createServer(async (req, res) => {
       console.log(`[lobby] registered ${body.wsUrl} (${body.mapName})`);
       broadcast();
       send(200, { ok: true });
-    } catch { send(400, { error: 'Bad request' }); }
+    } catch {
+      send(400, { error: 'Bad request' });
+    }
     return;
   }
 
   if (method === 'POST' && url === '/heartbeat') {
     try {
       const body = await readBody(req);
-      if (!isHeartbeatBody(body)) { send(400, { error: 'Bad body' }); return; }
+      if (!isHeartbeatBody(body)) {
+        send(400, { error: 'Bad body' });
+        return;
+      }
       const entry = games.get(body.wsUrl);
       if (entry) {
         entry.players = body.players;
@@ -117,20 +146,27 @@ const server = http.createServer(async (req, res) => {
         broadcast();
       }
       send(200, { ok: true });
-    } catch { send(400, { error: 'Bad request' }); }
+    } catch {
+      send(400, { error: 'Bad request' });
+    }
     return;
   }
 
   if (method === 'POST' && url === '/unregister') {
     try {
       const body = await readBody(req);
-      if (!isUnregisterBody(body)) { send(400, { error: 'Bad body' }); return; }
+      if (!isUnregisterBody(body)) {
+        send(400, { error: 'Bad body' });
+        return;
+      }
       const mapName = games.get(body.wsUrl)?.mapName;
       games.delete(body.wsUrl);
       console.log(`[lobby] unregistered ${body.wsUrl}${mapName ? ` (${mapName})` : ''}`);
       broadcast();
       send(200, { ok: true });
-    } catch { send(400, { error: 'Bad request' }); }
+    } catch {
+      send(400, { error: 'Bad request' });
+    }
     return;
   }
 

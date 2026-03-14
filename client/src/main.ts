@@ -8,25 +8,46 @@ import { initMouseWidget, setHandItem } from './mouse-widget';
 import { runTitleScreen, drawLogo } from './title';
 import { showTooltip, hideTooltip, moveTooltip, buildItemHtml } from './tooltip';
 
-const TOMBSTONE_BIT  = '/sprites/bitmaps/tombbit.png';
+const TOMBSTONE_BIT = '/sprites/bitmaps/tombbit.png';
 const TOMBSTONE_MASK = '/sprites/bitmaps/tombmask.png';
 
 const AVATARS = [
-  'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
-  'crom', 'drustan', 'duel', 'eric', 'gm', 'mahatma', 'mcelhoe', 'mel',
-  'mike', 'mikey', 'moronus', 'ollie', 'savaki', 'spook', 'stefan',
-  'stinglai', 'trevor', 'van',
+  'aaron',
+  'adriana',
+  'albert',
+  'aragorn',
+  'avatar',
+  'bh',
+  'crescendo',
+  'crom',
+  'drustan',
+  'duel',
+  'eric',
+  'gm',
+  'mahatma',
+  'mcelhoe',
+  'mel',
+  'mike',
+  'mikey',
+  'moronus',
+  'ollie',
+  'savaki',
+  'spook',
+  'stefan',
+  'stinglai',
+  'trevor',
+  'van',
 ];
 
 async function loadMap(name: string): Promise<{ mapData: MapFile; objFile: ObjectFile }> {
   const mapResp = await fetch(`/data/maps/${name}.json`);
   if (!mapResp.ok) throw new Error(`Failed to load map: ${mapResp.status}`);
-  const mapData = await mapResp.json() as MapFile;
+  const mapData = (await mapResp.json()) as MapFile;
 
   const objName = mapData.map.objfilename.replace(/\.obj$/, '');
   const objResp = await fetch(`/data/objects/${objName}.json`);
   if (!objResp.ok) throw new Error(`Failed to load objects: ${objResp.status}`);
-  const objFile = await objResp.json() as ObjectFile;
+  const objFile = (await objResp.json()) as ObjectFile;
 
   return { mapData, objFile };
 }
@@ -35,16 +56,19 @@ function formatAge(ms: number): string {
   const s = ms / 1000;
   const m = s / 60;
   const h = m / 60;
-  if (s < 45)   return 'just joined';
-  if (s < 90)   return 'a minute';
-  if (m < 45)   return `${Math.round(m)} minutes`;
-  if (m < 90)   return 'an hour';
-  if (h < 22)   return `${Math.round(h)} hours`;
-  if (h < 36)   return 'a day';
+  if (s < 45) return 'just joined';
+  if (s < 90) return 'a minute';
+  if (m < 45) return `${Math.round(m)} minutes`;
+  if (m < 90) return 'an hour';
+  if (h < 22) return `${Math.round(h)} hours`;
+  if (h < 36) return 'a day';
   return `${Math.round(h / 24)} days`;
 }
 
-async function drawImageDataOnCanvas(canvas: HTMLCanvasElement, imgData: ImageData | null): Promise<void> {
+async function drawImageDataOnCanvas(
+  canvas: HTMLCanvasElement,
+  imgData: ImageData | null,
+): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!imgData) return;
@@ -69,7 +93,7 @@ let invObjset = '';
 let invNetwork: GameNetwork | null = null;
 
 // Track current hand items for tooltips
-let currentLeftHand:  InventoryItem | null = null;
+let currentLeftHand: InventoryItem | null = null;
 let currentRightHand: InventoryItem | null = null;
 // Per-slot item for tooltips (indexed 0..INV_SIZE-1)
 const slotItems: Array<InventoryItem | null> = [];
@@ -126,7 +150,7 @@ function buildInvGrid(): void {
 
 function initHandTooltips(): void {
   const hands: Array<{ id: string; getItem: () => InventoryItem | null }> = [
-    { id: 'hand-left-canvas',   getItem: () => currentLeftHand  },
+    { id: 'hand-left-canvas', getItem: () => currentLeftHand },
     { id: 'hand-middle-canvas', getItem: () => currentRightHand },
   ];
   for (const { id, getItem } of hands) {
@@ -164,32 +188,33 @@ async function updateInventoryPanel(msg: {
   maxWeight: number;
 }): Promise<void> {
   // Track hand items for tooltips
-  currentLeftHand  = msg.leftHand;
+  currentLeftHand = msg.leftHand;
   currentRightHand = msg.rightHand;
 
   // Update weight display and burden bar
-  const weightEl   = document.getElementById('inv-weight');
+  const weightEl = document.getElementById('inv-weight');
   const burdenFill = document.getElementById('burden-fill');
-  if (weightEl)   weightEl.textContent = `${msg.currentWeight}/${msg.maxWeight}`;
-  if (burdenFill) burdenFill.style.width = `${Math.min(100, (msg.currentWeight / msg.maxWeight) * 100)}%`;
+  if (weightEl) weightEl.textContent = `${msg.currentWeight}/${msg.maxWeight}`;
+  if (burdenFill)
+    burdenFill.style.width = `${Math.min(100, (msg.currentWeight / msg.maxWeight) * 100)}%`;
 
   // Update hand slot icons (fetched in parallel)
   const [leftImg, rightImg] = await Promise.all([
-    msg.leftHand  ? getItemImgData(msg.leftHand)  : Promise.resolve(null),
+    msg.leftHand ? getItemImgData(msg.leftHand) : Promise.resolve(null),
     msg.rightHand ? getItemImgData(msg.rightHand) : Promise.resolve(null),
   ]);
   setHandItems(leftImg, rightImg);
 
   // Update hand slot charge counts for numbered weapons
-  const handLeftCount  = document.getElementById('hand-left-count');
-  const handMidCount   = document.getElementById('hand-middle-count');
+  const handLeftCount = document.getElementById('hand-left-count');
+  const handMidCount = document.getElementById('hand-middle-count');
   if (handLeftCount) {
     const obj = msg.leftHand ? invObjects[msg.leftHand.type] : null;
-    handLeftCount.textContent = (obj?.numbered && msg.leftHand) ? String(msg.leftHand.quantity) : '';
+    handLeftCount.textContent = obj?.numbered && msg.leftHand ? String(msg.leftHand.quantity) : '';
   }
   if (handMidCount) {
     const obj = msg.rightHand ? invObjects[msg.rightHand.type] : null;
-    handMidCount.textContent = (obj?.numbered && msg.rightHand) ? String(msg.rightHand.quantity) : '';
+    handMidCount.textContent = obj?.numbered && msg.rightHand ? String(msg.rightHand.quantity) : '';
   }
 
   // Update hand slot click handlers (set once via data attr trick, easier to redo here)
@@ -244,33 +269,33 @@ async function main(): Promise<void> {
   initHandTooltips();
 
   // DOM refs — title
-  const titleScreen  = document.getElementById('title-screen') as HTMLElement;
-  const titleCanvas  = document.getElementById('title-canvas') as HTMLCanvasElement;
+  const titleScreen = document.getElementById('title-screen') as HTMLElement;
+  const titleCanvas = document.getElementById('title-canvas') as HTMLCanvasElement;
 
   // DOM refs — lobby
-  const lobbyScreen     = document.getElementById('lobby-screen') as HTMLElement;
-  const gameScreen      = document.getElementById('game-screen') as HTMLElement;
+  const lobbyScreen = document.getElementById('lobby-screen') as HTMLElement;
+  const gameScreen = document.getElementById('game-screen') as HTMLElement;
   const playerNameInput = document.getElementById('player-name') as HTMLInputElement;
-  const avatarPreview   = document.getElementById('avatar-preview') as HTMLCanvasElement;
-  const avatarDropdown  = document.getElementById('avatar-dropdown') as HTMLElement;
-  const serverList      = document.getElementById('server-list') as HTMLElement;
-  const lobbyStatus     = document.getElementById('lobby-status') as HTMLElement;
+  const avatarPreview = document.getElementById('avatar-preview') as HTMLCanvasElement;
+  const avatarDropdown = document.getElementById('avatar-dropdown') as HTMLElement;
+  const serverList = document.getElementById('server-list') as HTMLElement;
+  const lobbyStatus = document.getElementById('lobby-status') as HTMLElement;
 
   // DOM refs — game
-  const canvas     = document.getElementById('game-canvas') as HTMLCanvasElement;
-  const roomInfo   = document.getElementById('room-label') as HTMLElement;
-  const mapLabel   = document.getElementById('map-label') as HTMLElement;
-  const status     = document.getElementById('status') as HTMLElement;
-  const leaveBtn          = document.getElementById('leave-btn') as HTMLButtonElement;
-  const chatLog    = document.getElementById('chat-log') as HTMLElement;
-  const chatInput  = document.getElementById('chat-input') as HTMLInputElement;
-  const chatSend   = document.getElementById('chat-send') as HTMLButtonElement;
+  const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+  const roomInfo = document.getElementById('room-label') as HTMLElement;
+  const mapLabel = document.getElementById('map-label') as HTMLElement;
+  const status = document.getElementById('status') as HTMLElement;
+  const leaveBtn = document.getElementById('leave-btn') as HTMLButtonElement;
+  const chatLog = document.getElementById('chat-log') as HTMLElement;
+  const chatInput = document.getElementById('chat-input') as HTMLInputElement;
+  const chatSend = document.getElementById('chat-send') as HTMLButtonElement;
   const playerListEl = document.getElementById('player-list') as HTMLElement;
   const navBtns = {
     north: document.getElementById('btn-north') as HTMLButtonElement,
-    east:  document.getElementById('btn-east')  as HTMLButtonElement,
+    east: document.getElementById('btn-east') as HTMLButtonElement,
     south: document.getElementById('btn-south') as HTMLButtonElement,
-    west:  document.getElementById('btn-west')  as HTMLButtonElement,
+    west: document.getElementById('btn-west') as HTMLButtonElement,
   };
 
   // ── State ─────────────────────────────────────────────────────────
@@ -324,10 +349,16 @@ async function main(): Promise<void> {
 
   // ── Player list state ────────────────────────────────────────────
   interface PlayerEntry {
-    id: number; name: string; avatar: string;
-    kills: number; deaths: number; joinedAt: number;
+    id: number;
+    name: string;
+    avatar: string;
+    kills: number;
+    deaths: number;
+    joinedAt: number;
     dead: boolean;
-    row: HTMLElement; timeEl: HTMLElement; avatarCanvas: HTMLCanvasElement;
+    row: HTMLElement;
+    timeEl: HTMLElement;
+    avatarCanvas: HTMLCanvasElement;
   }
   const playerMap = new Map<number, PlayerEntry>();
 
@@ -336,7 +367,10 @@ async function main(): Promise<void> {
     if (!p || p.dead === dead) return; // skip if unchanged
     p.dead = dead;
     if (dead) {
-      await drawImageDataOnCanvas(p.avatarCanvas, await loadMaskedSprite(TOMBSTONE_BIT, TOMBSTONE_MASK));
+      await drawImageDataOnCanvas(
+        p.avatarCanvas,
+        await loadMaskedSprite(TOMBSTONE_BIT, TOMBSTONE_MASK),
+      );
     } else {
       await drawAvatarOnCanvas(p.avatarCanvas, p.avatar);
     }
@@ -350,8 +384,14 @@ async function main(): Promise<void> {
     }
   }
 
-  async function addPlayerRow(id: number, name: string, avatar: string,
-                               kills: number, deaths: number, joinedAt: number): Promise<void> {
+  async function addPlayerRow(
+    id: number,
+    name: string,
+    avatar: string,
+    kills: number,
+    deaths: number,
+    joinedAt: number,
+  ): Promise<void> {
     const row = document.createElement('div');
     row.className = 'player-row';
 
@@ -381,7 +421,18 @@ async function main(): Promise<void> {
     row.appendChild(avatarCanvas);
     row.appendChild(details);
 
-    playerMap.set(id, { id, name, avatar, kills, deaths, joinedAt, dead: false, row, timeEl, avatarCanvas });
+    playerMap.set(id, {
+      id,
+      name,
+      avatar,
+      kills,
+      deaths,
+      joinedAt,
+      dead: false,
+      row,
+      timeEl,
+      avatarCanvas,
+    });
     renderPlayerList();
   }
 
@@ -418,9 +469,9 @@ async function main(): Promise<void> {
 
   // ── Stats panel ──────────────────────────────────────────────────
   function updateStats(hp: number, maxHp: number): void {
-    const hpBar  = document.getElementById('hp-bar');
+    const hpBar = document.getElementById('hp-bar');
     const hpText = document.getElementById('hp-text');
-    if (hpBar)  hpBar.style.width  = `${Math.max(0, (hp / maxHp) * 100)}%`;
+    if (hpBar) hpBar.style.width = `${Math.max(0, (hp / maxHp) * 100)}%`;
     if (hpText) hpText.textContent = `${hp}/${maxHp}`;
   }
 
@@ -462,8 +513,14 @@ async function main(): Promise<void> {
     if (gameScreen.style.display === 'none') return;
     const tag = (document.activeElement as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-    if (e.key === 't') { e.preventDefault(); chatInput.focus(); }
-    if (e.key === 'L') { e.preventDefault(); void toggleMode(); }
+    if (e.key === 't') {
+      e.preventDefault();
+      chatInput.focus();
+    }
+    if (e.key === 'L') {
+      e.preventDefault();
+      void toggleMode();
+    }
   });
 
   document.addEventListener('contextmenu', (e) => {
@@ -488,7 +545,9 @@ async function main(): Promise<void> {
         // WebSocket failed — fall back to polling
         lobbyWatcher = null;
         if (!lobbyRefreshTimer) {
-          lobbyRefreshTimer = setInterval(() => { void refreshServerList(); }, 20000);
+          lobbyRefreshTimer = setInterval(() => {
+            void refreshServerList();
+          }, 20000);
         }
       },
     );
@@ -498,8 +557,14 @@ async function main(): Promise<void> {
   }
 
   function stopLobbyWatcher(): void {
-    if (lobbyWatcher) { lobbyWatcher.close(); lobbyWatcher = null; }
-    if (lobbyRefreshTimer) { clearInterval(lobbyRefreshTimer); lobbyRefreshTimer = null; }
+    if (lobbyWatcher) {
+      lobbyWatcher.close();
+      lobbyWatcher = null;
+    }
+    if (lobbyRefreshTimer) {
+      clearInterval(lobbyRefreshTimer);
+      lobbyRefreshTimer = null;
+    }
   }
 
   function showLobby(): void {
@@ -531,12 +596,17 @@ async function main(): Promise<void> {
       const avatarTaken = taken.includes(selected);
       btn.disabled = full || avatarTaken;
       if (avatarTaken && !full) {
-        btn.onmouseenter = (e) => showTooltip('Your avatar is already in use in this game. Pick a different one to join.', e.clientX, e.clientY);
-        btn.onmousemove  = (e) => moveTooltip(e.clientX, e.clientY);
+        btn.onmouseenter = (e) =>
+          showTooltip(
+            'Your avatar is already in use in this game. Pick a different one to join.',
+            e.clientX,
+            e.clientY,
+          );
+        btn.onmousemove = (e) => moveTooltip(e.clientX, e.clientY);
         btn.onmouseleave = () => hideTooltip();
       } else {
         btn.onmouseenter = null;
-        btn.onmousemove  = null;
+        btn.onmousemove = null;
         btn.onmouseleave = null;
       }
     }
@@ -559,7 +629,7 @@ async function main(): Promise<void> {
       <span class="server-rooms-hdr">Rooms</span>
       <span class="server-join-hdr"></span>
     `;
-serverList.appendChild(header);
+    serverList.appendChild(header);
     for (const game of games) {
       const row = document.createElement('div');
       row.className = 'server-row';
@@ -581,17 +651,21 @@ serverList.appendChild(header);
       joinBtn.dataset.avatars = avatarKeys;
       joinBtn.dataset.full = String(full);
       const avatarStrip = row.querySelector<HTMLElement>('.server-avatars')!;
-      for (const entry of (game.avatars ?? [])) {
+      for (const entry of game.avatars ?? []) {
         const c = document.createElement('canvas');
         c.width = 32;
         c.height = 32;
         void drawAvatarOnCanvas(c, entry.avatar);
-        c.addEventListener('mouseenter', (e) => showTooltip(`<div class="tip-name">${entry.name}</div>`, e.clientX, e.clientY));
-        c.addEventListener('mousemove',  (e) => moveTooltip(e.clientX, e.clientY));
+        c.addEventListener('mouseenter', (e) =>
+          showTooltip(`<div class="tip-name">${entry.name}</div>`, e.clientX, e.clientY),
+        );
+        c.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
         c.addEventListener('mouseleave', () => hideTooltip());
         avatarStrip.appendChild(c);
       }
-      row.querySelector<HTMLButtonElement>('.join-btn')!.addEventListener('click', () => joinServer(game));
+      row
+        .querySelector<HTMLButtonElement>('.join-btn')!
+        .addEventListener('click', () => joinServer(game));
       serverList.appendChild(row);
     }
     updateJoinButtons();
@@ -700,7 +774,9 @@ serverList.appendChild(header);
       };
 
       network.onYouDied = (msg) => {
-        appendReport(`You were slain by ${msg.killerName}. Respawning in ${Math.round(msg.deadForMs / 1000)} seconds…`);
+        appendReport(
+          `You were slain by ${msg.killerName}. Respawning in ${Math.round(msg.deadForMs / 1000)} seconds…`,
+        );
         game.notifyDied();
         void setPlayerDeadDisplay(localPlayerId, true);
       };
@@ -762,28 +838,32 @@ serverList.appendChild(header);
   }
 
   leaveBtn.addEventListener('click', () => {
-    if (leaveCountdown !== null) { cancelLeave(); return; }
+    if (leaveCountdown !== null) {
+      cancelLeave();
+      return;
+    }
     let secs = 5;
     leaveBtn.textContent = `Leaving ${secs}…`;
     leaveCountdown = setInterval(() => {
       secs--;
-      if (secs <= 0) { doLeave(); return; }
+      if (secs <= 0) {
+        doLeave();
+        return;
+      }
       leaveBtn.textContent = `Leaving ${secs}…`;
     }, 1000);
   });
 
-
-
   // Size the lobby logo canvas the same way the title screen sizes its top band
   const lobbyLogo = document.getElementById('lobby-logo') as HTMLCanvasElement;
   const logoH = Math.max(60, Math.floor(window.innerHeight / 4) - 30);
-  lobbyLogo.width  = 780;
+  lobbyLogo.width = 780;
   lobbyLogo.height = logoH;
   void drawLogo(lobbyLogo);
 
   // Half-size game screen logo
   const gameLogoCanvas = document.getElementById('game-logo') as HTMLCanvasElement;
-  gameLogoCanvas.width  = 400;
+  gameLogoCanvas.width = 400;
   gameLogoCanvas.height = 100;
   void drawLogo(gameLogoCanvas);
 

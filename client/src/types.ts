@@ -62,8 +62,8 @@ export interface ObjDef {
   opens?: number;
   swings?: boolean;
   alternate?: number;
-  health?: number;      // negative = restores HP on use
-  lost?: boolean;       // consumed on use
+  health?: number; // negative = restores HP on use
+  lost?: boolean; // consumed on use
 }
 
 export interface InventoryItem {

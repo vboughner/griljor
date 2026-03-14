@@ -27,17 +27,18 @@ export function hideTooltip(): void {
 function positionTooltip(x: number, y: number): void {
   const tip = getEl();
   const margin = 8;
-  const ox = 14, oy = 14;
+  const ox = 14,
+    oy = 14;
   tip.style.left = '0';
-  tip.style.top  = '0';
+  tip.style.top = '0';
   const tw = tip.offsetWidth;
   const th = tip.offsetHeight;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const lx = (x + ox + tw > vw - margin) ? x - ox - tw : x + ox;
-  const ly = (y + oy + th > vh - margin) ? y - oy - th : y + oy;
+  const lx = x + ox + tw > vw - margin ? x - ox - tw : x + ox;
+  const ly = y + oy + th > vh - margin ? y - oy - th : y + oy;
   tip.style.left = `${lx}px`;
-  tip.style.top  = `${ly}px`;
+  tip.style.top = `${ly}px`;
 }
 
 export function buildItemHtml(obj: ObjDef, item: InventoryItem): string {
@@ -49,8 +50,8 @@ export function buildItemHtml(obj: ObjDef, item: InventoryItem): string {
   if (obj.weapon) {
     const parts: string[] = ['Weapon'];
     if (obj.damage != null) parts.push(`dmg ${obj.damage}`);
-    if (obj.range  != null) parts.push(`range ${obj.range}`);
-    if (obj.speed  != null) parts.push(`spd ${obj.speed}`);
+    if (obj.range != null) parts.push(`range ${obj.range}`);
+    if (obj.speed != null) parts.push(`spd ${obj.speed}`);
     rows.push(`<div class="tip-row">${parts.join(' · ')}</div>`);
   }
 
@@ -63,11 +64,13 @@ export function buildItemHtml(obj: ObjDef, item: InventoryItem): string {
   }
 
   if (obj.movement != null && obj.movement > 0 && obj.movement !== 9) {
-    rows.push(`<div class="tip-row"><span class="tip-lbl">Move</span> ${stepDelay(obj.movement)} ms/step</div>`);
+    rows.push(
+      `<div class="tip-row"><span class="tip-lbl">Move</span> ${stepDelay(obj.movement)} ms/step</div>`,
+    );
   }
 
   if ((obj.health ?? 0) < 0) {
-    rows.push(`<div class="tip-row"><span class="tip-lbl">Heals</span> ${-(obj.health!)} HP</div>`);
+    rows.push(`<div class="tip-row"><span class="tip-lbl">Heals</span> ${-obj.health!} HP</div>`);
   }
   if (item.quantity > 1 || obj.numbered) {
     rows.push(`<div class="tip-row"><span class="tip-lbl">Qty</span> ${item.quantity}</div>`);

@@ -9,7 +9,8 @@ export interface GameInfo {
   avatars: Array<{ avatar: string; name: string }>;
 }
 
-const LOBBY_HTTP = (import.meta.env.VITE_LOBBY_URL as string | undefined) ?? 'http://localhost:3000';
+const LOBBY_HTTP =
+  (import.meta.env.VITE_LOBBY_URL as string | undefined) ?? 'http://localhost:3000';
 // Derive WebSocket URL from HTTP URL (http→ws, https→wss)
 const LOBBY_WS = LOBBY_HTTP.replace(/^http/, 'ws') + '/watch';
 
@@ -27,7 +28,9 @@ export function watchGames(
   ws.addEventListener('message', (ev) => {
     try {
       onUpdate(JSON.parse(ev.data as string) as GameInfo[]);
-    } catch { /* ignore malformed */ }
+    } catch {
+      /* ignore malformed */
+    }
   });
   ws.addEventListener('error', onError);
   return ws;

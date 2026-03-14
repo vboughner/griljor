@@ -10,7 +10,11 @@ function bitmapUrl(objset: string, filename: string): string {
   return `/data/objects/bitmaps/${objset}/${filename}`;
 }
 
-async function spriteForObj(obj: ObjDef, objset: string, opaque = false): Promise<ImageData | null> {
+async function spriteForObj(
+  obj: ObjDef,
+  objset: string,
+  opaque = false,
+): Promise<ImageData | null> {
   if (!obj.bitmap) return null;
   const burl = bitmapUrl(objset, obj.bitmap);
   if (obj.masked && obj.mask) {
@@ -23,7 +27,7 @@ async function spriteForObj(obj: ObjDef, objset: string, opaque = false): Promis
 export async function preloadRoomSprites(
   room: RoomData,
   objects: ObjDef[],
-  objset: string
+  objset: string,
 ): Promise<void> {
   const needed = new Set<number>();
   if (room.spot) {
@@ -38,11 +42,13 @@ export async function preloadRoomSprites(
   for (const ro of room.recorded_objects ?? []) {
     if (ro.type > 0) needed.add(ro.type);
   }
-  await Promise.all([...needed].map((id) => {
-    const obj = objects[id];
-    if (!obj) return Promise.resolve(null);
-    return spriteForObj(obj, objset);
-  }));
+  await Promise.all(
+    [...needed].map((id) => {
+      const obj = objects[id];
+      if (!obj) return Promise.resolve(null);
+      return spriteForObj(obj, objset);
+    }),
+  );
 }
 
 /** Cache of ImageData → ImageBitmap to avoid repeated createImageBitmap calls. */
@@ -63,7 +69,7 @@ export async function getBitmap(img: ImageData): Promise<ImageBitmap> {
 export async function buildRoomBackground(
   room: RoomData,
   objects: ObjDef[],
-  objset: string
+  objset: string,
 ): Promise<OffscreenCanvas> {
   const oc = new OffscreenCanvas(CANVAS_SIZE, CANVAS_SIZE);
   const ctx = oc.getContext('2d')!;
@@ -139,7 +145,7 @@ export async function renderFrame(
   floorItems: Map<string, InventoryItem> = new Map(),
   objects: ObjDef[] = [],
   objset: string = '',
-  tombstoneSprite: ImageData | null = null
+  tombstoneSprite: ImageData | null = null,
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bg, 0, 0);
@@ -158,7 +164,7 @@ export async function renderFrame(
 
   // Draw other players first (behind local player)
   for (const other of others) {
-    const effectiveSprite = (other.dead && tombstoneSprite) ? tombstoneSprite : other.sprite;
+    const effectiveSprite = other.dead && tombstoneSprite ? tombstoneSprite : other.sprite;
     if (effectiveSprite) {
       const bm = await getBitmap(effectiveSprite);
       ctx.drawImage(bm, BORDER + other.px * TILE, BORDER + other.py * TILE, TILE, TILE);

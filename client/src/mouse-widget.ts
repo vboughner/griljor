@@ -13,14 +13,15 @@ function parseXbmBytes(raw: string): number[] {
   if (!match) throw new Error('Invalid XBM');
   return match[1]
     .split(',')
-    .map(s => s.trim())
-    .filter(s => /^0x/i.test(s))
-    .map(s => parseInt(s, 16));
+    .map((s) => s.trim())
+    .filter((s) => /^0x/i.test(s))
+    .map((s) => parseInt(s, 16));
 }
 
 function renderXbm(canvas: HTMLCanvasElement): void {
   const bytes = parseXbmBytes(mousexbm);
-  const W = 128, H = 128;
+  const W = 128,
+    H = 128;
   const ctx = canvas.getContext('2d')!;
   const img = ctx.createImageData(W, H);
   for (let y = 0; y < H; y++) {
@@ -28,7 +29,7 @@ function renderXbm(canvas: HTMLCanvasElement): void {
       const idx = y * W + x;
       const isSet = (bytes[idx >> 3] >> (idx & 7)) & 1;
       const p = idx * 4;
-      img.data[p]     = 255;
+      img.data[p] = 255;
       img.data[p + 1] = 255;
       img.data[p + 2] = 255;
       img.data[p + 3] = isSet ? 255 : 0;
@@ -46,7 +47,7 @@ function drawMovementSlot(canvas: HTMLCanvasElement): void {
       const idx = y * SLOT_W + x;
       const isSet = (bytes[idx >> 3] >> (idx & 7)) & 1;
       const p = idx * 4;
-      img.data[p]     = 255;
+      img.data[p] = 255;
       img.data[p + 1] = 255;
       img.data[p + 2] = 255;
       img.data[p + 3] = isSet ? 0 : 255;
