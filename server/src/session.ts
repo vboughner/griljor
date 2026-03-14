@@ -196,37 +196,13 @@ export class GameSession {
 
     for (const other of this.players.values()) {
       if (other.id === id) continue;
-      this.send(ws, {
-        type: 'PLAYER_INFO',
-        id: other.id,
-        name: other.name,
-        avatar: other.avatar,
-        room: other.room,
-        x: other.x,
-        y: other.y,
-        kills: other.kills,
-        deaths: other.deaths,
-        joinedAt: other.joinedAt,
-        dead: other.dead,
-      });
+      this.send(ws, this.makePlayerInfo(other));
       // Also send their current HP so the new player sees health bars
       this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
     }
 
     // Tell everyone else about the new player
-    this.broadcast({
-      type: 'PLAYER_INFO',
-      id,
-      name: player.name,
-      avatar: player.avatar,
-      room: player.room,
-      x: player.x,
-      y: player.y,
-      kills: player.kills,
-      deaths: player.deaths,
-      joinedAt: player.joinedAt,
-      dead: player.dead,
-    }, id);
+    this.broadcast(this.makePlayerInfo(player), id);
 
     // Replay chat history for the new player
     for (const entry of this.chatHistory) {
@@ -625,9 +601,15 @@ export class GameSession {
     player.inventory.fill(null);
     player.currentWeight = 0;
 
+    // Build occupied set once; re-use for each drop in this batch
+    const playerOccupied = new Set<string>();
+    for (const p of this.players.values()) {
+      if (p.room === player.room) playerOccupied.add(`${p.x},${p.y}`);
+    }
+
     for (const item of items) {
       if (!item) continue;
-      const tile = this.nearbyFreeTile(player.room, player.x, player.y);
+      const tile = this.nearbyFreeTile(player.room, player.x, player.y, playerOccupied);
       if (tile) {
         const roomMap = this.roomItems.get(player.room) ?? new Map<string, InventoryItem>();
         roomMap.set(`${tile.x},${tile.y}`, item);
@@ -649,11 +631,7 @@ export class GameSession {
         .map(({ i }) => i);
 
     let candidates = pickRooms(team);
-    console.log(`[respawn] team=${team} candidate rooms: [${candidates.join(',')}]`);
-    if (candidates.length === 0) {
-      candidates = pickRooms(-1);
-      console.log(`[respawn] no team rooms, falling back to all rooms: [${candidates.join(',')}]`);
-    }
+    if (candidates.length === 0) candidates = pickRooms(-1);
     if (candidates.length === 0) return null;
 
     // Shuffle candidates so we try rooms in random order
@@ -664,9 +642,9 @@ export class GameSession {
 
     for (const roomIdx of candidates) {
       const spot = this.randomWalkableTile(roomIdx);
-      console.log(`[respawn] room=${roomIdx} -> walkable tile: ${spot ? `(${spot.x},${spot.y})` : 'null'}`);
       if (spot) return { room: roomIdx, ...spot };
     }
+    console.warn(`[respawn] team=${team} no walkable tile found in any of [${candidates.join(',')}]`);
     return null;
   }
 
@@ -707,35 +685,29 @@ export class GameSession {
   }
 
   private scheduleRespawn(victim: Player, killer: Player | null): void {
-    victim.hp = victim.maxHp;
     victim.dead = true;
+    const killerName = killer?.name ?? 'the void'; // capture now; killer may disconnect before timer fires
 
     // Broadcast tombstone state at death location
     console.log(`[respawn] ${victim.name} is dead; broadcasting tombstone at room=${victim.room} (${victim.x},${victim.y})`);
-    this.broadcast({
-      type: 'PLAYER_INFO',
-      id: victim.id, name: victim.name, avatar: victim.avatar,
-      room: victim.room, x: victim.x, y: victim.y,
-      kills: victim.kills, deaths: victim.deaths, joinedAt: victim.joinedAt,
-      dead: true,
+    this.broadcast(this.makePlayerInfo(victim));
+
+    console.log(`[respawn] sending YOU_DIED to ${victim.name} (ws readyState=${victim.ws.readyState}): deadForMs=${RESPAWN_DELAY_MS}`);
+    this.send(victim.ws, {
+      type: 'YOU_DIED',
+      killedBy: killer?.id ?? 0,
+      killerName,
+      deadForMs: RESPAWN_DELAY_MS,
     });
 
-    const youDiedMsg = {
-      type: 'YOU_DIED' as const,
-      killedBy: killer?.id ?? 0,
-      killerName: killer?.name ?? 'the void',
-      deadForMs: RESPAWN_DELAY_MS,
-    };
-    console.log(`[respawn] sending YOU_DIED to ${victim.name} (ws readyState=${victim.ws.readyState}): deadForMs=${RESPAWN_DELAY_MS}`);
-    this.send(victim.ws, youDiedMsg);
-
     victim.respawnTimer = setTimeout(() => {
-      this.doRespawn(victim, killer);
+      this.doRespawn(victim, killerName);
     }, RESPAWN_DELAY_MS);
   }
 
-  private doRespawn(victim: Player, killer: Player | null): void {
+  private doRespawn(victim: Player, killerName: string): void {
     victim.respawnTimer = null;
+    victim.hp = victim.maxHp; // restore HP at respawn, not at death
 
     const spawn = this.randomSpawnForTeam(victim.team);
     if (spawn) {
@@ -751,13 +723,7 @@ export class GameSession {
 
     // Broadcast alive state at new location
     console.log(`[respawn] broadcasting PLAYER_INFO for ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`);
-    this.broadcast({
-      type: 'PLAYER_INFO',
-      id: victim.id, name: victim.name, avatar: victim.avatar,
-      room: victim.room, x: victim.x, y: victim.y,
-      kills: victim.kills, deaths: victim.deaths, joinedAt: victim.joinedAt,
-      dead: false,
-    });
+    this.broadcast(this.makePlayerInfo(victim));
 
     // Tell the victim where they respawned
     console.log(`[respawn] sending YOU_RESPAWNED to ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`);
@@ -767,7 +733,7 @@ export class GameSession {
     this.sendStats(victim);
     this.sendInventory(victim);
 
-    console.log(`[respawn] ${victim.name} respawn complete at room=${victim.room} (${victim.x},${victim.y}) (killed by ${killer?.name ?? 'void'})`);
+    console.log(`[respawn] ${victim.name} respawn complete at room=${victim.room} (${victim.x},${victim.y}) (killed by ${killerName})`);
   }
 
   // ── Leave ─────────────────────────────────────────────────────────────────
@@ -824,15 +790,20 @@ export class GameSession {
     });
   }
 
-  private nearbyFreeTile(roomIdx: number, px: number, py: number): { x: number; y: number } | null {
+  private nearbyFreeTile(
+    roomIdx: number, px: number, py: number,
+    playerOccupied?: Set<string>,
+  ): { x: number; y: number } | null {
     const room = this.world.rooms[roomIdx];
     if (!room) return null;
     const roomMap = this.roomItems.get(roomIdx) ?? new Map<string, InventoryItem>();
 
-    // Build player-occupied set once to avoid repeated Map iteration per tile
-    const playerOccupied = new Set<string>();
-    for (const p of this.players.values()) {
-      if (p.room === roomIdx) playerOccupied.add(`${p.x},${p.y}`);
+    // Build player-occupied set if caller didn't supply one
+    if (!playerOccupied) {
+      playerOccupied = new Set<string>();
+      for (const p of this.players.values()) {
+        if (p.room === roomIdx) playerOccupied.add(`${p.x},${p.y}`);
+      }
     }
 
     // Spiral search outward from player position
@@ -848,16 +819,30 @@ export class GameSession {
           const cell = room.spot?.[tx]?.[ty];
           if (cell) {
             const [flId, wlId] = cell;
-            const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
-            const floorObj = flId > 0 ? this.world.objects[flId] : null;
-            if (wallObj  && !wallObj.movement)  continue;
-            if (floorObj && !floorObj.movement) continue;
+            // Void tile: not walkable when room has a floor (ring-style map)
+            if (!flId && !wlId) { if (room.floor) continue; }
+            else {
+              const wallObj  = wlId > 0 ? this.world.objects[wlId] : null;
+              const floorObj = flId > 0 ? this.world.objects[flId] : null;
+              if (wallObj  && !wallObj.movement)  continue;
+              if (floorObj && !floorObj.movement) continue;
+            }
           }
           return { x: tx, y: ty };
         }
       }
     }
     return null;
+  }
+
+  private makePlayerInfo(p: Player): Extract<S2CMessage, { type: 'PLAYER_INFO' }> {
+    return {
+      type: 'PLAYER_INFO',
+      id: p.id, name: p.name, avatar: p.avatar,
+      room: p.room, x: p.x, y: p.y,
+      kills: p.kills, deaths: p.deaths, joinedAt: p.joinedAt,
+      dead: p.dead,
+    };
   }
 
   private send(ws: WebSocket, msg: S2CMessage): void {

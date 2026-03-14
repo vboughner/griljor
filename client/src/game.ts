@@ -6,6 +6,8 @@ import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
 import { stepDelay } from './utils';
 
 const GRID = 20;
+const TOMBSTONE_BIT  = '/sprites/bitmaps/tombbit.png';
+const TOMBSTONE_MASK = '/sprites/bitmaps/tombmask.png';
 
 interface ExitTile { destRoom: number; landX: number; landY: number; }
 
@@ -145,6 +147,7 @@ export class Game {
   private px: number = 10;
   private py: number = 10;
   private exitMap: Map<string, ExitTile> = new Map();
+  private exitKeys: Set<string> = new Set();
   private roomBg: OffscreenCanvas | null = null;
   private playerSprite: ImageData | null = null;
   private tombstoneSprite: ImageData | null = null;
@@ -251,10 +254,10 @@ export class Game {
       }
 
       // Item actions
-      if (e.key === 's') { e.preventDefault(); this.network?.sendPickup(this.px, this.py, 'left'); return; }
-      if (e.key === 'S') { e.preventDefault(); this.network?.sendPickup(this.px, this.py, 'right'); return; }
-      if (e.key === 'Z') { e.preventDefault(); this.network?.sendDrop('left'); return; }
-      if (e.key === 'X') { e.preventDefault(); this.network?.sendDrop('right'); return; }
+      if (e.key === 's') { e.preventDefault(); if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'left'); return; }
+      if (e.key === 'S') { e.preventDefault(); if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'right'); return; }
+      if (e.key === 'Z') { e.preventDefault(); if (!this.isDead) this.network?.sendDrop('left'); return; }
+      if (e.key === 'X') { e.preventDefault(); if (!this.isDead) this.network?.sendDrop('right'); return; }
     };
     window.addEventListener('keydown', this.onKeyDown);
 
@@ -516,13 +519,8 @@ export class Game {
     this.py = py;
     this.roomBg = null;
     this.exitMap = buildExitMap(this.mapData.rooms[index], this.objects);
-    // Load tombstone sprite on first room load if not already loaded
-    if (!this.tombstoneSprite) {
-      this.tombstoneSprite = await loadMaskedSprite(
-        '/sprites/bitmaps/tombbit.png',
-        '/sprites/bitmaps/tombmask.png'
-      );
-    }
+    this.exitKeys = new Set(this.exitMap.keys());
+    this.tombstoneSprite = await loadMaskedSprite(TOMBSTONE_BIT, TOMBSTONE_MASK);
     this.network?.sendLocation(this.currentRoom, this.px, this.py);
     await this.render();
   }
@@ -624,7 +622,7 @@ export class Game {
         const next = this.movePath[0];
         const ex = Math.max(0, Math.min(GRID - 1, target.x));
         const ey = Math.max(0, Math.min(GRID - 1, target.y));
-        const exitKeys = new Set(this.exitMap.keys());
+        const exitKeys = this.exitKeys;
         if (isTileBlocked(next.x, next.y, room, this.objects, exitKeys)) {
           const step = findNextStep(this.px, this.py, ex, ey, room, this.objects, exitKeys);
           if (!step) { this.stopMoving(); return; }
@@ -645,7 +643,7 @@ export class Game {
 
       const room = this.mapData.rooms[this.currentRoom];
       const next = this.movePath[0];
-      const exitKeys = new Set(this.exitMap.keys());
+      const exitKeys = this.exitKeys;
 
       // If the next Bresenham tile is blocked, fall back to BFS for one step
       // then recompute a fresh Bresenham path from the redirected position onward

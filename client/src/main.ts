@@ -8,6 +8,9 @@ import { initMouseWidget, setHandItem } from './mouse-widget';
 import { runTitleScreen, drawLogo } from './title';
 import { showTooltip, hideTooltip, moveTooltip, buildItemHtml } from './tooltip';
 
+const TOMBSTONE_BIT  = '/sprites/bitmaps/tombbit.png';
+const TOMBSTONE_MASK = '/sprites/bitmaps/tombmask.png';
+
 const AVATARS = [
   'aaron', 'adriana', 'albert', 'aragorn', 'avatar', 'bh', 'crescendo',
   'crom', 'drustan', 'duel', 'eric', 'gm', 'mahatma', 'mcelhoe', 'mel',
@@ -323,28 +326,17 @@ async function main(): Promise<void> {
   interface PlayerEntry {
     id: number; name: string; avatar: string;
     kills: number; deaths: number; joinedAt: number;
+    dead: boolean;
     row: HTMLElement; timeEl: HTMLElement; avatarCanvas: HTMLCanvasElement;
   }
   const playerMap = new Map<number, PlayerEntry>();
-  let tombstoneImageData: ImageData | null | 'loading' = null;
-
-  async function getTombstoneImageData(): Promise<ImageData | null> {
-    if (tombstoneImageData === 'loading') return null;
-    if (tombstoneImageData !== null) return tombstoneImageData;
-    tombstoneImageData = 'loading';
-    tombstoneImageData = await loadMaskedSprite(
-      '/sprites/bitmaps/tombbit.png',
-      '/sprites/bitmaps/tombmask.png'
-    );
-    return tombstoneImageData;
-  }
 
   async function setPlayerDeadDisplay(id: number, dead: boolean): Promise<void> {
     const p = playerMap.get(id);
-    if (!p) return;
+    if (!p || p.dead === dead) return; // skip if unchanged
+    p.dead = dead;
     if (dead) {
-      const tomb = await getTombstoneImageData();
-      await drawImageDataOnCanvas(p.avatarCanvas, tomb);
+      await drawImageDataOnCanvas(p.avatarCanvas, await loadMaskedSprite(TOMBSTONE_BIT, TOMBSTONE_MASK));
     } else {
       await drawAvatarOnCanvas(p.avatarCanvas, p.avatar);
     }
@@ -389,7 +381,7 @@ async function main(): Promise<void> {
     row.appendChild(avatarCanvas);
     row.appendChild(details);
 
-    playerMap.set(id, { id, name, avatar, kills, deaths, joinedAt, row, timeEl, avatarCanvas });
+    playerMap.set(id, { id, name, avatar, kills, deaths, joinedAt, dead: false, row, timeEl, avatarCanvas });
     renderPlayerList();
   }
 
