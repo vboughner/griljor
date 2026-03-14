@@ -1,28 +1,47 @@
 import { MapFile, ObjectFile, ObjDef, RoomData, InventoryItem } from './types';
 import { loadMaskedSprite, loadSprite, setColorMode, getColorMode, ColorMode } from './assets';
-import { preloadRoomSprites, buildRoomBackground, renderFrame, getBitmap, OtherPlayer, TILE, BORDER } from './renderer';
+import {
+  preloadRoomSprites,
+  buildRoomBackground,
+  renderFrame,
+  getBitmap,
+  OtherPlayer,
+  TILE,
+  BORDER,
+} from './renderer';
 import { GameNetwork } from './network';
 import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
 import { stepDelay } from './utils';
 
 const GRID = 20;
-const TOMBSTONE_BIT  = '/sprites/bitmaps/tombbit.png';
+const TOMBSTONE_BIT = '/sprites/bitmaps/tombbit.png';
 const TOMBSTONE_MASK = '/sprites/bitmaps/tombmask.png';
 
-interface ExitTile { destRoom: number; landX: number; landY: number; }
+interface ExitTile {
+  destRoom: number;
+  landX: number;
+  landY: number;
+}
 
 /** Returns true if the tile at (x, y) cannot be entered by players.
  *  movement>0 means walkable; movement=0/absent means blocked.
  *  permeable controls missile passage only (not player movement). */
-function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[], exitKeys?: Set<string>): boolean {
+function isTileBlocked(
+  x: number,
+  y: number,
+  room: RoomData,
+  objects: ObjDef[],
+  exitKeys?: Set<string>,
+): boolean {
   if (exitKeys?.has(`${x},${y}`)) return false; // exit tiles are always walkable
   const cell = room.spot?.[x]?.[y];
   if (cell) {
     const [flId, wlId] = cell;
     // Void tile: if room has a floor tile, void = outside walls = blocked;
     // otherwise (battle-style floor=0) void = open floor = walkable.
-    if (!flId && !wlId) { if (room.floor) return true; }
-    else {
+    if (!flId && !wlId) {
+      if (room.floor) return true;
+    } else {
       // Non-void: block if any object lacks movement (absent = blocked)
       if (wlId > 0 && !((objects[wlId]?.movement ?? 0) > 0)) return true;
       if (flId > 0 && !((objects[flId]?.movement ?? 0) > 0)) return true;
@@ -38,8 +57,14 @@ function isTileBlocked(x: number, y: number, room: RoomData, objects: ObjDef[], 
 }
 
 const STEP_DIRS: [number, number][] = [
-  [0,-1],[1,0],[0,1],[-1,0],       // cardinal first (preferred for straight paths)
-  [1,-1],[1,1],[-1,1],[-1,-1],     // then diagonal
+  [0, -1],
+  [1, 0],
+  [0, 1],
+  [-1, 0], // cardinal first (preferred for straight paths)
+  [1, -1],
+  [1, 1],
+  [-1, 1],
+  [-1, -1], // then diagonal
 ];
 
 /**
@@ -47,10 +72,13 @@ const STEP_DIRS: [number, number][] = [
  * Returns [dx,dy] for the next step, or null if no path or already at target.
  */
 function findNextStep(
-  sx: number, sy: number,
-  tx: number, ty: number,
-  room: RoomData, objects: ObjDef[],
-  exitKeys?: Set<string>
+  sx: number,
+  sy: number,
+  tx: number,
+  ty: number,
+  room: RoomData,
+  objects: ObjDef[],
+  exitKeys?: Set<string>,
 ): [number, number] | null {
   if (sx === tx && sy === ty) return null;
   const visited = new Uint8Array(GRID * GRID);
@@ -58,7 +86,8 @@ function findNextStep(
   const queue: Node[] = [];
   visited[sy * GRID + sx] = 1;
   for (const [dx, dy] of STEP_DIRS) {
-    const nx = sx + dx, ny = sy + dy;
+    const nx = sx + dx,
+      ny = sy + dy;
     if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
     if (isTileBlocked(nx, ny, room, objects, exitKeys)) continue;
     const k = ny * GRID + nx;
@@ -70,7 +99,8 @@ function findNextStep(
   while (queue.length > 0) {
     const { x, y, first } = queue.shift()!;
     for (const [dx, dy] of STEP_DIRS) {
-      const nx = x + dx, ny = y + dy;
+      const nx = x + dx,
+        ny = y + dy;
       if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
       if (isTileBlocked(nx, ny, room, objects, exitKeys)) continue;
       const k = ny * GRID + nx;
@@ -90,17 +120,29 @@ function findNextStep(
  * fallback when a step is blocked.
  */
 function computeBresenhamPath(
-  x0: number, y0: number, x1: number, y1: number
-): Array<{x: number, y: number}> {
-  const path: Array<{x: number, y: number}> = [];
-  const adx = Math.abs(x1 - x0), ady = Math.abs(y1 - y0);
-  const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): Array<{ x: number; y: number }> {
+  const path: Array<{ x: number; y: number }> = [];
+  const adx = Math.abs(x1 - x0),
+    ady = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1,
+    sy = y0 < y1 ? 1 : -1;
   let err = adx - ady;
-  let cx = x0, cy = y0;
+  let cx = x0,
+    cy = y0;
   while (cx !== x1 || cy !== y1) {
     const e2 = 2 * err;
-    if (e2 > -ady) { err -= ady; cx += sx; }
-    if (e2 <  adx) { err += adx; cy += sy; }
+    if (e2 > -ady) {
+      err -= ady;
+      cx += sx;
+    }
+    if (e2 < adx) {
+      err += adx;
+      cy += sy;
+    }
     path.push({ x: cx, y: cy });
   }
   return path;
@@ -170,7 +212,7 @@ export class Game {
 
   // click-to-move path: walk toward this tile step by step
   private moveTarget: { x: number; y: number } | null = null;
-  private movePath: Array<{x: number, y: number}> = [];
+  private movePath: Array<{ x: number; y: number }> = [];
   private moveTimer: ReturnType<typeof setTimeout> | null = null;
   // rate-limit: keyboard cannot move faster than click-to-move
   private moveReadyAt = 0;
@@ -191,7 +233,7 @@ export class Game {
     roomInfo: HTMLElement,
     status: HTMLElement,
     navBtns: Record<string, HTMLButtonElement>,
-    network?: GameNetwork
+    network?: GameNetwork,
   ) {
     this.mapData = mapData;
     this.objects = objFile.objects;
@@ -205,9 +247,9 @@ export class Game {
     this.initFloorItems();
 
     navBtns['north'].onclick = () => this.move(0, -1);
-    navBtns['south'].onclick = () => this.move(0,  1);
-    navBtns['east'].onclick  = () => this.move( 1, 0);
-    navBtns['west'].onclick  = () => this.move(-1, 0);
+    navBtns['south'].onclick = () => this.move(0, 1);
+    navBtns['east'].onclick = () => this.move(1, 0);
+    navBtns['west'].onclick = () => this.move(-1, 0);
     for (const btn of Object.values(navBtns)) btn.disabled = false;
 
     this.onKeyDown = (e: KeyboardEvent) => {
@@ -217,17 +259,30 @@ export class Game {
 
       const keyDirs: Record<string, [number, number]> = {
         // Arrow keys
-        ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowRight: [1, 0], ArrowLeft: [-1, 0],
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+        ArrowRight: [1, 0],
+        ArrowLeft: [-1, 0],
         // QWERTY 8-directional (original layout)
-        q: [-1, -1], w: [0, -1], e: [1, -1],
-        a: [-1,  0],             d: [1,  0],
-        z: [-1,  1], x: [0,  1], c: [1,  1],
+        q: [-1, -1],
+        w: [0, -1],
+        e: [1, -1],
+        a: [-1, 0],
+        d: [1, 0],
+        z: [-1, 1],
+        x: [0, 1],
+        c: [1, 1],
       };
       const codeDirs: Record<string, [number, number]> = {
         // Numpad (use e.code to avoid NumLock interference)
-        Numpad7: [-1, -1], Numpad8: [0, -1], Numpad9: [1, -1],
-        Numpad4: [-1,  0],                   Numpad6: [1,  0],
-        Numpad1: [-1,  1], Numpad2: [0,  1], Numpad3: [1,  1],
+        Numpad7: [-1, -1],
+        Numpad8: [0, -1],
+        Numpad9: [1, -1],
+        Numpad4: [-1, 0],
+        Numpad6: [1, 0],
+        Numpad1: [-1, 1],
+        Numpad2: [0, 1],
+        Numpad3: [1, 1],
       };
 
       const d = keyDirs[e.key] ?? codeDirs[e.code];
@@ -254,10 +309,26 @@ export class Game {
       }
 
       // Item actions
-      if (e.key === 's') { e.preventDefault(); if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'left'); return; }
-      if (e.key === 'S') { e.preventDefault(); if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'right'); return; }
-      if (e.key === 'Z') { e.preventDefault(); if (!this.isDead) this.network?.sendDrop('left'); return; }
-      if (e.key === 'X') { e.preventDefault(); if (!this.isDead) this.network?.sendDrop('right'); return; }
+      if (e.key === 's') {
+        e.preventDefault();
+        if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'left');
+        return;
+      }
+      if (e.key === 'S') {
+        e.preventDefault();
+        if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'right');
+        return;
+      }
+      if (e.key === 'Z') {
+        e.preventDefault();
+        if (!this.isDead) this.network?.sendDrop('left');
+        return;
+      }
+      if (e.key === 'X') {
+        e.preventDefault();
+        if (!this.isDead) this.network?.sendDrop('right');
+        return;
+      }
     };
     window.addEventListener('keydown', this.onKeyDown);
 
@@ -267,7 +338,7 @@ export class Game {
       const rect = this.canvas.getBoundingClientRect();
       // Subtract BORDER so tile (0,0) starts at the inner map area
       const tx = Math.floor((e.clientX - rect.left) / TILE) - 1;
-      const ty = Math.floor((e.clientY - rect.top)  / TILE) - 1;
+      const ty = Math.floor((e.clientY - rect.top) / TILE) - 1;
 
       // Border click → walk toward that exit (any button)
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
@@ -291,10 +362,7 @@ export class Game {
         ) {
           // Holding an opener adjacent to target tile — use it (open/close door)
           this.network?.sendUseItem(hand, tx, ty);
-        } else if (
-          tx === this.px && ty === this.py &&
-          (handObj?.health ?? 0) < 0
-        ) {
+        } else if (tx === this.px && ty === this.py && (handObj?.health ?? 0) < 0) {
           // Consumable: click own tile to use on self
           this.network?.sendUseItem(hand, tx, ty);
         } else if (tx !== this.px || ty !== this.py) {
@@ -311,14 +379,22 @@ export class Game {
     });
 
     this.canvas.addEventListener('mousemove', (e) => {
-      if (!this.hoverMode) { moveTooltip(e.clientX, e.clientY); return; }
+      if (!this.hoverMode) {
+        moveTooltip(e.clientX, e.clientY);
+        return;
+      }
       const rect = this.canvas.getBoundingClientRect();
       const tx = Math.floor((e.clientX - rect.left) / TILE) - 1;
-      const ty = Math.floor((e.clientY - rect.top)  / TILE) - 1;
-      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) { hideTooltip(); return; }
+      const ty = Math.floor((e.clientY - rect.top) / TILE) - 1;
+      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
+        hideTooltip();
+        return;
+      }
       showTooltip(this.buildTileHtml(tx, ty), e.clientX, e.clientY);
     });
-    this.canvas.addEventListener('mouseleave', () => { if (this.hoverMode) hideTooltip(); });
+    this.canvas.addEventListener('mouseleave', () => {
+      if (this.hoverMode) hideTooltip();
+    });
 
     if (this.network) this.wireNetwork(this.network);
   }
@@ -343,8 +419,13 @@ export class Game {
       if (msg.id === this.myId) return; // don't store self in otherPlayers
       const sprite = await this.loadAvatarSprite(msg.avatar);
       this.otherPlayers.set(msg.id, {
-        id: msg.id, name: msg.name, avatar: msg.avatar,
-        room: msg.room, x: msg.x, y: msg.y, sprite,
+        id: msg.id,
+        name: msg.name,
+        avatar: msg.avatar,
+        room: msg.room,
+        x: msg.x,
+        y: msg.y,
+        sprite,
         dead: msg.dead,
       });
       await this.render();
@@ -402,9 +483,12 @@ export class Game {
     net.onMissileStart = (msg) => {
       if (msg.room !== this.currentRoom || msg.path.length === 0) return;
       const anim: MissileAnim = {
-        x: msg.path[0].x, y: msg.path[0].y,
-        dx: msg.dx, dy: msg.dy,
-        objType: msg.objType, timer: null,
+        x: msg.path[0].x,
+        y: msg.path[0].y,
+        dx: msg.dx,
+        dy: msg.dy,
+        objType: msg.objType,
+        timer: null,
       };
       this.missiles.set(msg.id, anim);
       void this.render();
@@ -486,7 +570,7 @@ export class Game {
   private async loadAvatarSprite(name: string): Promise<ImageData | null> {
     return loadMaskedSprite(
       `/sprites/facebits/${name}bit.png`,
-      `/sprites/facebits/${name}mask.png`
+      `/sprites/facebits/${name}mask.png`,
     );
   }
 
@@ -586,15 +670,17 @@ export class Game {
       // Off-grid border exit: navigate to the nearest edge tile first, then step off
       const ex = Math.max(0, Math.min(GRID - 1, x));
       const ey = Math.max(0, Math.min(GRID - 1, y));
-      this.movePath = (this.px === ex && this.py === ey)
-        ? []
-        : computeBresenhamPath(this.px, this.py, ex, ey);
+      this.movePath =
+        this.px === ex && this.py === ey ? [] : computeBresenhamPath(this.px, this.py, ex, ey);
     }
     this.scheduleMoveStep();
   }
 
   private stopMoving(): void {
-    if (this.moveTimer !== null) { clearTimeout(this.moveTimer); this.moveTimer = null; }
+    if (this.moveTimer !== null) {
+      clearTimeout(this.moveTimer);
+      this.moveTimer = null;
+    }
     this.moveTarget = null;
     this.movePath = [];
   }
@@ -608,7 +694,10 @@ export class Game {
   }
 
   private async doMoveStep(): Promise<void> {
-    if (this.isDead) { this.stopMoving(); return; }
+    if (this.isDead) {
+      this.stopMoving();
+      return;
+    }
     if (!this.moveTarget) return;
     const target = this.moveTarget;
 
@@ -625,7 +714,10 @@ export class Game {
         const exitKeys = this.exitKeys;
         if (isTileBlocked(next.x, next.y, room, this.objects, exitKeys)) {
           const step = findNextStep(this.px, this.py, ex, ey, room, this.objects, exitKeys);
-          if (!step) { this.stopMoving(); return; }
+          if (!step) {
+            this.stopMoving();
+            return;
+          }
           const [sdx, sdy] = step;
           this.movePath = computeBresenhamPath(this.px + sdx, this.py + sdy, ex, ey);
           this.movePath.unshift({ x: this.px + sdx, y: this.py + sdy });
@@ -639,7 +731,10 @@ export class Game {
       }
     } else {
       // In-room: follow pre-computed Bresenham path
-      if (this.movePath.length === 0) { this.stopMoving(); return; }
+      if (this.movePath.length === 0) {
+        this.stopMoving();
+        return;
+      }
 
       const room = this.mapData.rooms[this.currentRoom];
       const next = this.movePath[0];
@@ -648,8 +743,19 @@ export class Game {
       // If the next Bresenham tile is blocked, fall back to BFS for one step
       // then recompute a fresh Bresenham path from the redirected position onward
       if (isTileBlocked(next.x, next.y, room, this.objects, exitKeys)) {
-        const step = findNextStep(this.px, this.py, target.x, target.y, room, this.objects, exitKeys);
-        if (!step) { this.stopMoving(); return; }
+        const step = findNextStep(
+          this.px,
+          this.py,
+          target.x,
+          target.y,
+          room,
+          this.objects,
+          exitKeys,
+        );
+        if (!step) {
+          this.stopMoving();
+          return;
+        }
         const [sdx, sdy] = step;
         this.movePath = computeBresenhamPath(this.px + sdx, this.py + sdy, target.x, target.y);
         this.movePath.unshift({ x: this.px + sdx, y: this.py + sdy });
@@ -659,7 +765,10 @@ export class Game {
       dy = this.movePath[0].y - this.py;
     }
 
-    if (dx === 0 && dy === 0) { this.stopMoving(); return; }
+    if (dx === 0 && dy === 0) {
+      this.stopMoving();
+      return;
+    }
 
     const prevRoom = this.currentRoom;
     const prevX = this.px;
@@ -668,14 +777,23 @@ export class Game {
     await this.move(dx, dy);
 
     // Room changed: arrived in new room, stop
-    if (this.currentRoom !== prevRoom) { this.stopMoving(); return; }
+    if (this.currentRoom !== prevRoom) {
+      this.stopMoving();
+      return;
+    }
 
     // Blocked (e.g. another player on that tile): stop
-    if (this.px === prevX && this.py === prevY) { this.stopMoving(); return; }
+    if (this.px === prevX && this.py === prevY) {
+      this.stopMoving();
+      return;
+    }
 
     // Consume the step we just completed
-    if (this.movePath.length > 0 &&
-        this.movePath[0].x === this.px && this.movePath[0].y === this.py) {
+    if (
+      this.movePath.length > 0 &&
+      this.movePath[0].x === this.px &&
+      this.movePath[0].y === this.py
+    ) {
       this.movePath.shift();
     }
 
@@ -707,18 +825,27 @@ export class Game {
 
     if (flObj) {
       const blocked = flObj.permeable === false ? ' <span class="tip-lbl">[blocks]</span>' : '';
-      rows.push(`<div class="tip-row"><span class="tip-lbl">floor</span> ${flObj.name ?? `#${flId}`}${blocked}</div>`);
+      rows.push(
+        `<div class="tip-row"><span class="tip-lbl">floor</span> ${flObj.name ?? `#${flId}`}${blocked}</div>`,
+      );
       const spd = flObj.movement ?? 0;
       const delay = spd > 0 ? stepDelay(spd) : null;
       const speedLabel = delay === null ? 'blocked' : `${delay} ms/step`;
       rows.push(`<div class="tip-row"><span class="tip-lbl">speed</span> ${speedLabel}</div>`);
     }
     if (wlObj) {
-      const passable = (wlObj.movement ?? 0) > 0 ? ' <span class="tip-lbl">[passable]</span>' : ' <span class="tip-lbl">[blocks]</span>';
-      rows.push(`<div class="tip-row"><span class="tip-lbl">wall&nbsp;</span> ${wlObj.name ?? `#${wlId}`}${passable}</div>`);
+      const passable =
+        (wlObj.movement ?? 0) > 0
+          ? ' <span class="tip-lbl">[passable]</span>'
+          : ' <span class="tip-lbl">[blocks]</span>';
+      rows.push(
+        `<div class="tip-row"><span class="tip-lbl">wall&nbsp;</span> ${wlObj.name ?? `#${wlId}`}${passable}</div>`,
+      );
     }
 
-    const recHere = (room.recorded_objects ?? []).filter(ro => ro.x === tx && ro.y === ty && ro.type > 0);
+    const recHere = (room.recorded_objects ?? []).filter(
+      (ro) => ro.x === tx && ro.y === ty && ro.type > 0,
+    );
     for (const ro of recHere) {
       const obj = this.objects[ro.type];
       const nm = obj?.name ?? `#${ro.type}`;
@@ -735,7 +862,9 @@ export class Game {
 
     if (!flObj && !wlObj && recHere.length === 0 && !droppedItem) {
       rows.push(`<div class="tip-row"><span class="tip-lbl">floor</span> empty</div>`);
-      rows.push(`<div class="tip-row"><span class="tip-lbl">speed</span> ${stepDelay(9)} ms/step</div>`);
+      rows.push(
+        `<div class="tip-row"><span class="tip-lbl">speed</span> ${stepDelay(9)} ms/step</div>`,
+      );
     }
     return rows.join('');
   }
@@ -764,15 +893,20 @@ export class Game {
     const floorItems = this.floorItems.get(this.currentRoom) ?? new Map<string, InventoryItem>();
 
     await renderFrame(
-      this.canvas, this.roomBg,
+      this.canvas,
+      this.roomBg,
       this.isDead ? this.tombstoneSprite : this.playerSprite,
-      this.px, this.py,
-      others, floorItems, this.objects, this.objset,
-      this.tombstoneSprite
+      this.px,
+      this.py,
+      others,
+      floorItems,
+      this.objects,
+      this.objset,
+      this.tombstoneSprite,
     );
     this.drawBorderIndicators(room);
     await this.drawMissiles();
-    this.roomInfo.textContent = (room.name && room.name !== 'no name') ? room.name : '';
+    this.roomInfo.textContent = room.name && room.name !== 'no name' ? room.name : '';
   }
 
   private drawBorderIndicators(room: RoomData): void {
@@ -785,7 +919,8 @@ export class Game {
 
     const drawArrow = (cx: number, cy: number, dx: number, dy: number): void => {
       const S = 9;
-      const px = -dy, py = dx; // perpendicular
+      const px = -dy,
+        py = dx; // perpendicular
       ctx.beginPath();
       ctx.moveTo(cx + dx * S, cy + dy * S);
       ctx.lineTo(cx + px * S * 0.7 - dx * S * 0.7, cy + py * S * 0.7 - dy * S * 0.7);
@@ -794,10 +929,10 @@ export class Game {
       ctx.fill();
     };
 
-    if (room.exit_north >= 0) drawArrow(mapMid, halfBorder,          0, -1);
-    if (room.exit_south >= 0) drawArrow(mapMid, BORDER + mapPx + halfBorder, 0,  1);
-    if (room.exit_west  >= 0) drawArrow(halfBorder,          mapMid, -1,  0);
-    if (room.exit_east  >= 0) drawArrow(BORDER + mapPx + halfBorder, mapMid,  1,  0);
+    if (room.exit_north >= 0) drawArrow(mapMid, halfBorder, 0, -1);
+    if (room.exit_south >= 0) drawArrow(mapMid, BORDER + mapPx + halfBorder, 0, 1);
+    if (room.exit_west >= 0) drawArrow(halfBorder, mapMid, -1, 0);
+    if (room.exit_east >= 0) drawArrow(BORDER + mapPx + halfBorder, mapMid, 1, 0);
   }
 
   private async drawMissiles(): Promise<void> {

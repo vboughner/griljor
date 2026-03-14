@@ -54,7 +54,7 @@ function loadAndProcess(url: string, mode: ColorMode): Promise<ImageData | null>
         if (r >= 200 && id.data[i + 1] >= 200 && id.data[i + 2] >= 200) {
           id.data[i + 3] = 0; // white → transparent in both modes
         } else if (mode === 'dark') {
-          const v = 255 - r;  // invert: black → white on dark bg
+          const v = 255 - r; // invert: black → white on dark bg
           id.data[i] = v;
           id.data[i + 1] = v;
           id.data[i + 2] = v;
@@ -76,45 +76,48 @@ function loadAndProcess(url: string, mode: ColorMode): Promise<ImageData | null>
 
 export async function loadMaskedSprite(
   bitmapUrl: string,
-  maskUrl: string
+  maskUrl: string,
 ): Promise<ImageData | null> {
   const mode = colorMode;
   const cacheKey = `${mode}:masked:${bitmapUrl}`;
   if (imageCache.has(cacheKey)) return imageCache.get(cacheKey)!;
   if (loadingPromises.has(cacheKey)) return loadingPromises.get(cacheKey)!;
 
-  const p = Promise.all([loadRaw(bitmapUrl), loadRaw(maskUrl)]).then(
-    ([bitmapData, maskData]) => {
-      if (!bitmapData) return null;
+  const p = Promise.all([loadRaw(bitmapUrl), loadRaw(maskUrl)]).then(([bitmapData, maskData]) => {
+    if (!bitmapData) return null;
 
-      const result = new ImageData(
-        new Uint8ClampedArray(bitmapData.data),
-        bitmapData.width,
-        bitmapData.height
-      );
+    const result = new ImageData(
+      new Uint8ClampedArray(bitmapData.data),
+      bitmapData.width,
+      bitmapData.height,
+    );
 
-      for (let i = 0; i < result.data.length; i += 4) {
-        const outsideMask = !maskData || maskData.data[i] >= 200;
-        if (outsideMask) {
-          // Outside sprite silhouette → transparent
-          result.data[i + 3] = 0;
-        } else {
-          // Inside sprite silhouette: features (dark bits) vs interior (light bits)
-          const isFeature = result.data[i] < 200;
-          const v = mode === 'dark'
-            ? (isFeature ? 255 : 0)   // dark mode: white features, black interior
-            : (isFeature ? 0 : 255);  // light mode: black features, white interior
-          result.data[i] = v;
-          result.data[i + 1] = v;
-          result.data[i + 2] = v;
-          result.data[i + 3] = 255;
-        }
+    for (let i = 0; i < result.data.length; i += 4) {
+      const outsideMask = !maskData || maskData.data[i] >= 200;
+      if (outsideMask) {
+        // Outside sprite silhouette → transparent
+        result.data[i + 3] = 0;
+      } else {
+        // Inside sprite silhouette: features (dark bits) vs interior (light bits)
+        const isFeature = result.data[i] < 200;
+        const v =
+          mode === 'dark'
+            ? isFeature
+              ? 255
+              : 0 // dark mode: white features, black interior
+            : isFeature
+              ? 0
+              : 255; // light mode: black features, white interior
+        result.data[i] = v;
+        result.data[i + 1] = v;
+        result.data[i + 2] = v;
+        result.data[i + 3] = 255;
       }
-
-      imageCache.set(cacheKey, result);
-      return result;
     }
-  );
+
+    imageCache.set(cacheKey, result);
+    return result;
+  });
 
   loadingPromises.set(cacheKey, p);
   return p;
@@ -136,7 +139,7 @@ export async function loadOpaqueTile(url: string): Promise<ImageData | null> {
   if (imageCache.has(key)) return imageCache.get(key)!;
   if (loadingPromises.has(key)) return loadingPromises.get(key)!;
 
-  const bgR = mode === 'dark' ? 51 : 232;   // #333 vs #e8e8e8
+  const bgR = mode === 'dark' ? 51 : 232; // #333 vs #e8e8e8
   const p = loadRaw(url).then((raw) => {
     if (!raw) return null;
     const result = new ImageData(new Uint8ClampedArray(raw.data), raw.width, raw.height);
