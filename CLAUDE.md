@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Worktree Dev Workflow
+
+Run multiple isolated dev environments simultaneously. See [`WORKTREES.md`](WORKTREES.md) for full details.
+
+```sh
+./dev.sh                   # start lobby + game (battle) + client in tmux
+./dev.sh battle dungeon    # start lobby + 2 games + client
+./dev.sh stop              # kill the tmux session
+./new-worktree.sh 1 teams  # create worktree ../griljor-1-teams/ on branch 'teams'
+```
+
+---
+
 ## Primary Focus: Modern Web Rewrite
 
 **The active development work in this repository is a modern web rewrite of the original game.** The rewrite lives in the `server/` and `client/` directories and is implemented as a Node.js/TypeScript WebSocket server with a Vite/TypeScript browser client.
