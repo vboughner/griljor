@@ -38,7 +38,7 @@
 
 Make teams work:
 - [x] players start in their team room
-- [ ] add join team buttons (2 of them, and double the height of that map row for the avatars?)
+- [x] add join team buttons (2 of them, and double the height of that map row for the avatars?)
 - [ ] display which team people are in the player list, make your team more obvious on the map (in colors?)
 - [ ] consider friendly fire options for teammates (i.e. cannot hurt members of your own team)
 
@@ -47,7 +47,8 @@ Make teams work:
 - [x] **fire rate limiting** — legacy has an ~850ms cooldown between shots (adjustable per weapon via a `refire` field); currently you can fire infinitely fast
 - [x] **health regeneration** — in the original, players slowly heal between fights (1 HP/sec baseline, faster at higher levels); without it, consumables are the only way to recover HP
 - [ ] **periodic item placement (`.pla` files)** — weapons and items respawn on a timer per map script; the game gets stale without this
-- [ ] **team UI + friendly fire** — teams exist in data but have no visible UI selection or enforcement; see also "Make teams work" section above
+- [x] **team UI selection** — lobby now shows per-team join buttons with avatar strips and player counts for multi-team maps; server uses the chosen team for spawn placement
+- [ ] **friendly fire** — team membership is tracked server-side but teammates can still deal damage to each other
 - [ ] **win conditions** — no game ever ends; the original had capture-the-flag mechanics (`flag`/`flagteams` on objects) and a game timer with rewards
 - [x] **speed penalty when hurt** — in the original, players moved proportionally slower as they took damage (25% HP = 25% speed); creates tactical depth
 - [ ] **dark rooms + flashlight** — several maps (castle, hack, outdoor) have rooms that are dark by default; flashlight items illuminate a radius around the bearer

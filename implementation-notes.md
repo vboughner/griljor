@@ -1862,3 +1862,89 @@ and calls `sendInventory(player)` after a successful shot.
 unsigned bytes (e.g. hand grenade: 255 = signed -1, neutron grenade: 253 =
 signed -3). These produce very long cooldowns (1020–1190 ms). This is
 intentional — grenades are single-use, slow-reload weapons.
+
+---
+
+## Phase 14 — Team Selection in Lobby
+
+### Overview
+
+Multi-team maps (e.g. `battle`, `janitorialwar`) previously auto-assigned every
+joining player to team 1. This phase adds per-team join buttons in the lobby and
+threads the chosen team number from the client JOIN message through to the
+server's spawn logic.
+
+### Data Flow
+
+```
+session.ts playerAvatars  →  server heartbeat  →  lobby GameEntry  →  client GameInfo  →  lobby UI
+           adds team field       (unchanged)         avatars type         avatars type        groups by team
+```
+
+`playerAvatars` now returns `Array<{ avatar: string; name: string; team: number }>`.
+The `team` field propagates through the lobby heartbeat so the client knows which
+team each in-game avatar belongs to.
+
+### Protocol Change
+
+`JOIN` (C→S) gains a `team: number` field. The server validates it:
+
+```typescript
+const team =
+  typeof msg.team === 'number' && msg.team >= 1 && msg.team <= this.world.teams
+    ? msg.team
+    : 1;
+```
+
+Out-of-range or missing values fall back to team 1, so old clients remain
+compatible.
+
+### Lobby UI — Multi-Team Rows
+
+Single-team maps (`world.teams <= 1`) render unchanged. For multi-team maps the
+row expands to show one line per team. Column order (left to right):
+
+```
+Map | Rooms | Teams | Players (per-team count) | In Game (per-team avatars) | Join Team N buttons
+```
+
+- **`server-team-lines`** (300 px, `align-self: stretch`, `justify-content: center`, `gap: 10px`):
+  one `server-team-line` div per team containing only the avatar strip. Each line
+  has `height: 32px` so empty teams hold their vertical position.
+- **`server-team-counts`** (55 px, same stretch/center/gap): one `server-players`
+  span per team showing `N/perTeamMax`. Each span is `display: flex;
+  align-items: center; height: 32px` so the text centers with the avatar row and
+  the join button.
+- **`server-join-btns`** (`margin-left: auto`, same stretch/center/gap): one
+  `Join Team N` button per team. `min-width: 130px` matches the header column.
+
+All three stacked columns use identical `justify-content: center` + `gap: 10px`
+so their rows align regardless of exact item heights.
+
+### Join Button Disable Logic
+
+`updateJoinButtons()` sets `btn.disabled = full || avatarTaken` as before, and
+now also attaches a tooltip explaining *why*:
+
+| Condition | Tooltip |
+|-----------|---------|
+| Team full (`btn.dataset.full === 'true'`) | "This team is full." |
+| Game full (single-team button) | "This game is full." |
+| Avatar already in game | "Your avatar is already in use in this game. Pick a different one to join." |
+
+The full condition is checked first; avatar-taken is only shown when the slot
+is still open.
+
+### CSS Additions
+
+```css
+.server-team-lines { … width: 300px; align-self: stretch; justify-content: center; gap: 10px; }
+.server-team-line  { … height: 32px; }   /* holds position even when empty */
+.server-team-counts{ … width: 55px;  align-self: stretch; justify-content: center; gap: 10px; align-items: center; }
+.server-team-counts .server-players { display: flex; align-items: center; justify-content: center; height: 32px; }
+.server-join-btns  { … margin-left: auto; align-self: stretch; justify-content: center; gap: 10px; }
+.join-btn          { … min-width: 130px; }
+```
+
+The lobby `max-width` was widened from 800 px to 900 px to accommodate the
+wider join-button column (130 px vs the previous 50 px).
