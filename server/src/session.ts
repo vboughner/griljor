@@ -449,6 +449,13 @@ export class GameSession {
     this.sendInventory(player);
     this.sendStats(player);
 
+    // Sync health for all players in both directions, regardless of room or LOS
+    for (const other of this.players.values()) {
+      if (other.id === id) continue;
+      this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
+      this.send(other.ws, { type: 'PLAYER_HEALTH', id, hp: player.hp, maxHp: player.maxHp });
+    }
+
     console.log(`[+] ${msg.name} (id=${id}) joined. Players: ${this.players.size}`);
     this.startAfkTimer(player);
   }
