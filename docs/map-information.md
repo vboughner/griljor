@@ -2,7 +2,7 @@
 
 All playable maps live in `pipeline/out/data/maps/`. Each map JSON has a
 `map.objfilename` field pointing to the object set whose IDs the tile data
-uses — see `implementation-notes.md` for the full per-map object file table.
+uses — see `docs/implementation-notes.md` for the full per-map object file table.
 
 ---
 
@@ -96,7 +96,7 @@ items to drop into specific rooms or team-owned rooms on each cycle. For
 example, `battle.pla` drops neutron grenades, repair kits, food, and ammo
 at regular intervals to keep the map stocked during long games.
 
-See `modern-rewrite-plan.md` for the full format description and
+See `docs/modern-rewrite-plan.md` for the full format description and
 implementation notes. This feature is **not yet implemented** in the modern
 rewrite.
 

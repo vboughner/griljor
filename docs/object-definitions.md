@@ -1,7 +1,7 @@
 # Griljor Object Property Reference
 
 Properties that can appear on objects in `pipeline/out/data/objects/*.json`.
-Each map references its own object file — see `implementation-notes.md` for the per-map mapping.
+Each map references its own object file — see `docs/implementation-notes.md` for the per-map mapping.
 
 ---
 
