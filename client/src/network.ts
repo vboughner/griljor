@@ -10,7 +10,8 @@ type C2SMessage =
   | { type: 'INV_SWAP'; slot: number; hand: 'left' | 'right' }
   | { type: 'FIRE_WEAPON'; hand: 'left' | 'right'; targetX: number; targetY: number }
   | { type: 'USE_ITEM'; hand: 'left' | 'right'; targetX: number; targetY: number }
-  | { type: 'PING' };
+  | { type: 'PING' }
+  | { type: 'VOLUNTARY_RESPAWN' };
 
 type S2CMessage =
   | {
