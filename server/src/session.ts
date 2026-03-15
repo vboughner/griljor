@@ -30,6 +30,76 @@ const EXPLOSION_DIRS = [
  * per-item, not per-charge.  For non-numbered stackable items, multiply by
  * the stack size.
  */
+// ── Line-of-sight helpers ──────────────────────────────────────────────────
+
+/**
+ * Walk from (x1,y1) toward (x2,y2) one Chebyshev step at a time.
+ * Returns each step's tile, NOT including the start tile (x1,y1).
+ * Stops when (x2,y2) is reached.
+ */
+export function chebyshevPath(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): Array<{ x: number; y: number }> {
+  const path: Array<{ x: number; y: number }> = [];
+  let cx = x1;
+  let cy = y1;
+  while (cx !== x2 || cy !== y2) {
+    if (cx !== x2) cx += Math.sign(x2 - cx);
+    if (cy !== y2) cy += Math.sign(y2 - cy);
+    path.push({ x: cx, y: cy });
+  }
+  return path;
+}
+
+/**
+ * Returns true if any object on tile (x,y) does NOT have transparent:true,
+ * meaning it blocks line of sight.
+ */
+export function tileViewBlocked(
+  room: RoomData,
+  objects: Array<ObjDef | null>,
+  x: number,
+  y: number,
+): boolean {
+  const cell = room.spot?.[x]?.[y];
+  if (cell) {
+    const [flId, wlId] = cell;
+    if (flId > 0 && objects[flId]?.transparent !== true) return true;
+    if (wlId > 0 && objects[wlId]?.transparent !== true) return true;
+  }
+  for (const ro of room.recorded_objects) {
+    if (ro.x === x && ro.y === y) {
+      if (objects[ro.type]?.transparent !== true) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns true if tile (x2,y2) is visible from tile (x1,y1).
+ * Adjacent tiles (1 Chebyshev step) are always visible.
+ * The looker's own tile (x1,y1) is not checked; the target tile IS checked.
+ */
+export function spotIsVisible(
+  room: RoomData,
+  objects: Array<ObjDef | null>,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): boolean {
+  if (x1 === x2 && y1 === y2) return true;
+  const path = chebyshevPath(x1, y1, x2, y2);
+  if (path.length <= 1) return true; // adjacent — always visible
+  for (const { x, y } of path) {
+    if (tileViewBlocked(room, objects, x, y)) return false;
+  }
+  return true;
+}
+
 export function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryItem): number {
   if (!obj) return 0;
   if (obj.numbered) return obj.weight ?? 0;
@@ -98,6 +168,9 @@ export class GameSession {
 
   private onPlayerCountChange?: () => void;
   private regenInterval: ReturnType<typeof setInterval> | null = null;
+
+  // viewerId → Set of visible player IDs (symmetric)
+  private visibility = new Map<number, Set<number>>();
 
   constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
     this.onPlayerCountChange = opts?.onPlayerCountChange;
@@ -225,6 +298,20 @@ export class GameSession {
     });
   }
 
+  private initVisibility(id: number): void {
+    this.visibility.set(id, new Set());
+  }
+
+  private clearVisibility(id: number): void {
+    const visSet = this.visibility.get(id);
+    if (visSet) {
+      for (const otherId of visSet) {
+        this.visibility.get(otherId)?.delete(id);
+      }
+    }
+    this.visibility.delete(id);
+  }
+
   private onJoin(ws: WebSocket, msg: Extract<C2SMessage, { type: 'JOIN' }>): void {
     if (this.resetTimer !== null) {
       clearTimeout(this.resetTimer);
@@ -277,6 +364,7 @@ export class GameSession {
     }
     this.wsToId.set(ws, id);
     this.onPlayerCountChange?.();
+    this.initVisibility(id);
 
     // Tell the new player they're accepted and send existing players' info
     this.send(ws, {
@@ -292,13 +380,31 @@ export class GameSession {
 
     for (const other of this.players.values()) {
       if (other.id === id) continue;
-      this.send(ws, this.makePlayerInfo(other));
-      // Also send their current HP so the new player sees health bars
-      this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
+      if (other.room !== player.room) {
+        // Different room: always send info both ways
+        this.send(ws, this.makePlayerInfo(other));
+        this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
+        this.send(other.ws, this.makePlayerInfo(player));
+      } else {
+        // Same room: check LOS
+        const room = this.world.rooms[player.room];
+        const visible =
+          room !== undefined &&
+          spotIsVisible(room, this.world.objects, player.x, player.y, other.x, other.y);
+        if (visible) {
+          this.visibility.get(id)!.add(other.id);
+          this.visibility.get(other.id)?.add(id);
+          this.send(ws, this.makePlayerInfo(other));
+          this.send(ws, {
+            type: 'PLAYER_HEALTH',
+            id: other.id,
+            hp: other.hp,
+            maxHp: other.maxHp,
+          });
+          this.send(other.ws, this.makePlayerInfo(player));
+        }
+      }
     }
-
-    // Tell everyone else about the new player
-    this.broadcast(this.makePlayerInfo(player), id);
 
     // Replay chat history for the new player
     for (const entry of this.chatHistory) {
@@ -333,10 +439,87 @@ export class GameSession {
     const player = this.players.get(playerId);
     if (!player) return;
     if (player.dead) return;
+
+    const prevRoom = player.room;
+    if (msg.room !== prevRoom) {
+      // Room changed: hide mover from everyone who could see them in the old room
+      const moverVisSet = this.visibility.get(playerId);
+      if (moverVisSet) {
+        for (const otherId of moverVisSet) {
+          const other = this.players.get(otherId);
+          if (other && other.room === prevRoom) {
+            this.send(other.ws, { type: 'PLAYER_HIDDEN', id: playerId });
+            this.visibility.get(otherId)?.delete(playerId);
+          }
+        }
+        moverVisSet.clear();
+      }
+    }
+
     player.room = msg.room;
     player.x = msg.x;
     player.y = msg.y;
-    this.broadcast({ type: 'MY_LOCATION', id: playerId, room: msg.room, x: msg.x, y: msg.y });
+    this.updateVisibilityOnMove(playerId);
+  }
+
+  private updateVisibilityOnMove(moverId: number): void {
+    const mover = this.players.get(moverId);
+    if (!mover) return;
+    const moverVisSet = this.visibility.get(moverId);
+    if (!moverVisSet) return;
+
+    for (const other of this.players.values()) {
+      if (other.id === moverId) continue;
+
+      if (other.room !== mover.room) {
+        // Different room: always send position update
+        this.send(other.ws, {
+          type: 'MY_LOCATION',
+          id: moverId,
+          room: mover.room,
+          x: mover.x,
+          y: mover.y,
+        });
+        continue;
+      }
+
+      // Same room: check LOS
+      const wasVisible = moverVisSet.has(other.id);
+      const room = this.world.rooms[mover.room];
+      const nowVisible =
+        room !== undefined &&
+        spotIsVisible(room, this.world.objects, mover.x, mover.y, other.x, other.y);
+
+      // Update visibility sets (symmetric)
+      if (nowVisible) {
+        moverVisSet.add(other.id);
+        this.visibility.get(other.id)?.add(moverId);
+      } else {
+        moverVisSet.delete(other.id);
+        this.visibility.get(other.id)?.delete(moverId);
+      }
+
+      if (nowVisible && !wasVisible) {
+        // Case A: just became visible — introduce them to each other
+        this.send(other.ws, this.makePlayerInfo(mover));
+        this.send(mover.ws, this.makePlayerInfo(other));
+      } else if (!nowVisible && wasVisible) {
+        // Case B: just became hidden — tell both sides to hide
+        this.send(mover.ws, { type: 'PLAYER_HIDDEN', id: other.id });
+        this.send(other.ws, { type: 'PLAYER_HIDDEN', id: moverId });
+      } else if (nowVisible && wasVisible) {
+        // Case C: still visible — send normal position update to the other player
+        this.send(other.ws, {
+          type: 'MY_LOCATION',
+          id: moverId,
+          room: mover.room,
+          x: mover.x,
+          y: mover.y,
+        });
+        // no need to update mover about other — other didn't move
+      }
+      // Case D: !nowVisible && !wasVisible → nothing
+    }
   }
 
   private onMessage(playerId: number, msg: Extract<C2SMessage, { type: 'MESSAGE' }>): void {
@@ -1136,6 +1319,7 @@ export class GameSession {
 
     this.players.delete(playerId);
     this.wsToId.delete(player.ws);
+    this.clearVisibility(playerId);
     this.broadcast({ type: 'LEAVING_GAME', id: playerId });
     if (this.players.size === 0) {
       if (this.world.resetOnEmpty) {
@@ -1251,8 +1435,56 @@ export class GameSession {
     } else {
       console.warn(`[${context}] ${player.name} team=${player.team} no spawn — staying in place`);
     }
-    this.broadcast(this.makePlayerInfo(player));
+    this.recomputeVisibilityAfterTeleport(player);
     this.send(player.ws, { type: 'YOU_RESPAWNED', room: player.room, x: player.x, y: player.y });
+  }
+
+  /**
+   * Called after a player teleports (respawn, voluntary respawn).
+   * Hides the player from everyone who could see them before, clears their
+   * visibility set, then recomputes who can see them at the new position and
+   * sends appropriate PLAYER_INFO reveals.
+   */
+  private recomputeVisibilityAfterTeleport(player: Player): void {
+    // Hide from everyone who currently sees this player
+    const oldVisSet = this.visibility.get(player.id);
+    if (oldVisSet) {
+      for (const otherId of oldVisSet) {
+        const other = this.players.get(otherId);
+        if (other) {
+          this.send(other.ws, { type: 'PLAYER_HIDDEN', id: player.id });
+          this.visibility.get(otherId)?.delete(player.id);
+        }
+      }
+      oldVisSet.clear();
+    }
+
+    const newVisSet = this.visibility.get(player.id) ?? new Set<number>();
+    this.visibility.set(player.id, newVisSet);
+
+    // Recompute visibility for all others
+    for (const other of this.players.values()) {
+      if (other.id === player.id) continue;
+
+      if (other.room !== player.room) {
+        // Different room: send roster info (position in a different room)
+        this.send(other.ws, this.makePlayerInfo(player));
+        continue;
+      }
+
+      // Same room: check LOS
+      const room = this.world.rooms[player.room];
+      const visible =
+        room !== undefined &&
+        spotIsVisible(room, this.world.objects, player.x, player.y, other.x, other.y);
+
+      if (visible) {
+        newVisSet.add(other.id);
+        this.visibility.get(other.id)?.add(player.id);
+        this.send(other.ws, this.makePlayerInfo(player));
+        this.send(player.ws, this.makePlayerInfo(other));
+      }
+    }
   }
 
   private sendInventory(player: Player): void {
