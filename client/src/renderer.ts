@@ -142,19 +142,41 @@ export interface OtherPlayer {
  * @param boxOtherPlayers  master toggle — false means no indicators for anyone
  */
 const INDICATOR_TEAMMATE = '#00cc00';
-const INDICATOR_ENEMY = '#ffffff';
+const INDICATOR_ENEMY = '#ff4444';
+const CORNER_LEN = 8; // px per corner arm
 
 export function playerIndicatorStyle(
   teamsEnabled: boolean,
   localTeam: number,
   otherTeam: number,
   boxOtherPlayers: boolean,
-): { color: string; lineWidth: number } | null {
+): { color: string; lineWidth: number; corners: boolean } | null {
   if (!boxOtherPlayers) return null;
   if (teamsEnabled && otherTeam !== 0 && otherTeam === localTeam) {
-    return { color: INDICATOR_TEAMMATE, lineWidth: 1 };
+    return { color: INDICATOR_TEAMMATE, lineWidth: 1, corners: true };
   }
-  return { color: INDICATOR_ENEMY, lineWidth: 1 };
+  return { color: INDICATOR_ENEMY, lineWidth: 1, corners: false };
+}
+
+/** Draw corner brackets around a tile box at pixel (bx, by) with size bw×bh. */
+function strokeCorners(
+  ctx: CanvasRenderingContext2D,
+  bx: number,
+  by: number,
+  bw: number,
+  bh: number,
+): void {
+  const c = CORNER_LEN;
+  ctx.beginPath();
+  // top-left
+  ctx.moveTo(bx + c, by); ctx.lineTo(bx, by); ctx.lineTo(bx, by + c);
+  // top-right
+  ctx.moveTo(bx + bw - c, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + c);
+  // bottom-left
+  ctx.moveTo(bx, by + bh - c); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + c, by + bh);
+  // bottom-right
+  ctx.moveTo(bx + bw - c, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - c);
+  ctx.stroke();
 }
 
 /**
@@ -205,10 +227,16 @@ export async function renderFrame(
     if (boxOtherPlayers && !other.dead) {
       const style = playerIndicatorStyle(teamsEnabled, localTeam, other.team, boxOtherPlayers);
       if (style) {
+        const bx = BORDER + other.px * TILE + 1;
+        const by = BORDER + other.py * TILE + 1;
         ctx.save();
         ctx.strokeStyle = style.color;
         ctx.lineWidth = style.lineWidth;
-        ctx.strokeRect(BORDER + other.px * TILE + 1, BORDER + other.py * TILE + 1, TILE - 2, TILE - 2);
+        if (style.corners) {
+          strokeCorners(ctx, bx, by, TILE - 2, TILE - 2);
+        } else {
+          ctx.strokeRect(bx, by, TILE - 2, TILE - 2);
+        }
         ctx.restore();
       }
     }
@@ -227,7 +255,7 @@ export async function renderFrame(
     ctx.save();
     ctx.strokeStyle = INDICATOR_TEAMMATE;
     ctx.lineWidth = 1;
-    ctx.strokeRect(BORDER + px * TILE + 1, BORDER + py * TILE + 1, TILE - 2, TILE - 2);
+    strokeCorners(ctx, BORDER + px * TILE + 1, BORDER + py * TILE + 1, TILE - 2, TILE - 2);
     ctx.restore();
   }
 }
