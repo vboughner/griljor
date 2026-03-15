@@ -169,13 +169,21 @@ function strokeCorners(
   const c = CORNER_LEN;
   ctx.beginPath();
   // top-left
-  ctx.moveTo(bx + c, by); ctx.lineTo(bx, by); ctx.lineTo(bx, by + c);
+  ctx.moveTo(bx + c, by);
+  ctx.lineTo(bx, by);
+  ctx.lineTo(bx, by + c);
   // top-right
-  ctx.moveTo(bx + bw - c, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + c);
+  ctx.moveTo(bx + bw - c, by);
+  ctx.lineTo(bx + bw, by);
+  ctx.lineTo(bx + bw, by + c);
   // bottom-left
-  ctx.moveTo(bx, by + bh - c); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + c, by + bh);
+  ctx.moveTo(bx, by + bh - c);
+  ctx.lineTo(bx, by + bh);
+  ctx.lineTo(bx + c, by + bh);
   // bottom-right
-  ctx.moveTo(bx + bw - c, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - c);
+  ctx.moveTo(bx + bw - c, by + bh);
+  ctx.lineTo(bx + bw, by + bh);
+  ctx.lineTo(bx + bw, by + bh - c);
   ctx.stroke();
 }
 

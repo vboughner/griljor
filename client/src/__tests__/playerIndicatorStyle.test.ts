@@ -25,9 +25,21 @@ describe('playerIndicatorStyle', () => {
 
   it('free-for-all map (teamsEnabled=false): all players get red full-rect indicator', () => {
     // teamsEnabled=false — no green teammate outlines
-    expect(playerIndicatorStyle(false, 1, 1, true)).toEqual({ color: '#ff4444', lineWidth: 1, corners: false });
-    expect(playerIndicatorStyle(false, 2, 2, true)).toEqual({ color: '#ff4444', lineWidth: 1, corners: false });
-    expect(playerIndicatorStyle(false, 0, 3, true)).toEqual({ color: '#ff4444', lineWidth: 1, corners: false });
+    expect(playerIndicatorStyle(false, 1, 1, true)).toEqual({
+      color: '#ff4444',
+      lineWidth: 1,
+      corners: false,
+    });
+    expect(playerIndicatorStyle(false, 2, 2, true)).toEqual({
+      color: '#ff4444',
+      lineWidth: 1,
+      corners: false,
+    });
+    expect(playerIndicatorStyle(false, 0, 3, true)).toEqual({
+      color: '#ff4444',
+      lineWidth: 1,
+      corners: false,
+    });
   });
 
   it('free-for-all map, boxOtherPlayers=false → null', () => {
