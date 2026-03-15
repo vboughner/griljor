@@ -18,7 +18,7 @@
 #
 # To also commit the map to the repo config, update:
 #   server/ecosystem.config.js  — add the app entry
-#   nginx-example.conf          — add the ~^/ws/<mapname> line to the map block
+#   server/nginx-example.conf   — add the ~^/ws/<mapname> line to the map block
 #
 
 set -e
@@ -118,5 +118,5 @@ echo "  pm2 restart $MAPNAME"
 echo ""
 echo "To sync the repo config files to match the live map list, run:"
 echo "  bash ~/griljor/scripts/sync-repo-config.sh"
-echo "  git add server/ecosystem.config.js nginx-example.conf"
+echo "  git add server/ecosystem.config.js server/nginx-example.conf"
 echo "  git commit -m \"Update active map list\""

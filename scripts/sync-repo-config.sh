@@ -7,7 +7,7 @@
 #
 # Files updated:
 #   server/ecosystem.config.js  — rebuilds the map app entries
-#   nginx-example.conf          — rebuilds the map $uri $ws_port block
+#   server/nginx-example.conf   — rebuilds the map $uri $ws_port block
 #
 # Usage:  bash ~/griljor/scripts/sync-repo-config.sh
 #
@@ -99,7 +99,7 @@ else:
 # ---------------------------------------------------------------------------
 # 3. Update nginx-example.conf
 # ---------------------------------------------------------------------------
-nginx_path = f'{repo_dir}/nginx-example.conf'
+nginx_path = f'{repo_dir}/server/nginx-example.conf'
 with open(nginx_path) as f:
     nginx = f.read()
 
@@ -118,17 +118,17 @@ new_nginx = re.sub(
 )
 
 if new_nginx == nginx:
-    print('nginx-example.conf: no changes needed.')
+    print('server/nginx-example.conf: no changes needed.')
 else:
     with open(nginx_path, 'w') as f:
         f.write(new_nginx)
-    print('nginx-example.conf: updated.')
+    print('server/nginx-example.conf: updated.')
 
 print()
 print('Done. Review the changes with:')
-print('  git diff server/ecosystem.config.js nginx-example.conf')
+print('  git diff server/ecosystem.config.js server/nginx-example.conf')
 print()
 print('Then commit:')
-print('  git add server/ecosystem.config.js nginx-example.conf')
+print('  git add server/ecosystem.config.js server/nginx-example.conf')
 print('  git commit -m "Update active map list"')
 PYEOF

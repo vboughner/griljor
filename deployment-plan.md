@@ -80,7 +80,7 @@ The active maps are configured here. See the file in the repo for the current li
 
 ### `nginx-example.conf`
 
-See the file in the repo root. This is the template — the live config on the server diverges after certbot adds SSL lines.
+See the file in `server/`. This is the template — the live config on the server diverges after certbot adds SSL lines.
 
 ---
 
@@ -94,7 +94,7 @@ See the file in the repo root. This is the template — the live config on the s
 | `client/src/network.ts` | Accept full WebSocket URL string (already does) |
 | `server/ecosystem.config.js` | PM2 config for all processes |
 | `client/.env.production` | Production lobby URL — origin only, no `/games` (gitignored) |
-| `nginx-example.conf` | nginx config template |
+| `server/nginx-example.conf` | nginx config template |
 
 ---
 
@@ -195,7 +195,7 @@ npm install && npm run build && cd ..
 Copy the template and fix the home directory path (the template uses `/home/ubuntu/` as a placeholder):
 
 ```sh
-sudo cp ~/griljor/nginx-example.conf /etc/nginx/sites-available/griljor
+sudo cp ~/griljor/server/nginx-example.conf /etc/nginx/sites-available/griljor
 sudo sed -i 's|/home/ubuntu/|/home/griljor/|g' /etc/nginx/sites-available/griljor
 sudo ln -s /etc/nginx/sites-available/griljor /etc/nginx/sites-enabled/griljor
 sudo rm -f /etc/nginx/sites-enabled/default
@@ -275,8 +275,8 @@ After adding or removing maps, run this to update `server/ecosystem.config.js` a
 
 ```sh
 bash ~/griljor/scripts/sync-repo-config.sh
-git diff server/ecosystem.config.js nginx-example.conf
-git add server/ecosystem.config.js nginx-example.conf
+git diff server/ecosystem.config.js server/nginx-example.conf
+git add server/ecosystem.config.js server/nginx-example.conf
 git commit -m "Update active map list"
 ```
 

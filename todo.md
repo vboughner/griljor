@@ -26,7 +26,7 @@
 ## Change / Add / Reorg
 - [ ] it might be nice for the dmg and health? numbers to move upwards a little more than they do
 - [ ] move a bunch of files to the docs folder instead and update all the references from CLAUDE.md and README.md
-- [ ] move nginx-example.conf to server folder and update references to it
+- [x] move nginx-example.conf to server folder and update references to it
 - [ ] add something to the title screen that mentions it is an old school game from 1989 and has been modernized, include a link to the repository
 - [ ] time people out of AFK games so that they don't stay on the server forever if they leave their browser tab open
 - [ ] wait a little longer to reset the map after no one is left in it, and consider a timer in the lobby that tells you how long until the map resets (30 seconds?)
