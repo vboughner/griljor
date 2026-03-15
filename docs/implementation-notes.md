@@ -2079,3 +2079,77 @@ grenade msPerStep = round(2500 / (speed × 2.2))
 explosion msPerStep = round(2500 / (boomObj.speed × 2.2))
   explosion object (speed=4): ~284 ms/step; radius=1 → ends at 756+284 = 1040 ms
 ```
+
+## Phase 16 — Server-Side Line-of-Sight Visibility
+
+Players are only revealed to each other when there is a clear line of sight. Visibility is computed entirely on the server; clients receive `PLAYER_INFO` when a player becomes visible and `PLAYER_HIDDEN` when they disappear.
+
+### Algorithm
+
+Ported from the legacy `sight.c` implementation. Three exported pure functions in `server/src/session.ts`:
+
+**`chebyshevPath(x1, y1, x2, y2)`** — walks from `(x1,y1)` toward `(x2,y2)` one 8-directional step at a time (diagonal counts as one step), returning each tile visited, excluding the start tile.
+
+**`tileViewBlocked(room, objects, x, y)`** — returns `true` if any object on tile `(x,y)` lacks `transparent: true`:
+- floor object from `spot[x][y][0]`
+- wall object from `spot[x][y][1]`
+- any `recorded_object` positioned at `(x,y)`
+
+**`spotIsVisible(room, objects, x1, y1, x2, y2)`**:
+- If the path has 0 or 1 tiles (same tile or adjacent): always `true` — players must always be able to see an adjacent tile so they know it is occupied.
+- Otherwise: iterate every tile on the path (including the target tile). If any tile is view-blocked → `false`.
+
+### Directional LOS
+
+LOS is **not symmetric** when one player is on an opaque tile. The looker's own tile is always excluded (you can see out of the forest you are standing in), but the target's tile is always included (you cannot see into someone else's forest from a distance).
+
+Each visibility event runs two independent checks:
+- `spotIsVisible(A → B)` — determines whether A can see B (updates A's vis set)
+- `spotIsVisible(B → A)` — determines whether B can see A (updates B's vis set)
+
+These can differ. A player hiding in forest can observe others, but others cannot see them from more than one tile away.
+
+### Transparency Data
+
+The `transparent?: boolean` field on `ObjDef` controls whether a tile passes sight. Objects without this field (or with it set to `false`) block vision. Key examples from the object files:
+
+| Category | Examples | transparent |
+|---|---|---|
+| Open floors, paths, bridges | stone, grey floor, plains, beach | `true` |
+| Walls, corners, fences | block wall, inner corner, closed door | absent → blocks |
+| Terrain players can hide in | forest, large tree, potted plant, bush | absent → blocks |
+| Open doors, broken doors | open door, broken door | `true` |
+| Stairs and exits | all stair variants | `true` |
+| Carried items and weapons | all takeable objects | `true` |
+
+### Visibility Tracking
+
+`GameSession` maintains `private visibility = new Map<number, Set<number>>()`. `visibility.get(id)` is the set of player IDs that player `id` can currently see from their own perspective.
+
+Updates happen in three places:
+
+1. **`onJoin`** — for each existing player in the same room, runs both directional checks and sends `PLAYER_INFO` + `PLAYER_HEALTH` to each side that can see the other.
+2. **`updateVisibilityOnMove(moverId)`** — called on every `MY_LOCATION`. For each same-room player: computes both directional checks, updates both vis sets, and sends the appropriate message:
+   - newly visible → `PLAYER_INFO` + `PLAYER_HEALTH`
+   - just hidden → `PLAYER_HIDDEN`
+   - still visible → `MY_LOCATION` (position update only, to the observer side)
+3. **`recomputeVisibilityAfterTeleport(player)`** — called on respawn. Clears all stale visibility for the player, then runs the same two-directional check for every other player in the new room.
+
+### Cross-Room Rules
+
+- Players in **different rooms** are never automatically revealed to each other — no `PLAYER_INFO` or `MY_LOCATION` is sent across room boundaries.
+- **Health changes** (`PLAYER_HEALTH`) are broadcast to all players regardless of room or visibility, so HP bars stay accurate even for unseen players.
+- When a player **changes rooms**, `PLAYER_HIDDEN` is sent to every player in the old room whose vis set contained the mover. The mover's vis set is cleared.
+
+### Protocol Messages
+
+| Message | Direction | Meaning |
+|---|---|---|
+| `PLAYER_INFO` | S→C | Player just entered your field of view (or joined visible to you) |
+| `PLAYER_HIDDEN` | S→C | Player just left your field of view or exited the room |
+| `MY_LOCATION` | S→C | Position update for a player already in your field of view |
+
+### Reference
+
+Legacy implementation: `legacy/src/sight.c` (`spot_is_visible`, `update_vision`).
+Research notes: `docs/legacy-light-and-sight.md`.
