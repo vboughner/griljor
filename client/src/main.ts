@@ -893,10 +893,13 @@ async function main(): Promise<void> {
         appendReport(
           `You were slain by ${msg.killerName}. Respawning in ${Math.round(msg.deadForMs / 1000)} seconds…`,
         );
+        cancelRespawn();
+        respawnBtn.disabled = true;
         game.notifyDied();
         void setPlayerDeadDisplay(localPlayerId, true);
       };
       network.onYouRespawned = (msg) => {
+        respawnBtn.disabled = false;
         void game.notifyRespawned(msg.room, msg.x, msg.y);
         void setPlayerDeadDisplay(localPlayerId, false);
       };
@@ -929,11 +932,13 @@ async function main(): Promise<void> {
   }
 
   // Returns a cancel function. When the countdown reaches zero, calls onConfirm().
+  // beforeStart (optional) is called the moment the countdown begins.
   function makeCountdownButton(
     btn: HTMLButtonElement,
     idleLabel: string,
     activePrefix: string,
     onConfirm: () => void,
+    beforeStart?: () => void,
   ): () => void {
     let timer: ReturnType<typeof setInterval> | null = null;
     function cancel(): void {
@@ -948,6 +953,7 @@ async function main(): Promise<void> {
         cancel();
         return;
       }
+      beforeStart?.();
       let secs = 5;
       btn.textContent = `${activePrefix} ${secs}…`;
       timer = setInterval(() => {
@@ -963,13 +969,27 @@ async function main(): Promise<void> {
     return cancel;
   }
 
-  const cancelRespawn = makeCountdownButton(respawnBtn, 'Respawn', 'Respawn', () =>
-    currentNetwork?.sendVoluntaryRespawn(),
+  let respawnWarned = false;
+
+  // cancelLeave is a forward reference — valid because it's only called on click, after init.
+  const cancelRespawn = makeCountdownButton(
+    respawnBtn,
+    'Respawn',
+    'Respawn',
+    () => currentNetwork?.sendVoluntaryRespawn(),
+    () => {
+      cancelLeave();
+      if (!respawnWarned) {
+        respawnWarned = true;
+        appendReport('Warning: respawning will drop all of your carried items.');
+      }
+    },
   );
 
   function doLeave(): void {
     cancelRespawn();
     cancelLeave();
+    respawnWarned = false;
     currentNetwork?.sendLeave();
     currentGame?.destroy();
     currentGame = null;
@@ -983,7 +1003,9 @@ async function main(): Promise<void> {
     refreshServerList();
   }
 
-  const cancelLeave = makeCountdownButton(leaveBtn, 'Leave Game', 'Leaving', doLeave);
+  const cancelLeave = makeCountdownButton(leaveBtn, 'Leave Game', 'Leaving', doLeave, () =>
+    cancelRespawn(),
+  );
 
   // Size the lobby logo canvas the same way the title screen sizes its top band
   const lobbyLogo = document.getElementById('lobby-logo') as HTMLCanvasElement;
