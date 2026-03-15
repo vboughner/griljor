@@ -181,6 +181,9 @@ export class GameSession {
           case 'USE_ITEM':
             this.onUseItem(playerId, msg);
             break;
+          case 'VOLUNTARY_RESPAWN':
+            this.onVoluntaryRespawn(playerId);
+            break;
           case 'PING':
             break; // no-op: keeps the connection alive
         }
@@ -985,6 +988,29 @@ export class GameSession {
     }
     this.onPlayerCountChange?.();
     console.log(`[-] ${player.name} (id=${playerId}) left. Players: ${this.players.size}`);
+  }
+
+  private onVoluntaryRespawn(playerId: number): void {
+    const player = this.players.get(playerId);
+    if (!player || player.dead) return;
+
+    this.dropPlayerItems(player);
+
+    const spawn = this.randomSpawnForTeam(player.team);
+    if (spawn) {
+      player.room = spawn.room;
+      player.x = spawn.x;
+      player.y = spawn.y;
+    }
+
+    this.broadcast(this.makePlayerInfo(player));
+    this.send(player.ws, { type: 'YOU_RESPAWNED', room: player.room, x: player.x, y: player.y });
+
+    const text = `${player.name} chose to respawn.`;
+    this.broadcast({ type: 'MESSAGE', from: 0, name: 'GM', to: 'all', text });
+    this.chatHistory.push({ from: 0, name: 'GM', text });
+
+    this.sendInventory(player);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
