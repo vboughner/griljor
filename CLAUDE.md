@@ -65,10 +65,10 @@ When writing integration tests that involve timers (fire rate, missiles, regen, 
 
 **The active development work in this repository is a modern web rewrite of the original game.** The rewrite lives in the `server/` and `client/` directories and is implemented as a Node.js/TypeScript WebSocket server with a Vite/TypeScript browser client.
 
-- **Overall plan and feature roadmap**: see [`modern-rewrite-plan.md`](modern-rewrite-plan.md)
-- **What has already been implemented**: see [`implementation-notes.md`](implementation-notes.md)
-- **What still needs to be done**: see [`todo.md`](todo.md)
-- **Deployment and hosting plan**: see [`deployment-plan.md`](deployment-plan.md)
+- **Overall plan and feature roadmap**: see [`docs/modern-rewrite-plan.md`](docs/modern-rewrite-plan.md)
+- **What has already been implemented**: see [`docs/implementation-notes.md`](docs/implementation-notes.md)
+- **What still needs to be done**: see [`TODO.md`](TODO.md)
+- **Deployment and hosting plan**: see [`docs/deployment-plan.md`](docs/deployment-plan.md)
 
 When asked to work on the game, assume the target is the modern web rewrite unless the user explicitly asks about the legacy C codebase.
 

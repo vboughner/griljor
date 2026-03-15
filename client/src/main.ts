@@ -258,7 +258,8 @@ async function main(): Promise<void> {
 
   // DOM refs — title
   const titleScreen = document.getElementById('title-screen') as HTMLElement;
-  const titleCanvas = document.getElementById('title-canvas') as HTMLCanvasElement;
+  const titleLetters = document.getElementById('title-letters') as HTMLCanvasElement;
+  const titleTerrain = document.getElementById('title-terrain') as HTMLCanvasElement;
 
   // DOM refs — lobby
   const lobbyScreen = document.getElementById('lobby-screen') as HTMLElement;
@@ -320,6 +321,13 @@ async function main(): Promise<void> {
     avatarDropdown.appendChild(c);
   }
 
+  playerNameInput.addEventListener(
+    'focus',
+    () => {
+      playerNameInput.select();
+    },
+    { once: true },
+  );
   playerNameInput.addEventListener('input', () => {
     if (playerNameInput.value.trim() === '') {
       nameManuallyEdited = false;
@@ -331,9 +339,30 @@ async function main(): Promise<void> {
   setSelectedAvatar(selectedAvatar);
   playerNameInput.value = selectedAvatar;
 
-  document.getElementById('random-avatar-btn')!.addEventListener('click', () => {
+  const randomAvatarBtn = document.getElementById('random-avatar-btn')!;
+  let randomBtnTipTimer = 0;
+  randomAvatarBtn.addEventListener('click', (e) => {
     const others = AVATARS.filter((a) => a !== selectedAvatar);
     setSelectedAvatar(others[Math.floor(Math.random() * others.length)]);
+    clearTimeout(randomBtnTipTimer);
+    hideTooltip();
+    randomBtnTipTimer = window.setTimeout(
+      () => showTooltip('Refresh to a random avatar', e.clientX, e.clientY),
+      1000,
+    );
+  });
+  randomAvatarBtn.addEventListener('mouseenter', (e) => {
+    const x = e.clientX,
+      y = e.clientY;
+    randomBtnTipTimer = window.setTimeout(
+      () => showTooltip('Refresh to a random avatar', x, y),
+      1000,
+    );
+  });
+  randomAvatarBtn.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
+  randomAvatarBtn.addEventListener('mouseleave', () => {
+    clearTimeout(randomBtnTipTimer);
+    hideTooltip();
   });
 
   // ── Player list state ────────────────────────────────────────────
@@ -657,7 +686,7 @@ async function main(): Promise<void> {
       <span class="server-rooms-hdr">Rooms</span>
       <span class="server-teams-hdr">Teams</span>
       <span class="server-count-hdr">Players</span>
-      <span class="server-avatars-hdr">In Game</span>
+      <span class="server-avatars-hdr">Avatars</span>
       <span class="server-join-hdr"></span>
     `;
     serverList.appendChild(header);
@@ -1007,11 +1036,9 @@ async function main(): Promise<void> {
     cancelRespawn(),
   );
 
-  // Size the lobby logo canvas the same way the title screen sizes its top band
   const lobbyLogo = document.getElementById('lobby-logo') as HTMLCanvasElement;
-  const logoH = Math.max(60, Math.floor(window.innerHeight / 4) - 30);
-  lobbyLogo.width = 780;
-  lobbyLogo.height = logoH;
+  lobbyLogo.width = 400;
+  lobbyLogo.height = 100;
   void drawLogo(lobbyLogo);
 
   // Half-size game screen logo
@@ -1022,7 +1049,7 @@ async function main(): Promise<void> {
 
   showTitle();
   void refreshServerList(); // start fetching in background during title
-  await runTitleScreen(titleCanvas);
+  await runTitleScreen(titleLetters, titleTerrain);
   hideTitle();
   showLobby();
 }

@@ -86,7 +86,7 @@ This document catalogues every meaningful difference between the legacy C game (
 
 ### 3.1 Ammo / reload system
 - **Legacy**: Ammo objects have a `charges` field that is a bitmask of weapon types they reload. The functions `remove_with_reload()` and `types_match()` handle finding a compatible ammo item in inventory and loading it into the weapon. For example, arrows reload a bow when the quiver is in inventory.
-- **Modern**: Numbered items track charges and decrement on fire/use. But there is no reload-from-ammo-item mechanic — when a weapon runs out it is gone. The bow disappearing when empty is noted as a bug in todo.md.
+- **Modern**: Numbered items track charges and decrement on fire/use. But there is no reload-from-ammo-item mechanic — when a weapon runs out it is gone. The bow disappearing when empty is noted as a bug in TODO.md.
 
 ### 3.2 Wearable items
 - **Legacy**: Objects have a `wearable` bitfield that acts as a "slot" mask (e.g., one value for helmets, another for armor). You can only wear one item per slot. Worn items provide passive effects via their object fields.
@@ -288,7 +288,7 @@ This document catalogues every meaningful difference between the legacy C game (
   - `t <objnum> <quantity> <team>` — drop into a random room owned by that team (0 = any)
   - `r <objnum> <quantity> <roomnum>` — drop into a specific room
   Many maps have these (battle, castle, flames, hack1, hometown, ivarr, outdoor, paradise3, ring, shelter, shooter, three, trek, tunnel, etc.)
-- **Modern**: Not implemented. The architecture is described in `modern-rewrite-plan.md` as a stretch goal. The server would parse the `.pla` file (or JSON equivalent) at game start, set a repeating timer, and use the existing `ITEM_ADDED` broadcast path.
+- **Modern**: Not implemented. The architecture is described in `docs/modern-rewrite-plan.md` as a stretch goal. The server would parse the `.pla` file (or JSON equivalent) at game start, set a repeating timer, and use the existing `ITEM_ADDED` broadcast path.
 
 ---
 
@@ -312,7 +312,7 @@ This document catalogues every meaningful difference between the legacy C game (
 
 ### 9.5 Maximum player cap
 - **Legacy**: `MAX_GAME_SIZE = 20` persons hard-coded.
-- **Modern**: No cap enforced server-side. (Bug noted in todo.md: "there probably isn't anything keeping a 17th player from joining a max 16 player game.")
+- **Modern**: No cap enforced server-side. (Bug noted in TODO.md: "there probably isn't anything keeping a 17th player from joining a max 16 player game.")
 
 ---
 
@@ -373,9 +373,9 @@ These fields exist in the parsed JSON objects (from the pipeline) but are never 
 
 ---
 
-## 13. Bugs in Play (from todo.md that reflect Legacy Differences)
+## 13. Bugs in Play (from TODO.md that reflect Legacy Differences)
 
-The following items in `todo.md` represent mechanics from the legacy game that are partially or incorrectly implemented in the modern rewrite:
+The following items in `TODO.md` represent mechanics from the legacy game that are partially or incorrectly implemented in the modern rewrite:
 
 - **Ammo consumption**: Numbered weapon items should consume charges on fire — not fully working
 - **Grenade depletion**: Grenades don't get depleted from inventory properly as fired
@@ -435,7 +435,7 @@ Five C source files (`main.c`, `io.c`, `load.c`, `person.c`, `response.c`) imple
 - **`legacy/burt/speech.text`** (8.3K): Alternative personality data for testing.
 - **`legacy/lib/messages`** (408 lines): Actual Burt conversation logs from 1990–1991 showing how players talked to him and what he replied — good reference for tone and personality.
 
-The `todo.md` note says "add Burt back somehow, maybe to respond to chats if you address him directly." All the source and data to do this is here.
+The `TODO.md` note says "add Burt back somehow, maybe to respond to chats if you address him directly." All the source and data to do this is here.
 
 ### 14.5 Categorized object data files (`legacy/lib/obj/*.bin`)
 Pre-categorized binary slices of the object definitions: `exits`, `flags`, `floors`, `foliage`, `magic`, `objects`, `terrain`, `walls`, `weapons`. The modern pipeline reads the full `.obj` binary directly and doesn't use these, but they are a useful reference for what object categories exist and which object IDs fall into each category.
@@ -446,7 +446,7 @@ Pre-categorized binary slices of the object definitions: `exits`, `flags`, `floo
 | `fields` (22K) | Detailed spec of every object field | Most complete reference for object behaviors beyond the header files |
 | `griljor.doc` (7.9K) | Player-facing game instructions | Source material for writing a help/tutorial page |
 | `global.doc` (6.9K) | Global game mechanics | Reference for understanding mechanics not obvious from code |
-| `Wishlist` (1.8K) | Original developers' feature wishlist | Interesting to compare against current todo.md |
+| `Wishlist` (1.8K) | Original developers' feature wishlist | Interesting to compare against current TODO.md |
 | `magic.doc` (195B) | Notes on the magic system | Reference if magic items are ever implemented |
 | `spell.ideas` (252B) | Spell system brainstorming | Historical context |
 
@@ -469,7 +469,7 @@ Griljor Design Spec v1.0 (1995 revision). Describes the planned redesign as an o
 
 ## 15. Map and Object Editors
 
-The original game shipped two full GUI editors built as X11 applications. Neither has been ported to the modern rewrite. Both are noted in `modern-rewrite-plan.md` as a stretch goal ("Port eventually, Phase 7+, not blocking the game port").
+The original game shipped two full GUI editors built as X11 applications. Neither has been ported to the modern rewrite. Both are noted in `docs/modern-rewrite-plan.md` as a stretch goal ("Port eventually, Phase 7+, not blocking the game port").
 
 ### 15.1 Map Editor (`editmap`)
 Source files in `legacy/src/`: `editmap.c`, `editorX11.c`, `emap.c`, `ranroom.c`, plus headers `emap.h` and `ranroom.h`. Built as its own executable via `make editmap`.

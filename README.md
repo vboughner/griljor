@@ -24,10 +24,13 @@ The game is being rewritten as a browser-playable web application. The goal is t
 
 | Document | Contents |
 |----------|----------|
-| [`modern-rewrite-plan.md`](modern-rewrite-plan.md) | Architecture decisions, porting challenges, and feature plan |
-| [`implementation-notes.md`](implementation-notes.md) | Detailed record of what was built, phase by phase, with technical decisions |
-| [`todo.md`](todo.md) | Remaining work |
-| [`deployment-plan.md`](deployment-plan.md) | Hosting plan (Hetzner VM, nginx, PM2, HTTPS) |
+| [`docs/modern-rewrite-plan.md`](docs/modern-rewrite-plan.md) | Architecture decisions, porting challenges, and feature plan |
+| [`docs/implementation-notes.md`](docs/implementation-notes.md) | Detailed record of what was built, phase by phase, with technical decisions |
+| [`TODO.md`](TODO.md) | Remaining work |
+| [`docs/deployment-plan.md`](docs/deployment-plan.md) | Hosting plan (Hetzner VM, nginx, PM2, HTTPS) |
+| [`docs/differences-with-legacy.md`](docs/differences-with-legacy.md) | How the modern rewrite differs from the original C/X11 game |
+| [`docs/map-information.md`](docs/map-information.md) | Map inventory, room structure, and placement file format |
+| [`docs/object-definitions.md`](docs/object-definitions.md) | Object property reference for pipeline JSON data |
 | [`scripts/`](scripts/) | Production server scripts: rebuild, add-map, remove-map |
 
 ### Running locally

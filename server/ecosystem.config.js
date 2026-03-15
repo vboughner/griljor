@@ -48,6 +48,6 @@ module.exports = {
       env:    { MAP: 'playtesters', PORT: 3007, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/playtesters` },
     },
     // Add more maps here following the same pattern.
-    // Each map needs a unique PORT and a matching /ws/<mapname> block in nginx-example.conf.
+    // Each map needs a unique PORT and a matching /ws/<mapname> block in server/nginx-example.conf.
   ],
 };

@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #1a1a1a;
+      background: #111010;
       color: #ccc;
       font-family: monospace;
       display: flex;
@@ -19,16 +19,111 @@
     h1 { font-size: 1.4em; color: #aaa; letter-spacing: 2px; }
 
     /* ── Title ── */
+    @keyframes titleFadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes titlePulse {
+      0%, 100% { opacity: 0.85; }
+      50%       { opacity: 0.2; }
+    }
+
     #title-screen {
       position: fixed; inset: 0; z-index: 10;
-      background: #1a1a1a;
-      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+      background: #111010;
+      display: flex; flex-direction: column; align-items: stretch;
     }
-    #title-canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+    /* CRT scanline overlay */
+    #title-screen::before {
+      content: '';
+      position: absolute; inset: 0; z-index: 99;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0px, transparent 3px,
+        rgba(0,0,0,0.13) 3px, rgba(0,0,0,0.13) 4px
+      );
+    }
+
+    #title-letters {
+      display: block; width: 100%;
+      height: 18vh; min-height: 100px; max-height: 200px;
+      flex-shrink: 0; border: none;
+      box-shadow:
+        inset 0 0 80px rgba(0,0,0,0.4),
+        inset 0 -12px 32px rgba(0,0,0,0.35);
+    }
+
+    #title-credits {
+      flex-shrink: 0;
+      text-align: center;
+      font-family: monospace;
+      font-size: 15px;
+      color: #b8842a;
+      line-height: 1.8;
+      padding: 10px 20px 0;
+      animation: titleFadeUp 0.7s ease-out 0.2s both;
+    }
+    #title-credits a {
+      color: #b8842a;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    #title-credits a:hover { color: #d4a040; }
+    #title-prompt {
+      flex-shrink: 0;
+      text-align: center;
+      font-family: monospace;
+      font-size: 15px;
+      color: #b8842a;
+      padding: 18px 0 0;
+      animation: titleFadeUp 0.7s ease-out 0.6s both,
+                 titlePulse 2.2s ease-in-out 1.4s infinite;
+    }
+    #title-separator {
+      flex-shrink: 0;
+      height: 1px;
+      margin: 14px 10% 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(130, 100, 38, 0.35) 20%,
+        rgba(170, 135, 52, 0.6) 50%,
+        rgba(130, 100, 38, 0.35) 80%,
+        transparent
+      );
+      animation: titleFadeUp 0.7s ease-out 0.55s both;
+    }
+    #title-terrain-wrapper {
+      position: relative;
+      flex: 1; min-height: 0;
+      margin: 12px 0 20px;
+      border: none;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.6),
+        inset 0 0 80px rgba(0,0,0,0.35),
+        0 -4px 24px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    #title-terrain {
+      position: absolute; inset: 0;
+      display: block; width: 100%; height: 100%;
+      border: none;
+    }
+    #title-terrain-vignette {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(to right,  rgba(10,9,8,0.75) 0%, transparent 18%),
+        linear-gradient(to left,   rgba(10,9,8,0.75) 0%, transparent 18%),
+        linear-gradient(to top,    rgba(10,9,8,0.88) 0%, transparent 22%);
+    }
 
     /* ── Lobby ── */
     #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 900px; }
-    #lobby-logo { border: none; margin-top: -20px; margin-bottom: 24px; }
+    #lobby-header { display: flex; align-items: center; gap: 20px; width: 100%; margin-bottom: 24px; padding-top: 12px; }
+    #lobby-logo { border: none; image-rendering: pixelated; flex-shrink: 0; }
+    #lobby-title { font-size: 18px; color: #aaa; letter-spacing: 0.05em; flex: 1; text-align: center; }
     .lobby-panel { width: 100%; border: 1px solid #303030; margin-bottom: 40px; }
     .lobby-panel-hdr {
       padding: 5px 16px;
@@ -366,25 +461,39 @@
 
   <!-- ── Title Screen ── -->
   <div id="title-screen">
-    <canvas id="title-canvas"></canvas>
+    <canvas id="title-letters"></canvas>
+    <div id="title-credits">
+      <div>Modern rewrite of an old game (<a href="https://github.com/vboughner/griljor" target="_blank" rel="noopener">find this on GitHub</a>)</div>
+      <div>Thanks to the many contributors at U.C. Berkeley between 1989 &ndash; 1991</div>
+    </div>
+
+    <div id="title-separator"></div>
+    <div id="title-prompt">press any key or click to continue</div>
+    <div id="title-terrain-wrapper">
+      <canvas id="title-terrain"></canvas>
+      <div id="title-terrain-vignette"></div>
+    </div>
   </div>
 
   <!-- ── Lobby Screen ── -->
   <div id="lobby-screen" style="display:none">
-    <canvas id="lobby-logo" style="display:block; image-rendering:pixelated;"></canvas>
+    <div id="lobby-header">
+      <canvas id="lobby-logo"></canvas>
+      <div id="lobby-title">Game Selection</div>
+    </div>
     <div class="lobby-panel">
-      <div class="lobby-panel-hdr">Player Setup</div>
+      <div class="lobby-panel-hdr">Choose Your Avatar and Name</div>
       <div id="lobby-controls">
         <div id="avatar-picker">
           <canvas id="avatar-preview" width="32" height="32" title="Choose avatar"></canvas>
 <div id="avatar-dropdown"></div>
         </div>
         <input id="player-name" maxlength="10" placeholder="name" spellcheck="false" autocomplete="off" />
-        <button id="random-avatar-btn" title="Random avatar">↻</button>
+        <button id="random-avatar-btn" >↻</button>
       </div>
     </div>
     <div class="lobby-panel lobby-panel-games" style="margin-bottom: 0">
-      <div class="lobby-panel-hdr">Available Games<span id="lobby-status">Loading…</span></div>
+      <div class="lobby-panel-hdr">Join a Game<span id="lobby-status">Loading…</span></div>
       <div id="server-list"></div>
     </div>
   </div>
