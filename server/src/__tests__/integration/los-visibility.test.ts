@@ -113,25 +113,34 @@ describe('LOS visibility — wall blocks initial PLAYER_INFO on join', () => {
   });
 
   it('player behind a wall does NOT receive PLAYER_INFO for the other player on join', () => {
-    // B joins and moves to the right side (x=15, behind the wall at x=10)
+    // B joins and moves to the right side (x=15, behind the wall at x=10).
+    // Clear B's queue so later checks are clean.
     const b = joinPlayer(session, 'Bob');
     b.ws.receive({ type: 'MY_LOCATION', room: 0, x: 15, y: 5 });
+    b.ws.flush();
 
-    // A joins on the left side (x=5) — wall at x=10 blocks LOS to B
+    // A joins, then moves to the left side (x=5).  A's spawn tile is random,
+    // so A may or may not have briefly seen B before crossing the wall.
+    // After the move to (5,5) the server recomputes LOS: if B was previously
+    // visible it sends PLAYER_HIDDEN, so the *final* visibility state is hidden.
     const a = joinPlayer(session, 'Alice');
     a.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
 
-    // Flush all accumulated messages (spawn position was random so Alice may have
-    // briefly been visible to Bob during join; we want to test the *settled* state).
-    a.ws.flush();
-    b.ws.flush();
+    // Walk A's full message log and verify B is not currently visible:
+    // every PLAYER_INFO for B must be followed by a PLAYER_HIDDEN for B.
+    const relevant = a.ws
+      .messages()
+      .filter((m) => (m.type === 'PLAYER_INFO' || m.type === 'PLAYER_HIDDEN') && m.id === b.id);
+    const last = relevant.at(-1);
+    // Either B never appeared (last === undefined) or the last event hid B.
+    expect(last === undefined || last.type === 'PLAYER_HIDDEN').toBe(true);
 
-    // B moves a step on the right side — triggers a fresh visibility update.
-    // The wall at x=10 should block LOS, so A must NOT receive PLAYER_INFO for B.
-    b.ws.receive({ type: 'MY_LOCATION', room: 0, x: 15, y: 6 });
-
-    const infos = a.ws.messagesOfType('PLAYER_INFO');
-    expect(infos.some((m) => m.id === b.id)).toBe(false);
+    // Symmetrically, B must not currently see A.
+    const bRelevant = b.ws
+      .messages()
+      .filter((m) => (m.type === 'PLAYER_INFO' || m.type === 'PLAYER_HIDDEN') && m.id === a.id);
+    const bLast = bRelevant.at(-1);
+    expect(bLast === undefined || bLast.type === 'PLAYER_HIDDEN').toBe(true);
   });
 });
 
