@@ -617,6 +617,35 @@ export async function drawLogo(canvas: HTMLCanvasElement): Promise<void> {
   }
 }
 
+// ── Letter layout helper ─────────────────────────────────────────────────────
+
+function computeLetterLayout(
+  rawLetters: (ImageBitmap | null)[],
+  canvasW: number,
+  canvasH: number,
+): { scale: number; startX: number; baseY: number } {
+  const usableH = canvasH - 8;
+  let scale = 1;
+  for (const bm of rawLetters)
+    if (bm && bm.height > 0) scale = Math.min(scale, usableH / bm.height);
+  const totalW = rawLetters.reduce(
+    (s, bm) => s + Math.floor((bm?.width ?? 48) * scale) + LETTER_PAD,
+    -LETTER_PAD,
+  );
+  if (totalW > canvasW - 40) scale *= (canvasW - 40) / totalW;
+  const finalW = rawLetters.reduce(
+    (s, bm) => s + Math.floor((bm?.width ?? 48) * scale) + LETTER_PAD,
+    -LETTER_PAD,
+  );
+  const startX = Math.max(20, Math.floor((canvasW - finalW) / 2));
+  const tallest = rawLetters.reduce(
+    (h, bm) => Math.max(h, bm ? Math.floor(bm.height * scale) : 0),
+    0,
+  );
+  const baseY = Math.max(0, Math.floor((canvasH - tallest) / 2));
+  return { scale, startX, baseY };
+}
+
 // ── Main entry point ─────────────────────────────────────────────────────────
 
 export async function runTitleScreen(
@@ -704,28 +733,12 @@ export async function runTitleScreen(
   const camY = 0;
 
   // ── Letter layout ────────────────────────────────────────────────
-  const usableLetterH = lH - 8;
-
-  let scale = 1;
-  for (const bm of rawLetters)
-    if (bm && bm.height > 0) scale = Math.min(scale, usableLetterH / bm.height);
-
-  const totalLetterW = rawLetters.reduce(
-    (s, bm) => s + Math.floor((bm?.width ?? 48) * scale) + LETTER_PAD,
-    -LETTER_PAD,
-  );
-  if (totalLetterW > W - 40) scale *= (W - 40) / totalLetterW;
-
-  const finalTotalW = rawLetters.reduce(
-    (s, bm) => s + Math.floor((bm?.width ?? 48) * scale) + LETTER_PAD,
-    -LETTER_PAD,
-  );
-  let xCursor = Math.max(20, Math.floor((W - finalTotalW) / 2));
-  const tallestLetter = rawLetters.reduce(
-    (h, bm) => Math.max(h, bm ? Math.floor(bm.height * scale) : 0),
-    0,
-  );
-  const letterBaseY = Math.max(0, Math.floor((lH - tallestLetter) / 2));
+  const {
+    scale,
+    startX: startXCursor,
+    baseY: letterBaseY,
+  } = computeLetterLayout(rawLetters, W, lH);
+  let xCursor = startXCursor;
 
   const letterSprites: LetterSprite[] = rawLetters.map((bm, i) => {
     const w = bm ? Math.floor(bm.width * scale) : 48;
@@ -745,6 +758,7 @@ export async function runTitleScreen(
   });
 
   let allLettersDone = false;
+  let lettersNeedRedraw = true;
   let startedCount = 1;
 
   function relayout(): void {
@@ -759,30 +773,13 @@ export async function runTitleScreen(
     terrainCanvas.height = tH;
 
     vpW = Math.min(tW - 2 * MARGIN_X, mapW);
-    vpH = Math.min(tH - MARGIN_BOTTOM - 8, mapH);
+    vpH = Math.min(tH - MARGIN_BOTTOM - MARGIN_TOP_TERRAIN, mapH);
     vpX = Math.floor((tW - vpW) / 2);
     camX = Math.max(0, Math.floor((mapW - vpW) / 2));
 
     // Recompute letter layout and jump letters to final positions
-    const usableH = lH - 8;
-    let newScale = 1;
-    for (const bm of rawLetters)
-      if (bm && bm.height > 0) newScale = Math.min(newScale, usableH / bm.height);
-    const totalW = rawLetters.reduce(
-      (s, bm) => s + Math.floor((bm?.width ?? 48) * newScale) + LETTER_PAD,
-      -LETTER_PAD,
-    );
-    if (totalW > W - 40) newScale *= (W - 40) / totalW;
-    const finalW = rawLetters.reduce(
-      (s, bm) => s + Math.floor((bm?.width ?? 48) * newScale) + LETTER_PAD,
-      -LETTER_PAD,
-    );
-    let xc = Math.max(20, Math.floor((W - finalW) / 2));
-    const tallest = rawLetters.reduce(
-      (h, bm) => Math.max(h, bm ? Math.floor(bm.height * newScale) : 0),
-      0,
-    );
-    const baseY = Math.max(0, Math.floor((lH - tallest) / 2));
+    const { scale: newScale, startX, baseY } = computeLetterLayout(rawLetters, W, lH);
+    let xc = startX;
     for (let i = 0; i < letterSprites.length; i++) {
       const s = letterSprites[i];
       const bm = rawLetters[i];
@@ -796,6 +793,7 @@ export async function runTitleScreen(
       xc += s.w + LETTER_PAD;
     }
     allLettersDone = true;
+    lettersNeedRedraw = true;
   }
 
   window.addEventListener('resize', onResize);
@@ -840,31 +838,35 @@ export async function runTitleScreen(
     frame++;
 
     // ── Letters canvas ───────────────────────────────────────────
-    lCtx.fillStyle = '#111010';
-    lCtx.fillRect(0, 0, W, lH);
+    if (lettersNeedRedraw) {
+      lCtx.fillStyle = '#111010';
+      lCtx.fillRect(0, 0, W, lH);
 
-    if (!allLettersDone) {
-      for (let i = 0; i < startedCount && i < letterSprites.length; i++) {
-        const s = letterSprites[i];
-        if (!s.done) {
-          s.x += 13;
-          if (s.x >= s.targetX) {
-            s.x = s.targetX;
-            s.done = true;
+      if (!allLettersDone) {
+        for (let i = 0; i < startedCount && i < letterSprites.length; i++) {
+          const s = letterSprites[i];
+          if (!s.done) {
+            s.x += 13;
+            if (s.x >= s.targetX) {
+              s.x = s.targetX;
+              s.done = true;
+            }
           }
         }
+        if (startedCount < letterSprites.length) {
+          const last = letterSprites[startedCount - 1];
+          const totalDist = last.targetX - (-last.w - 10);
+          const traveled = last.x - (-last.w - 10);
+          if (totalDist > 0 && traveled / totalDist >= 0.35) startedCount++;
+        }
+        if (letterSprites.every((s) => s.done)) allLettersDone = true;
       }
-      if (startedCount < letterSprites.length) {
-        const last = letterSprites[startedCount - 1];
-        const totalDist = last.targetX - (-last.w - 10);
-        const traveled = last.x - (-last.w - 10);
-        if (totalDist > 0 && traveled / totalDist >= 0.35) startedCount++;
-      }
-      if (letterSprites.every((s) => s.done)) allLettersDone = true;
-    }
 
-    for (const s of letterSprites)
-      if (s.bm && s.x > -s.w) lCtx.drawImage(s.bm, s.x, s.targetY + s.extraY, s.w, s.h);
+      for (const s of letterSprites)
+        if (s.bm && s.x > -s.w) lCtx.drawImage(s.bm, s.x, s.targetY + s.extraY, s.w, s.h);
+
+      if (allLettersDone) lettersNeedRedraw = false;
+    }
 
     // ── Terrain canvas ───────────────────────────────────────────
     tCtx.fillStyle = '#111010';

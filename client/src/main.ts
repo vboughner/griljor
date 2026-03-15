@@ -686,7 +686,7 @@ async function main(): Promise<void> {
       <span class="server-rooms-hdr">Rooms</span>
       <span class="server-teams-hdr">Teams</span>
       <span class="server-count-hdr">Players</span>
-      <span class="server-avatars-hdr">In Game</span>
+      <span class="server-avatars-hdr">Avatars</span>
       <span class="server-join-hdr"></span>
     `;
     serverList.appendChild(header);
