@@ -24,24 +24,20 @@
 - [ ] ammo count is a little hard to see as yellow, and is covered by the flame thrower ammo, it should be drawn on top and be a more contrasting color, like amber, and the number needs a mask behind it (a circle badge in black maybe?)
 
 ## Change / Add / Reorg
-- [ ] it might be nice for the dmg and health? numbers to move upwards a little more than they do
 - [x] move a bunch of files to the docs folder instead and update all the references from CLAUDE.md and README.md
 - [x] move nginx-example.conf to server folder and update references to it
 - [ ] add something to the title screen that mentions it is an old school game from 1989 and has been modernized, include a link to the repository
 - [ ] time people out of AFK games so that they don't stay on the server forever if they leave their browser tab open
 - [ ] wait a little longer to reset the map after no one is left in it, and consider a timer in the lobby that tells you how long until the map resets (30 seconds?)
+- [ ] help users in the lobby know when server is going to get reset (when no one is left in it)
+- [ ] when someone leaves the game after 5 seconds there should be a message that they left the game, but when someone disconnects suddenly, they should be said to have disconnected
+- [ ] it might be nice for the dmg and health? numbers to move upwards a little more than they do
 - [ ] let the chat history be taller, contain more text, perhaps use up space that is not needed by the player list
 - [ ] make the mouse graphic not so tall, figure out a better way to display what the mouse buttons are for, it kind of needs a redesign for the modern era
 - [ ] need the border boxes around other player (or to make them a different color than everything else? team colors?)
-- [ ] help users in the lobby know when server is going to get reset (when no one is left in it)
 - [ ] need a tutorial to help teach how to pickup and manipulate inventory and learn shortcut keys (or at least a help page)
-- [ ] do something different with the mouse controls (the big mouse looks funny)
 - [ ] we need to provide some hotkey discovery help in the UI
 - [ ] add hot key setting and mouse changes settings (but how will they save these, do we need profiles, or maybe just 3 good hotkey setting choices)
-- [ ] consider placing player list at the top of the display to make them more prominent
-- [ ] consider making it possible to know which room other players are in
-- [ ] consider making the limited lighting feature work properly (where you can only see things near you and you have a flashlight)
-- [ ] when someone leaves the game after 5 seconds there should be a message that they left the game, but when someone disconnects suddenly, they should be said to have disconnected
 
 ## Make teams work:
 - [x] players start in their team room

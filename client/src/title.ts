@@ -689,6 +689,8 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
 
   // ── Letter layout ────────────────────────────────────────────────
   const PROMPT_FONT_SIZE = 13;
+  const CREDIT_FONT_SIZE = 14;
+  const CREDIT_LINE_H = CREDIT_FONT_SIZE + 5;
   const PROMPT_MARGIN = 8;
   const promptY = topH - PROMPT_MARGIN;
   const usableLetterH = promptY - PROMPT_FONT_SIZE - PROMPT_MARGIN * 2;
@@ -712,7 +714,7 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
     (h, bm) => Math.max(h, bm ? Math.floor(bm.height * scale) : 0),
     0,
   );
-  const letterBaseY = Math.max(0, Math.floor((usableLetterH - tallestLetter) / 2));
+  const letterBaseY = Math.max(0, Math.floor((usableLetterH - tallestLetter) / 4));
 
   const letterSprites: LetterSprite[] = rawLetters.map((bm, i) => {
     const w = bm ? Math.floor(bm.width * scale) : 48;
@@ -786,7 +788,7 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
       for (let i = 0; i < startedCount && i < letterSprites.length; i++) {
         const s = letterSprites[i];
         if (!s.done) {
-          s.x += 10;
+          s.x += 13;
           if (s.x >= s.targetX) {
             s.x = s.targetX;
             s.done = true;
@@ -804,6 +806,33 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
 
     for (const s of letterSprites)
       if (s.bm && s.x > -s.w) ctx.drawImage(s.bm, s.x, s.targetY + s.extraY, s.w, s.h);
+
+    // Credits — placed just below the letters
+    const creditsTopY = letterBaseY + tallestLetter + 22;
+    ctx.font = `${CREDIT_FONT_SIZE}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#666';
+    ctx.fillText(
+      'An old school game from U.C. Berkeley, written in 1989\u20131991',
+      W / 2,
+      creditsTopY + CREDIT_LINE_H,
+    );
+    ctx.fillText(
+      'Original contributors: Van Boughner, Mel Nicholson, Albert Baker, Doug Stein, Trevor Pering,',
+      W / 2,
+      creditsTopY + CREDIT_LINE_H * 2,
+    );
+    ctx.fillText(
+      'Eric vanBezooijen, Stefan, and a number of others who contributed original art',
+      W / 2,
+      creditsTopY + CREDIT_LINE_H * 3,
+    );
+
+    ctx.fillText(
+      'This modern rewrite uses Claude Code heavily for porting and enhancing the original code',
+      W / 2,
+      creditsTopY + CREDIT_LINE_H * 5,
+    );
 
     ctx.fillStyle = '#888';
     ctx.font = `${PROMPT_FONT_SIZE}px monospace`;
