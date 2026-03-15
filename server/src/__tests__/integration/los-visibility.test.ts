@@ -254,7 +254,7 @@ describe('LOS visibility — players in different rooms', () => {
     session.destroy();
   });
 
-  it('player in different room always receives MY_LOCATION updates', () => {
+  it('player in different room does NOT receive MY_LOCATION updates', () => {
     // A joins and moves to room 0
     const a = joinPlayer(session, 'Alice');
     a.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
@@ -270,26 +270,27 @@ describe('LOS visibility — players in different rooms', () => {
     // Move A within room 0
     a.ws.receive({ type: 'MY_LOCATION', room: 0, x: 8, y: 8 });
 
-    // B in room 1 should receive A's MY_LOCATION update regardless of walls
-    const locMsgs = b.ws.messagesOfType('MY_LOCATION');
-    expect(locMsgs.some((m) => m.id === a.id && m.room === 0 && m.x === 8 && m.y === 8)).toBe(true);
-
-    // B should NOT receive PLAYER_HIDDEN for A
+    // B in room 1 should NOT receive A's position — different rooms don't reveal each other
+    expect(b.ws.messagesOfType('MY_LOCATION').some((m) => m.id === a.id)).toBe(false);
     expect(b.ws.messagesOfType('PLAYER_HIDDEN').some((m) => m.id === a.id)).toBe(false);
   });
 
-  it('PLAYER_INFO is sent to both players on join even when in different rooms', () => {
-    // A joins and moves to room 0
+  it('movements in a different room are not revealed to players in other rooms', () => {
+    // A and B both join, then separate into different rooms
     const a = joinPlayer(session, 'Alice');
     a.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-
-    // B joins and moves to room 1
     const b = joinPlayer(session, 'Bob');
+    b.ws.receive({ type: 'MY_LOCATION', room: 1, x: 5, y: 5 });
 
-    // A should have received PLAYER_INFO for B (different rooms always share info)
-    expect(a.ws.messagesOfType('PLAYER_INFO').some((m) => m.id === b.id)).toBe(true);
+    // Clear all join-time messages
+    a.ws.flush();
+    b.ws.flush();
 
-    // B should have received PLAYER_INFO for A
-    expect(b.ws.messagesOfType('PLAYER_INFO').some((m) => m.id === a.id)).toBe(true);
+    // B moves within room 1
+    b.ws.receive({ type: 'MY_LOCATION', room: 1, x: 8, y: 8 });
+
+    // A should receive no PLAYER_INFO or MY_LOCATION for B — different rooms don't reveal
+    expect(a.ws.messagesOfType('PLAYER_INFO').some((m) => m.id === b.id)).toBe(false);
+    expect(a.ws.messagesOfType('MY_LOCATION').some((m) => m.id === b.id)).toBe(false);
   });
 });

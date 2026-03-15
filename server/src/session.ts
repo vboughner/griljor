@@ -384,10 +384,8 @@ export class GameSession {
     for (const other of this.players.values()) {
       if (other.id === id) continue;
       if (other.room !== player.room) {
-        // Different room: always send info both ways
-        this.send(ws, this.makePlayerInfo(other));
-        this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
-        this.send(other.ws, this.makePlayerInfo(player));
+        // Different room: no position reveal — players only learn about each other via LOS
+        continue;
       } else {
         // Same room: check directional LOS independently for each perspective
         const room = this.world.rooms[player.room];
@@ -492,14 +490,7 @@ export class GameSession {
       if (other.id === moverId) continue;
 
       if (other.room !== mover.room) {
-        // Different room: always send position update
-        this.send(other.ws, {
-          type: 'MY_LOCATION',
-          id: moverId,
-          room: mover.room,
-          x: mover.x,
-          y: mover.y,
-        });
+        // Different room: no position reveal
         continue;
       }
 
@@ -1528,8 +1519,7 @@ export class GameSession {
       if (other.id === player.id) continue;
 
       if (other.room !== player.room) {
-        // Different room: send roster info (position in a different room)
-        this.send(other.ws, this.makePlayerInfo(player));
+        // Different room: no position reveal
         continue;
       }
 
