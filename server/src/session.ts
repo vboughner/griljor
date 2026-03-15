@@ -379,6 +379,7 @@ export class GameSession {
       room: player.room,
       x: player.x,
       y: player.y,
+      team: player.team,
     });
 
     for (const other of this.players.values()) {
@@ -1652,6 +1653,7 @@ export class GameSession {
       deaths: p.deaths,
       joinedAt: p.joinedAt,
       dead: p.dead,
+      team: p.team,
     };
   }
 

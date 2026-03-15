@@ -939,6 +939,7 @@ async function main(): Promise<void> {
         startPlayerTick();
         status.textContent = `Connected as ${playerName} (id=${msg.id})`;
         game.setMyId(msg.id);
+        game.setMyTeam(msg.team);
         // Server doesn't send PLAYER_INFO for the local player back to themselves
         void addPlayerRow(msg.id, playerName, selectedAvatar, 0, 0, Date.now());
         void game.goToRoom(msg.room, msg.x, msg.y);

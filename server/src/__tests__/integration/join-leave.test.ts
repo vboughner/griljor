@@ -62,4 +62,21 @@ describe('join / leave', () => {
     alice.ws.close();
     expect(session.playerCount).toBe(1);
   });
+
+  it('ACCEPTED includes the player team', () => {
+    // Default test world has teams=0, so any value is clamped to 1
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+    const accepted = alice.ws.lastOfType('ACCEPTED');
+    expect(accepted?.team).toBe(1);
+  });
+
+  it('PLAYER_INFO includes the player team', () => {
+    // Use a session with teams=2 so team values are preserved
+    const multiTeamSession = new GameSession({ ...buildTestWorld(), teams: 2 });
+    joinPlayer(multiTeamSession, 'Alice', 'a', 2);
+    const bob = joinPlayer(multiTeamSession, 'Bob', 'b', 1);
+    const aliceInfo = bob.ws.messagesOfType('PLAYER_INFO').find((m) => m.name === 'Alice');
+    expect(aliceInfo?.team).toBe(2);
+    multiTeamSession.destroy();
+  });
 });
