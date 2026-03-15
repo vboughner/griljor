@@ -12,13 +12,7 @@ import {
 import { GameNetwork } from './network';
 import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
 import { stepDelay, applyHpPenalty } from './utils';
-import {
-  isTileBlocked,
-  findNextStep,
-  computeBresenhamPath,
-  buildExitMap,
-  ExitTile,
-} from './game-utils';
+import { isTileBlocked, computeBfsPath, buildExitMap, ExitTile } from './game-utils';
 
 const GRID = 20;
 const TOMBSTONE_BIT = '/sprites/bitmaps/tombbit.png';
@@ -582,14 +576,17 @@ export class Game {
   private startMovingTo(x: number, y: number): void {
     this.stopMoving();
     this.moveTarget = { x, y };
+    const room = this.mapData.rooms[this.currentRoom];
     if (x >= 0 && x < GRID && y >= 0 && y < GRID) {
-      this.movePath = computeBresenhamPath(this.px, this.py, x, y);
+      this.movePath = computeBfsPath(this.px, this.py, x, y, room, this.objects, this.exitKeys);
     } else {
-      // Off-grid border exit: navigate to the nearest edge tile first, then step off
+      // Off-grid border exit: BFS to nearest edge tile, then step off
       const ex = Math.max(0, Math.min(GRID - 1, x));
       const ey = Math.max(0, Math.min(GRID - 1, y));
       this.movePath =
-        this.px === ex && this.py === ey ? [] : computeBresenhamPath(this.px, this.py, ex, ey);
+        this.px === ex && this.py === ey
+          ? []
+          : computeBfsPath(this.px, this.py, ex, ey, room, this.objects, this.exitKeys);
     }
     this.scheduleMoveStep();
   }
@@ -621,66 +618,27 @@ export class Game {
 
     let dx: number, dy: number;
     const offGrid = target.x < 0 || target.x >= GRID || target.y < 0 || target.y >= GRID;
+
     if (offGrid) {
-      // Off-map target (border exit)
       if (this.movePath.length > 0) {
-        // Navigate to edge tile first
-        const room = this.mapData.rooms[this.currentRoom];
+        // Still navigating to the edge tile
         const next = this.movePath[0];
-        const ex = Math.max(0, Math.min(GRID - 1, target.x));
-        const ey = Math.max(0, Math.min(GRID - 1, target.y));
-        const exitKeys = this.exitKeys;
-        if (isTileBlocked(next.x, next.y, room, this.objects, exitKeys)) {
-          const step = findNextStep(this.px, this.py, ex, ey, room, this.objects, exitKeys);
-          if (!step) {
-            this.stopMoving();
-            return;
-          }
-          const [sdx, sdy] = step;
-          this.movePath = computeBresenhamPath(this.px + sdx, this.py + sdy, ex, ey);
-          this.movePath.unshift({ x: this.px + sdx, y: this.py + sdy });
-        }
-        dx = this.movePath[0].x - this.px;
-        dy = this.movePath[0].y - this.py;
+        dx = next.x - this.px;
+        dy = next.y - this.py;
       } else {
         // At the edge tile — step off the grid to trigger room transition
         dx = Math.sign(target.x - this.px);
         dy = Math.sign(target.y - this.py);
       }
     } else {
-      // In-room: follow pre-computed Bresenham path
+      // In-room: follow pre-computed BFS path
       if (this.movePath.length === 0) {
         this.stopMoving();
         return;
       }
-
-      const room = this.mapData.rooms[this.currentRoom];
       const next = this.movePath[0];
-      const exitKeys = this.exitKeys;
-
-      // If the next Bresenham tile is blocked, fall back to BFS for one step
-      // then recompute a fresh Bresenham path from the redirected position onward
-      if (isTileBlocked(next.x, next.y, room, this.objects, exitKeys)) {
-        const step = findNextStep(
-          this.px,
-          this.py,
-          target.x,
-          target.y,
-          room,
-          this.objects,
-          exitKeys,
-        );
-        if (!step) {
-          this.stopMoving();
-          return;
-        }
-        const [sdx, sdy] = step;
-        this.movePath = computeBresenhamPath(this.px + sdx, this.py + sdy, target.x, target.y);
-        this.movePath.unshift({ x: this.px + sdx, y: this.py + sdy });
-      }
-
-      dx = this.movePath[0].x - this.px;
-      dy = this.movePath[0].y - this.py;
+      dx = next.x - this.px;
+      dy = next.y - this.py;
     }
 
     if (dx === 0 && dy === 0) {
@@ -700,7 +658,7 @@ export class Game {
       return;
     }
 
-    // Blocked (e.g. another player on that tile): stop
+    // Blocked by a dynamic obstacle (e.g. another player on that tile): stop
     if (this.px === prevX && this.py === prevY) {
       this.stopMoving();
       return;
