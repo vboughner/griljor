@@ -324,17 +324,10 @@ export class GameSession {
     };
     if (msg.to === 'all') {
       this.chatHistory.push({ from: playerId, name: sender.name, text: filtered });
+      if (this.chatHistory.length > 100) this.chatHistory.shift();
       this.broadcast(s2c);
       if (triggered) {
-        const gmMsg: S2CMessage = {
-          type: 'MESSAGE',
-          from: 0,
-          name: 'GM',
-          to: 'all',
-          text: randomScold(),
-        };
-        this.broadcast(gmMsg);
-        this.chatHistory.push({ from: 0, name: 'GM', text: gmMsg.text });
+        this.broadcastGM(randomScold());
       }
     } else {
       const target = this.players.get(msg.to as number);
@@ -766,15 +759,7 @@ export class GameSession {
 
     // Announce death in global chat
     const killerDesc = killer ? killer.name : 'the void';
-    const deathMsg: S2CMessage = {
-      type: 'MESSAGE',
-      from: 0,
-      name: 'GM',
-      to: 'all',
-      text: `${victim.name} was slain by ${killerDesc}.`,
-    };
-    this.broadcast(deathMsg);
-    this.chatHistory.push({ from: 0, name: 'GM', text: deathMsg.text });
+    this.broadcastGM(`${victim.name} was slain by ${killerDesc}.`);
 
     // Drop all inventory items
     this.dropPlayerItems(victim);
@@ -916,41 +901,16 @@ export class GameSession {
   private doRespawn(victim: Player, killerName: string): void {
     victim.respawnTimer = null;
     victim.hp = victim.maxHp; // restore HP at respawn, not at death
-
-    const spawn = this.randomSpawnForTeam(victim.team);
-    if (spawn) {
-      console.log(
-        `[respawn] ${victim.name} team=${victim.team} spawn found: room=${spawn.room} (${spawn.x},${spawn.y})`,
-      );
-      victim.room = spawn.room;
-      victim.x = spawn.x;
-      victim.y = spawn.y;
-    } else {
-      console.warn(
-        `[respawn] ${victim.name} team=${victim.team} NO SPAWN FOUND — staying at room=${victim.room} (${victim.x},${victim.y})`,
-      );
-    }
-
     victim.dead = false;
 
-    // Broadcast alive state at new location
-    console.log(
-      `[respawn] broadcasting PLAYER_INFO for ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`,
-    );
-    this.broadcast(this.makePlayerInfo(victim));
-
-    // Tell the victim where they respawned
-    console.log(
-      `[respawn] sending YOU_RESPAWNED to ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`,
-    );
-    this.send(victim.ws, { type: 'YOU_RESPAWNED', room: victim.room, x: victim.x, y: victim.y });
+    this.placePlayer(victim, 'respawn');
 
     this.broadcast({ type: 'PLAYER_HEALTH', id: victim.id, hp: victim.hp, maxHp: victim.maxHp });
     this.sendStats(victim);
     this.sendInventory(victim);
 
     console.log(
-      `[respawn] ${victim.name} respawn complete at room=${victim.room} (${victim.x},${victim.y}) (killed by ${killerName})`,
+      `[respawn] ${victim.name} complete at room=${victim.room} (${victim.x},${victim.y}) (killed by ${killerName})`,
     );
   }
 
@@ -995,29 +955,34 @@ export class GameSession {
     if (!player || player.dead) return;
 
     this.dropPlayerItems(player);
-
-    const spawn = this.randomSpawnForTeam(player.team);
-    if (spawn) {
-      player.room = spawn.room;
-      player.x = spawn.x;
-      player.y = spawn.y;
-    } else {
-      console.warn(
-        `[voluntary-respawn] ${player.name} team=${player.team} no spawn found — staying in place`,
-      );
-    }
-
-    this.broadcast(this.makePlayerInfo(player));
-    this.send(player.ws, { type: 'YOU_RESPAWNED', room: player.room, x: player.x, y: player.y });
-
-    const text = `${player.name} chose to respawn.`;
-    this.broadcast({ type: 'MESSAGE', from: 0, name: 'GM', to: 'all', text });
-    this.chatHistory.push({ from: 0, name: 'GM', text });
-
+    this.placePlayer(player, 'voluntary-respawn');
+    this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
+    this.broadcastGM(`${player.name} chose to respawn.`);
     this.sendInventory(player);
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private broadcastGM(text: string): void {
+    this.broadcast({ type: 'MESSAGE', from: 0, name: 'GM', to: 'all', text });
+    this.chatHistory.push({ from: 0, name: 'GM', text });
+    if (this.chatHistory.length > 100) this.chatHistory.shift();
+  }
+
+  // Move a player to a new spawn point and notify everyone.
+  private placePlayer(player: Player, context: string): void {
+    const spawn = this.randomSpawnForTeam(player.team);
+    if (spawn) {
+      console.log(`[${context}] ${player.name} spawn: room=${spawn.room} (${spawn.x},${spawn.y})`);
+      player.room = spawn.room;
+      player.x = spawn.x;
+      player.y = spawn.y;
+    } else {
+      console.warn(`[${context}] ${player.name} team=${player.team} no spawn — staying in place`);
+    }
+    this.broadcast(this.makePlayerInfo(player));
+    this.send(player.ws, { type: 'YOU_RESPAWNED', room: player.room, x: player.x, y: player.y });
+  }
 
   private sendInventory(player: Player): void {
     this.send(player.ws, {

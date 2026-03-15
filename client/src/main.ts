@@ -928,37 +928,47 @@ async function main(): Promise<void> {
     await currentGame?.setMode(currentMode);
   }
 
-  let respawnCountdown: ReturnType<typeof setInterval> | null = null;
-
-  function cancelRespawn(): void {
-    if (respawnCountdown !== null) {
-      clearInterval(respawnCountdown);
-      respawnCountdown = null;
+  // Returns a cancel function. When the countdown reaches zero, calls onConfirm().
+  function makeCountdownButton(
+    btn: HTMLButtonElement,
+    idleLabel: string,
+    activePrefix: string,
+    onConfirm: () => void,
+  ): () => void {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    function cancel(): void {
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+      btn.textContent = idleLabel;
     }
-    respawnBtn.textContent = 'Respawn';
-  }
-
-  respawnBtn.addEventListener('click', () => {
-    if (respawnCountdown !== null) {
-      cancelRespawn();
-      return;
-    }
-    let secs = 5;
-    respawnBtn.textContent = `Respawn ${secs}…`;
-    respawnCountdown = setInterval(() => {
-      secs--;
-      if (secs <= 0) {
-        cancelRespawn();
-        currentNetwork?.sendVoluntaryRespawn();
+    btn.addEventListener('click', () => {
+      if (timer !== null) {
+        cancel();
         return;
       }
-      respawnBtn.textContent = `Respawn ${secs}…`;
-    }, 1000);
-  });
+      let secs = 5;
+      btn.textContent = `${activePrefix} ${secs}…`;
+      timer = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+          cancel();
+          onConfirm();
+          return;
+        }
+        btn.textContent = `${activePrefix} ${secs}…`;
+      }, 1000);
+    });
+    return cancel;
+  }
 
-  let leaveCountdown: ReturnType<typeof setInterval> | null = null;
+  const cancelRespawn = makeCountdownButton(respawnBtn, 'Respawn', 'Respawn', () =>
+    currentNetwork?.sendVoluntaryRespawn(),
+  );
 
   function doLeave(): void {
+    cancelRespawn();
     cancelLeave();
     currentNetwork?.sendLeave();
     currentGame?.destroy();
@@ -973,31 +983,7 @@ async function main(): Promise<void> {
     refreshServerList();
   }
 
-  function cancelLeave(): void {
-    cancelRespawn();
-    if (leaveCountdown !== null) {
-      clearInterval(leaveCountdown);
-      leaveCountdown = null;
-    }
-    leaveBtn.textContent = 'Leave Game';
-  }
-
-  leaveBtn.addEventListener('click', () => {
-    if (leaveCountdown !== null) {
-      cancelLeave();
-      return;
-    }
-    let secs = 5;
-    leaveBtn.textContent = `Leaving ${secs}…`;
-    leaveCountdown = setInterval(() => {
-      secs--;
-      if (secs <= 0) {
-        doLeave();
-        return;
-      }
-      leaveBtn.textContent = `Leaving ${secs}…`;
-    }, 1000);
-  });
+  const cancelLeave = makeCountdownButton(leaveBtn, 'Leave Game', 'Leaving', doLeave);
 
   // Size the lobby logo canvas the same way the title screen sizes its top band
   const lobbyLogo = document.getElementById('lobby-logo') as HTMLCanvasElement;
