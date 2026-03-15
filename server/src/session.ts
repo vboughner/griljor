@@ -609,8 +609,8 @@ export class GameSession {
       this.activeMissiles.delete(id);
       this.broadcastToRoom(player.room, { type: 'MISSILE_END', id });
       if (hitPlayer) this.dealDamage(hitPlayer, damage, player);
-      // Drop throwable items (lost+stop) at landing position
-      if (obj.lost && obj.stop) {
+      // Drop throwable items (lost+stop, non-exploding) at landing position
+      if (obj.lost && obj.stop && !obj.explodes) {
         const landTile = finalPath[finalPath.length - 1];
         const tile = this.nearbyFreeTile(player.room, landTile.x, landTile.y);
         if (tile) {

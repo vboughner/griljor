@@ -22,6 +22,7 @@ export interface ObjDef {
   health?: number; // negative = restores HP on use
   lost?: boolean; // consumed on use (remove from inventory)
   stop?: boolean; // projectile stops on impact and lands on the floor
+  explodes?: number; // non-zero: projectile explodes on impact (does not land as item)
 }
 
 export interface RecObj {

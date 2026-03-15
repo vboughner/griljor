@@ -284,6 +284,21 @@ describe('combat', () => {
     expect(drops.some((m) => m.item.type === 5)).toBe(true); // potted plant dropped
   });
 
+  it('exploding item (lost+stop+explodes) does NOT drop on the floor after travel', () => {
+    const alice = joinPlayer(session, 'Alice');
+    // Pick up grenade from (3,3)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 1 });
+    vi.advanceTimersByTime(2000);
+
+    const drops = alice.ws.messagesOfType('ITEM_ADDED');
+    expect(drops.some((m) => m.item.type === 6)).toBe(false); // grenade must NOT drop
+  });
+
   it('thrown item lands near target player when hit tile is occupied', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');

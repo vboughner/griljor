@@ -38,9 +38,9 @@ describe('inventory', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.flush();
 
-    // Sword is at (5,5), try to pick it up from (3,3) — nothing there
-    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    // Sword is at (5,5), try to pick it up from (4,4) — nothing there
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 4, y: 4 });
+    alice.ws.receive({ type: 'PICKUP', x: 4, y: 4, hand: 'left' });
 
     // A failed pickup sends no ITEM_REMOVED and no YOUR_INVENTORY
     expect(alice.ws.messagesOfType('ITEM_REMOVED').length).toBe(0);
