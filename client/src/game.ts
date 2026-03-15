@@ -433,6 +433,11 @@ export class Game {
         await this.render();
       }
     };
+
+    net.onPlayerHidden = async (msg) => {
+      this.otherPlayers.delete(msg.id);
+      await this.render();
+    };
   }
 
   /** Keep hand-item state in sync so click routing can check opens field. */

@@ -29,6 +29,7 @@ export interface ObjDef {
   piercing?: number; // non-zero: explosion missiles pass through walls
   spread?: number; // number of evenly-spaced directions; 0 or absent = default 8
   directional?: boolean; // true: sprite direction matches missile travel direction
+  transparent?: boolean; // if absent/false, tile blocks line of sight
 }
 
 export interface RecObj {

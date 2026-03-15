@@ -79,4 +79,5 @@ export type S2CMessage =
   | { type: 'PLAYER_HEAL'; playerId: number; room: number; x: number; y: number; amount: number }
   | { type: 'YOU_DIED'; killedBy: number; killerName: string; deadForMs: number }
   | { type: 'YOU_RESPAWNED'; room: number; x: number; y: number }
-  | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number };
+  | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number }
+  | { type: 'PLAYER_HIDDEN'; id: number };
