@@ -66,9 +66,18 @@ export function buildTestWorld(): World {
   const objects: Array<ObjDef | null> = [
     null, // index 0
     { _index: 1, name: 'floor', movement: 5, permeable: true, transparent: true }, // walkable, missile-passable, sight-passable floor
-    { _index: 2, name: 'sword', takeable: true, weight: 5, weapon: true, damage: 30, range: 5 },
-    { _index: 3, name: 'potion', takeable: true, weight: 1, health: -20 },
-    { _index: 4, name: 'wall', movement: 0 }, // impassable wall
+    {
+      _index: 2,
+      name: 'sword',
+      takeable: true,
+      weight: 5,
+      weapon: true,
+      damage: 30,
+      range: 5,
+      transparent: true,
+    },
+    { _index: 3, name: 'potion', takeable: true, weight: 1, health: -20, transparent: true },
+    { _index: 4, name: 'wall', movement: 0 }, // impassable wall — blocks LOS
     {
       _index: 5,
       name: 'potted plant',
@@ -81,6 +90,7 @@ export function buildTestWorld(): World {
       stop: true,
       movingobj: 5,
       speed: 4,
+      transparent: true,
     },
     {
       _index: 6,
@@ -96,6 +106,7 @@ export function buildTestWorld(): World {
       movingobj: 6,
       boombit: 7,
       speed: 6,
+      transparent: true,
     },
     {
       _index: 7,
@@ -106,6 +117,7 @@ export function buildTestWorld(): World {
       directional: true,
       speed: 4,
       damage: 20,
+      transparent: true,
     },
   ];
 
