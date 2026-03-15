@@ -177,6 +177,8 @@ export class GameSession {
       if (msg.type === 'JOIN') {
         this.onJoin(ws, msg);
       } else if (playerId !== undefined) {
+        const afkPlayer = this.players.get(playerId);
+        if (afkPlayer && msg.type !== 'PING') this.resetAfkTimer(afkPlayer);
         switch (msg.type) {
           case 'MY_LOCATION':
             this.onLocation(playerId, msg);
@@ -324,6 +326,7 @@ export class GameSession {
     this.sendStats(player);
 
     console.log(`[+] ${msg.name} (id=${id}) joined. Players: ${this.players.size}`);
+    this.startAfkTimer(player);
   }
 
   private onLocation(playerId: number, msg: Extract<C2SMessage, { type: 'MY_LOCATION' }>): void {
@@ -1127,6 +1130,7 @@ export class GameSession {
       clearTimeout(player.respawnTimer);
       player.respawnTimer = null;
     }
+    this.clearAfkTimers(player);
 
     this.dropPlayerItems(player);
 
