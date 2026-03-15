@@ -8,6 +8,15 @@ const MAX_WEIGHT = 150;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
 
+// AFK idle detection
+// NOTE: Set to small values for testing; restore to minutes for production.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const AFK_IDLE_MS = 5 * 1000; // idle time before first warning (testing: 5s)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const AFK_WARN_INTERVAL_MS = 1 * 1000; // interval between warnings (testing: 1s)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const AFK_GRACE_MINUTES = 5; // number of warnings before kick
+
 const EXPLOSION_DIRS = [
   { dx: 0, dy: -1 },
   { dx: 1, dy: -1 },
@@ -60,6 +69,10 @@ interface Player {
   dead: boolean;
   respawnTimer: ReturnType<typeof setTimeout> | null;
   lastFireTime: number;
+  lastActivityAt: number;
+  afkIdleTimer: ReturnType<typeof setTimeout> | null;
+  afkWarnTimer: ReturnType<typeof setTimeout> | null;
+  afkWarningsLeft: number;
 }
 
 interface ChatEntry {
@@ -249,6 +262,10 @@ export class GameSession {
       dead: false,
       respawnTimer: null,
       lastFireTime: 0,
+      lastActivityAt: Date.now(),
+      afkIdleTimer: null,
+      afkWarnTimer: null,
+      afkWarningsLeft: 0,
     };
     this.players.set(id, player);
 
