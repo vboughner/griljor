@@ -19,8 +19,8 @@ describe('AFK timeout', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.flush();
 
-    // Advance past AFK_IDLE_MS (5s in test config)
-    vi.advanceTimersByTime(5001);
+    // Advance past AFK_IDLE_MS (5 min)
+    vi.advanceTimersByTime(300001);
 
     const msgs = alice.ws.messagesOfType('MESSAGE');
     expect(
@@ -32,9 +32,9 @@ describe('AFK timeout', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.flush();
 
-    vi.advanceTimersByTime(5001); // idle timer fires → first warning (5 mins left)
-    vi.advanceTimersByTime(1001); // second warning (4 mins left)
-    vi.advanceTimersByTime(1001); // third warning (3 mins left)
+    vi.advanceTimersByTime(300001); // idle timer fires → first warning (5 mins left)
+    vi.advanceTimersByTime(60001); // second warning (4 mins left)
+    vi.advanceTimersByTime(60001); // third warning (3 mins left)
 
     const msgs = alice.ws.messagesOfType('MESSAGE').filter((m) => m.name === 'GM');
     expect(msgs.length).toBe(3);
@@ -49,7 +49,7 @@ describe('AFK timeout', () => {
     bob.ws.flush();
 
     // Idle timer + 5 warning intervals
-    vi.advanceTimersByTime(5001 + 5 * 1001);
+    vi.advanceTimersByTime(300001 + 5 * 60001);
 
     const leaving = bob.ws.messagesOfType('LEAVING_GAME');
     expect(leaving.some((m) => m.id === alice.id)).toBe(true);
@@ -60,7 +60,7 @@ describe('AFK timeout', () => {
     alice.ws.flush();
 
     // Fire idle timer + 4 warning intervals to reach the "1 minute" warning
-    vi.advanceTimersByTime(5001 + 4 * 1001);
+    vi.advanceTimersByTime(300001 + 4 * 60001);
 
     const msgs = alice.ws.messagesOfType('MESSAGE').filter((m) => m.name === 'GM');
     expect(msgs[4].text).toContain('1 minute');
@@ -72,12 +72,12 @@ describe('AFK timeout', () => {
     alice.ws.flush();
 
     // Advance most of idle period, then send activity
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime(180000);
     alice.ws.receive({ type: 'MESSAGE', to: 'all', text: 'hello' });
     alice.ws.flush();
 
     // Advance past original idle expiry — but timer was reset, so no warning yet
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime(180000);
 
     const gm = alice.ws.messagesOfType('MESSAGE').filter((m) => m.name === 'GM');
     expect(gm.length).toBe(0);
@@ -87,7 +87,7 @@ describe('AFK timeout', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.flush();
 
-    vi.advanceTimersByTime(5001); // first warning fires
+    vi.advanceTimersByTime(300001); // first warning fires
     alice.ws.flush();
 
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
@@ -101,7 +101,7 @@ describe('AFK timeout', () => {
     alice.ws.flush();
 
     // Activity before idle timer fires — no warning phase yet
-    vi.advanceTimersByTime(3000);
+    vi.advanceTimersByTime(180000);
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
 
     const gm = alice.ws.messagesOfType('MESSAGE').filter((m) => m.name === 'GM');
@@ -113,12 +113,12 @@ describe('AFK timeout', () => {
     alice.ws.flush();
 
     // Advance to just before idle expiry, then PING
-    vi.advanceTimersByTime(4500);
+    vi.advanceTimersByTime(270000);
     alice.ws.receive({ type: 'PING' });
     alice.ws.flush();
 
     // Advance remaining — idle timer should still fire
-    vi.advanceTimersByTime(600);
+    vi.advanceTimersByTime(30001);
 
     const gm = alice.ws.messagesOfType('MESSAGE').filter((m) => m.name === 'GM');
     expect(gm.some((m) => m.text.includes('kicked'))).toBe(true);
@@ -128,7 +128,7 @@ describe('AFK timeout', () => {
     const alice = joinPlayer(session, 'Alice');
 
     // Idle timer + 5 warning intervals + kick timer
-    vi.advanceTimersByTime(5001 + 5 * 1001);
+    vi.advanceTimersByTime(300001 + 5 * 60001);
 
     expect(alice.ws.readyState).toBe(3); // WebSocket.CLOSED = 3
   });
@@ -136,12 +136,12 @@ describe('AFK timeout', () => {
   it('handles disconnect during warning phase without errors', () => {
     const alice = joinPlayer(session, 'Alice');
 
-    vi.advanceTimersByTime(5001); // enter warning phase
+    vi.advanceTimersByTime(300001); // enter warning phase
 
     // Player disconnects manually mid-warning
     alice.ws.close();
 
     // Advancing time should not throw or send messages to the now-gone player
-    expect(() => vi.advanceTimersByTime(5000)).not.toThrow();
+    expect(() => vi.advanceTimersByTime(60000)).not.toThrow();
   });
 });
