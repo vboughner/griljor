@@ -21,6 +21,12 @@ export interface ObjDef {
   alternate?: number; // object type this becomes when toggled
   health?: number; // negative = restores HP on use
   lost?: boolean; // consumed on use (remove from inventory)
+  stop?: boolean; // projectile stops on impact and lands on the floor
+  explodes?: number; // non-zero: projectile explodes on impact (does not land as item)
+  boombit?: number; // object type the weapon explodes into
+  piercing?: number; // non-zero: explosion missiles pass through walls
+  spread?: number; // number of evenly-spaced directions; 0 or absent = default 8
+  directional?: boolean; // true: sprite direction matches missile travel direction
 }
 
 export interface RecObj {

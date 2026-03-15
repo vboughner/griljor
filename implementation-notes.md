@@ -15,7 +15,7 @@ npm run test:server    # server only
 npm run test:client    # client only
 ```
 
-**132 tests total** (79 server, 53 client) as of the fire-rate-and-health branch.
+**151 tests total** (98 server, 53 client) as of the big-fixing-2 branch.
 
 ### Server test layout (`server/src/__tests__/`)
 
@@ -39,10 +39,11 @@ npm run test:client    # client only
 | `fire-rate.test.ts` | Cooldown enforcement: second shot within window ignored; allowed after cooldown elapses |
 | `regen.test.ts` | 1 HP/tick regen, PLAYER_HEALTH broadcast, no over-heal, dead players not healed |
 | `consumables.test.ts` | Heal on USE_ITEM, PLAYER_HEAL broadcast, lost item removal, full-HP guard, burden decrement, auto-reload from inventory, PLAYER_HIT broadcast, dead-player damage guard, lost weapon consumed on fire, pickup blocked by occupying player |
+| `explosion.test.ts` | Grenade produces 8 explosion rays on landing, boombit object type used, MISSILE_END per ray, blast radius damage, kill attribution, boombit fallback to movingobj |
 
 **`helpers.ts`** exports:
 - `MockWebSocket` — captures S→C messages; `receive(msg)` to inject C→S; `flush()`, `close()`
-- `buildTestWorld()` — minimal world with floor/sword/potion/wall and two pre-placed items
+- `buildTestWorld()` — minimal world with floor/sword/potion/wall/potted-plant/grenade/explosion objects and pre-placed items
 - `joinPlayer(session, name, avatar)` — connects, JOINs, returns `{ ws, id, room, x, y }`
 
 ### Client test layout (`client/src/__tests__/`)
@@ -1948,3 +1949,133 @@ is still open.
 
 The lobby `max-width` was widened from 800 px to 900 px to accommodate the
 wider join-button column (130 px vs the previous 50 px).
+
+---
+
+## Phase 15 — Throwable Item Landing and Grenade Explosions
+
+### Throwable Item Drop on Landing
+
+Weapons with `lost: true` and `stop: true` (e.g. potted plant) are consumed
+from the hand when fired, travel to their target, then reappear as a floor item
+at the landing tile.
+
+**Server (`session.ts :: onFireWeapon`)**:
+
+After the missile travel timer fires:
+- If `obj.lost && obj.stop && !obj.explodes`: the `handItem` reference (captured
+  before the weapon was consumed from the hand) is placed on the floor at or near
+  the landing tile via `nearbyFreeTile`. Broadcasts `ITEM_ADDED`.
+- The `!obj.explodes` guard prevents exploding weapons (grenades) from also
+  landing as floor items; they explode instead (see below).
+
+`ObjDef` gained `stop?: boolean` to carry this flag from the object data.
+
+### Fix: Grenade Item Not Consumed on Fire
+
+The `else if (obj.lost)` branch added in Phase 13 for grenade consumption ran
+unconditionally regardless of whether there were more grenades in inventory. The
+`autoReloadHand` call correctly pulled the next grenade from inventory into the
+hand slot after each throw, so grenades were properly consumed and auto-reloaded
+(matching the original game's behaviour).
+
+Additionally, the `stop && !explodes` condition ensures that exploding weapons
+do not leave a floor item behind; they explode instead.
+
+### Explosion System
+
+**Goal**: When a grenade missile stops (range exhausted, wall hit, or player hit),
+the server fires 8 new explosion missiles radiating outward in all cardinal and
+diagonal directions from the landing tile.
+
+#### Object Data Fields Added (`server/src/world.ts` `ObjDef`)
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `boombit` | `number` | Object type the weapon explodes into (the explosion sprite/stats) |
+| `piercing` | `number` | Non-zero: explosion missiles pass through walls |
+| `spread` | `number` | Number of evenly-spaced directions (0 or absent = default 8) |
+| `directional` | `boolean` | Sprite is rotated to match travel direction (already used by client) |
+
+#### Direction Constant
+
+```typescript
+const EXPLOSION_DIRS = [
+  { dx:  0, dy: -1 }, { dx:  1, dy: -1 }, { dx:  1, dy:  0 }, { dx:  1, dy:  1 },
+  { dx:  0, dy:  1 }, { dx: -1, dy:  1 }, { dx: -1, dy:  0 }, { dx: -1, dy: -1 },
+] as const;
+```
+
+#### `calcMissilePath` (extracted from `onFireWeapon`)
+
+The Bresenham path computation was extracted into a private method:
+
+```typescript
+private calcMissilePath(
+  room: RoomData, x0, y0, x1, y1: number, range: number, piercing: boolean,
+): Array<{ x: number; y: number }>
+```
+
+Wall/floor checks use `!piercing && wallObj && !wallObj.permeable`. `onFireWeapon`
+calls it with `piercing: false`. Explosion rays can be `piercing: true` if the
+boombit object has `piercing > 0`.
+
+#### `triggerExplosion`
+
+```typescript
+private triggerExplosion(
+  attacker: Player, roomIdx: number, landX, landY: number,
+  boomObjType: number, radius: number, piercing: boolean,
+): void
+```
+
+For each of the 8 `EXPLOSION_DIRS`:
+1. Compute `targetX/Y = clamp(landX + dx * radius, 0, GRID-1)`.
+2. Compute path via `calcMissilePath` from landing tile to target.
+3. Find first player hit along path (attacker is **not** skipped — self-damage allowed).
+4. Broadcast `MISSILE_START { objType: boomObjType }` to room.
+5. Schedule `setTimeout(path.length * msPerStep)`: broadcast `MISSILE_END`, then
+   call `dealDamage(hitPlayer, damage, attacker)` if a player was hit.
+
+Each explosion ray's timer handle is stored in `activeMissiles` so it is tracked
+alongside regular missiles.
+
+#### Wiring into `onFireWeapon`
+
+After the existing missile-end timer callback (and `stop` floor-drop check):
+
+```typescript
+if (obj.explodes) {
+  const boomObjType = obj.boombit ?? obj.movingobj ?? handItem.type;
+  const radius = Math.max(1, obj.explodes - 1);
+  const boomObj = this.world.objects[boomObjType];
+  const piercingFlag = (boomObj?.piercing ?? 0) > 0;
+  const landTile = finalPath[finalPath.length - 1];
+  this.triggerExplosion(player, player.room, landTile.x, landTile.y,
+    boomObjType, radius, piercingFlag);
+}
+```
+
+**`explodes - 1` = radius**: hand grenade (`explodes: 2`) → radius 1;
+nuclear bomb (`explodes: 7`) → radius 6. Minimum radius is 1.
+
+#### Key Decisions
+
+- **8 directions always**: All grenades explode in all 8 directions. The `spread`
+  field is present in `ObjDef` but not yet used; it is absent on all grenade
+  objects in the current data anyway.
+- **Self-damage**: Explosion rays do not skip the attacker — matches original game.
+- **No chain explosions**: Flammable objects triggering secondary explosions are
+  out of scope.
+- **Graceful fallback**: `boombit ?? movingobj ?? handItem.type` so objects without
+  `boombit` still explode using their projectile sprite.
+
+#### Timing
+
+```
+grenade msPerStep = round(2500 / (speed × 2.2))
+  hand grenade (speed=6): ~189 ms/step; range=4 → lands at 756 ms
+
+explosion msPerStep = round(2500 / (boomObj.speed × 2.2))
+  explosion object (speed=4): ~284 ms/step; radius=1 → ends at 756+284 = 1040 ms
+```

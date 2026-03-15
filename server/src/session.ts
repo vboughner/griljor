@@ -1,12 +1,23 @@
 import WebSocket from 'ws';
 import { C2SMessage, S2CMessage, InventoryItem } from './protocol';
-import { World, ObjDef, RecObj } from './world';
+import { World, ObjDef, RecObj, RoomData } from './world';
 import { filterText, randomScold } from './filter';
 
 const INV_SIZE = 35;
 const MAX_WEIGHT = 150;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
+
+const EXPLOSION_DIRS = [
+  { dx: 0, dy: -1 },
+  { dx: 1, dy: -1 },
+  { dx: 1, dy: 0 },
+  { dx: 1, dy: 1 },
+  { dx: 0, dy: 1 },
+  { dx: -1, dy: 1 },
+  { dx: -1, dy: 0 },
+  { dx: -1, dy: -1 },
+] as const;
 
 /**
  * For numbered items (guns, potions with charges), quantity represents the
@@ -460,6 +471,113 @@ export class GameSession {
 
   // ── Combat ────────────────────────────────────────────────────────────────
 
+  /** Scan path for the first player occupying a tile. Pass excludeId to skip a player (e.g. the shooter). */
+  private findPlayerHitOnPath(
+    path: Array<{ x: number; y: number }>,
+    roomIdx: number,
+    excludeId?: number,
+  ): { player: Player; hitAtStep: number } | null {
+    for (let i = 0; i < path.length; i++) {
+      const { x, y } = path[i];
+      for (const p of this.players.values()) {
+        if (p.room !== roomIdx) continue;
+        if (excludeId !== undefined && p.id === excludeId) continue;
+        if (p.x === x && p.y === y) return { player: p, hitAtStep: i + 1 };
+      }
+    }
+    return null;
+  }
+
+  private calcMissilePath(
+    room: RoomData,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    range: number,
+    piercing: boolean,
+  ): Array<{ x: number; y: number }> {
+    const path: Array<{ x: number; y: number }> = [];
+    const adx = Math.abs(x1 - x0),
+      ady = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1,
+      sy = y0 < y1 ? 1 : -1;
+    let err = adx - ady;
+    let cx = x0,
+      cy = y0;
+    while (path.length < range) {
+      const e2 = 2 * err;
+      if (e2 > -ady) {
+        err -= ady;
+        cx += sx;
+      }
+      if (e2 < adx) {
+        err += adx;
+        cy += sy;
+      }
+      if (cx < 0 || cx >= GRID || cy < 0 || cy >= GRID) break;
+      const cell = room.spot?.[cx]?.[cy];
+      if (cell) {
+        const [flId, wlId] = cell;
+        const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
+        const floorObj = flId > 0 ? this.world.objects[flId] : null;
+        if (!piercing && wallObj && !wallObj.permeable) break;
+        if (!piercing && floorObj && !floorObj.permeable) break;
+      }
+      path.push({ x: cx, y: cy });
+      if (cx === x1 && cy === y1) break;
+    }
+    return path;
+  }
+
+  private triggerExplosion(
+    attacker: Player,
+    roomIdx: number,
+    landX: number,
+    landY: number,
+    boomObjType: number,
+    radius: number,
+    piercing: boolean,
+  ): void {
+    const boomObj = this.world.objects[boomObjType];
+    if (!boomObj) return;
+
+    const msPerStep = Math.max(50, Math.round(2500 / ((boomObj.speed ?? 5) * 2.2)));
+    const damage = boomObj.damage ?? 10;
+    const roomData = this.world.rooms[roomIdx];
+    if (!roomData) return;
+
+    for (const { dx, dy } of EXPLOSION_DIRS) {
+      const targetX = Math.max(0, Math.min(GRID - 1, landX + dx * radius));
+      const targetY = Math.max(0, Math.min(GRID - 1, landY + dy * radius));
+      const path = this.calcMissilePath(roomData, landX, landY, targetX, targetY, radius, piercing);
+      if (path.length === 0) continue;
+
+      // Find first player hit along this ray (attacker included — self-damage allowed)
+      const hit = this.findPlayerHitOnPath(path, roomIdx);
+      const hitPlayer = hit?.player ?? null;
+      const finalPath = path.slice(0, hit?.hitAtStep ?? path.length);
+      const id = this.nextMissileId++;
+      this.broadcastToRoom(roomIdx, {
+        type: 'MISSILE_START',
+        id,
+        room: roomIdx,
+        path: finalPath,
+        objType: boomObjType,
+        msPerStep,
+        dx,
+        dy,
+      });
+
+      const timer = setTimeout(() => {
+        this.activeMissiles.delete(id);
+        this.broadcastToRoom(roomIdx, { type: 'MISSILE_END', id });
+        if (hitPlayer) this.dealDamage(hitPlayer, damage, attacker);
+      }, finalPath.length * msPerStep);
+      this.activeMissiles.set(id, timer);
+    }
+  }
+
   private autoReloadHand(player: Player, hand: 'left' | 'right', itemType: number): void {
     const reloadSlot = player.inventory.findIndex(
       (item) => item !== null && item.type === itemType,
@@ -530,60 +648,20 @@ export class GameSession {
     const room = this.world.rooms[player.room];
     if (!room) return;
 
-    // Compute Bresenham path from player to target, capped at range
-    const path: Array<{ x: number; y: number }> = [];
-    {
-      const x0 = player.x,
-        y0 = player.y;
-      const x1 = msg.targetX,
-        y1 = msg.targetY;
-      const adx = Math.abs(x1 - x0),
-        ady = Math.abs(y1 - y0);
-      const sx = x0 < x1 ? 1 : -1,
-        sy = y0 < y1 ? 1 : -1;
-      let err = adx - ady;
-      let cx = x0,
-        cy = y0;
-      while (path.length < range) {
-        const e2 = 2 * err;
-        if (e2 > -ady) {
-          err -= ady;
-          cx += sx;
-        }
-        if (e2 < adx) {
-          err += adx;
-          cy += sy;
-        }
-        if (cx < 0 || cx >= GRID || cy < 0 || cy >= GRID) break;
-        const cell = room.spot?.[cx]?.[cy];
-        if (cell) {
-          const [flId, wlId] = cell;
-          const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
-          const floorObj = flId > 0 ? this.world.objects[flId] : null;
-          if (wallObj && !wallObj.permeable) break;
-          if (floorObj && !floorObj.permeable) break;
-        }
-        path.push({ x: cx, y: cy });
-        if (cx === x1 && cy === y1) break; // reached target tile
-      }
-    }
+    const path = this.calcMissilePath(
+      room,
+      player.x,
+      player.y,
+      msg.targetX,
+      msg.targetY,
+      range,
+      false,
+    );
 
-    // Find first player hit along path
-    let hitPlayer: Player | null = null;
-    let hitAtStep = path.length;
-    outer: for (let i = 0; i < path.length; i++) {
-      const { x, y } = path[i];
-      for (const other of this.players.values()) {
-        if (other.id === playerId || other.room !== player.room) continue;
-        if (other.x === x && other.y === y) {
-          hitPlayer = other;
-          hitAtStep = i + 1;
-          break outer;
-        }
-      }
-    }
-
-    const finalPath = path.slice(0, hitAtStep);
+    // Find first player hit along path (excluding the shooter)
+    const hit = this.findPlayerHitOnPath(path, player.room, playerId);
+    const hitPlayer = hit?.player ?? null;
+    const finalPath = path.slice(0, hit?.hitAtStep ?? path.length);
     if (finalPath.length === 0) return;
 
     const id = this.nextMissileId++;
@@ -609,6 +687,39 @@ export class GameSession {
       this.activeMissiles.delete(id);
       this.broadcastToRoom(player.room, { type: 'MISSILE_END', id });
       if (hitPlayer) this.dealDamage(hitPlayer, damage, player);
+      const landTile = finalPath[finalPath.length - 1];
+      // Trigger explosion for exploding weapons
+      if (obj.explodes) {
+        const boomObjType = obj.boombit ?? obj.movingobj ?? handItem.type;
+        const radius = Math.max(1, obj.explodes - 1);
+        const boomObj = this.world.objects[boomObjType];
+        const piercingFlag = (boomObj?.piercing ?? 0) > 0;
+        this.triggerExplosion(
+          player,
+          player.room,
+          landTile.x,
+          landTile.y,
+          boomObjType,
+          radius,
+          piercingFlag,
+        );
+      }
+      // Drop throwable items (lost+stop, non-exploding) at landing position
+      if (obj.lost && obj.stop && !obj.explodes) {
+        const tile = this.nearbyFreeTile(player.room, landTile.x, landTile.y);
+        if (tile) {
+          const roomMap = this.roomItems.get(player.room) ?? new Map<string, InventoryItem>();
+          roomMap.set(`${tile.x},${tile.y}`, handItem);
+          this.roomItems.set(player.room, roomMap);
+          this.broadcast({
+            type: 'ITEM_ADDED',
+            room: player.room,
+            x: tile.x,
+            y: tile.y,
+            item: handItem,
+          });
+        }
+      }
     }, travelMs);
     this.activeMissiles.set(id, timer);
   }
