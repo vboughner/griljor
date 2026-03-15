@@ -850,11 +850,19 @@ export class GameSession {
       if (p.room === roomIdx) playerOccupied.add(`${p.x},${p.y}`);
     }
 
+    // Build a set of tiles blocked by recorded_objects (e.g. closed doors, walls).
+    const roBlocked = new Set<string>();
+    for (const ro of room.recorded_objects) {
+      const obj = ro.type > 0 ? this.world.objects[ro.type] : null;
+      if (obj && !obj.movement) roBlocked.add(`${ro.x},${ro.y}`);
+    }
+
     // Collect all walkable, unoccupied tiles
     const walkable: Array<{ x: number; y: number }> = [];
     for (let x = 0; x < GRID; x++) {
       for (let y = 0; y < GRID; y++) {
         if (playerOccupied.has(`${x},${y}`)) continue;
+        if (roBlocked.has(`${x},${y}`)) continue;
         const cell = room.spot[x]?.[y];
         if (!cell) continue;
         const [flId, wlId] = cell;
