@@ -200,6 +200,33 @@ describe('combat', () => {
     expect(drops.some((m) => m.item.type === 3)).toBe(true); // potion
   });
 
+  it('victim receives YOUR_INVENTORY with empty slots immediately on death', () => {
+    const alice = joinPlayer(session, 'Alice');
+    const bob = joinPlayer(session, 'Bob');
+
+    // Give Bob the potion (picked up into left hand)
+    bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 6, y: 6 });
+    bob.ws.receive({ type: 'PICKUP', x: 6, y: 6, hand: 'left' });
+
+    armAlice(alice);
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 1 });
+    bob.ws.flush();
+
+    for (let i = 0; i < 4; i++) {
+      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      vi.advanceTimersByTime(2000);
+    }
+
+    // Bob should have received a YOUR_INVENTORY after dying with empty hands and inventory
+    const invMsgs = bob.ws.messagesOfType('YOUR_INVENTORY');
+    const lastInv = invMsgs.at(-1);
+    expect(lastInv).toBeDefined();
+    expect(lastInv!.leftHand).toBeNull();
+    expect(lastInv!.rightHand).toBeNull();
+    expect(lastInv!.inventory.every((slot) => slot === null)).toBe(true);
+  });
+
   it('killed player respawns after delay and receives YOU_RESPAWNED', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');

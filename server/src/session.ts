@@ -773,8 +773,9 @@ export class GameSession {
     this.broadcast(deathMsg);
     this.chatHistory.push({ from: 0, name: 'GM', text: deathMsg.text });
 
-    // Drop all inventory items
+    // Drop all inventory items and notify victim their inventory is now empty
     this.dropPlayerItems(victim);
+    this.sendInventory(victim);
 
     // Schedule respawn after tombstone delay
     this.scheduleRespawn(victim, killer);
