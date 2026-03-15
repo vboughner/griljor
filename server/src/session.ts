@@ -10,11 +10,8 @@ const RESPAWN_DELAY_MS = 5000;
 
 // AFK idle detection
 // NOTE: Set to small values for testing; restore to minutes for production.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const AFK_IDLE_MS = 5 * 1000; // idle time before first warning (testing: 5s)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const AFK_WARN_INTERVAL_MS = 1 * 1000; // interval between warnings (testing: 1s)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const AFK_GRACE_MINUTES = 5; // number of warnings before kick
 
 const EXPLOSION_DIRS = [
@@ -1168,6 +1165,71 @@ export class GameSession {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private startAfkTimer(player: Player): void {
+    this.clearAfkTimers(player);
+    player.afkIdleTimer = setTimeout(() => {
+      player.afkIdleTimer = null;
+      player.afkWarningsLeft = AFK_GRACE_MINUTES;
+      this.sendAfkWarning(player);
+    }, AFK_IDLE_MS);
+  }
+
+  private clearAfkTimers(player: Player): void {
+    if (player.afkIdleTimer !== null) {
+      clearTimeout(player.afkIdleTimer);
+      player.afkIdleTimer = null;
+    }
+    if (player.afkWarnTimer !== null) {
+      clearTimeout(player.afkWarnTimer);
+      player.afkWarnTimer = null;
+    }
+  }
+
+  private sendAfkWarning(player: Player): void {
+    const mins = player.afkWarningsLeft;
+    this.send(player.ws, {
+      type: 'MESSAGE',
+      from: 0,
+      name: 'GM',
+      to: player.id,
+      text: `You'll be kicked from the game in another ${mins} minute${mins === 1 ? '' : 's'} if you are still inactive.`,
+    });
+    player.afkWarningsLeft--;
+    if (player.afkWarningsLeft <= 0) {
+      // Grace period exhausted — kick the player
+      player.afkWarnTimer = setTimeout(() => {
+        player.afkWarnTimer = null;
+        this.onLeave(player.id);
+        try {
+          player.ws.close();
+        } catch {
+          /* already closed */
+        }
+      }, AFK_WARN_INTERVAL_MS);
+    } else {
+      player.afkWarnTimer = setTimeout(() => {
+        player.afkWarnTimer = null;
+        this.sendAfkWarning(player);
+      }, AFK_WARN_INTERVAL_MS);
+    }
+  }
+
+  private resetAfkTimer(player: Player): void {
+    const wasWarning = player.afkWarningsLeft > 0 || player.afkWarnTimer !== null;
+    player.lastActivityAt = Date.now();
+    this.startAfkTimer(player);
+    if (wasWarning) {
+      player.afkWarningsLeft = 0;
+      this.send(player.ws, {
+        type: 'MESSAGE',
+        from: 0,
+        name: 'GM',
+        to: player.id,
+        text: 'Welcome back, I see you are still active!',
+      });
+    }
+  }
 
   private broadcastGM(text: string): void {
     this.broadcast({ type: 'MESSAGE', from: 0, name: 'GM', to: 'all', text });
