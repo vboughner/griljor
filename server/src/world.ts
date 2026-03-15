@@ -23,6 +23,12 @@ export interface ObjDef {
   lost?: boolean; // consumed on use (remove from inventory)
   charges?: number; // bitmask: this ammo item reloads weapons where weapon.type & charges != 0
   capacity?: number; // max charges a numbered weapon can hold
+  stop?: boolean; // projectile stops on impact and lands on the floor
+  explodes?: number; // non-zero: projectile explodes on impact (does not land as item)
+  boombit?: number; // object type the weapon explodes into
+  piercing?: number; // non-zero: explosion missiles pass through walls
+  spread?: number; // number of evenly-spaced directions; 0 or absent = default 8
+  directional?: boolean; // true: sprite direction matches missile travel direction
 }
 
 export interface RecObj {

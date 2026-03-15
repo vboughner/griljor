@@ -1,12 +1,23 @@
 import WebSocket from 'ws';
 import { C2SMessage, S2CMessage, InventoryItem } from './protocol';
-import { World, ObjDef, RecObj } from './world';
+import { World, ObjDef, RecObj, RoomData } from './world';
 import { filterText, randomScold } from './filter';
 
 const INV_SIZE = 35;
 const MAX_WEIGHT = 150;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
+
+const EXPLOSION_DIRS = [
+  { dx: 0, dy: -1 },
+  { dx: 1, dy: -1 },
+  { dx: 1, dy: 0 },
+  { dx: 1, dy: 1 },
+  { dx: 0, dy: 1 },
+  { dx: -1, dy: 1 },
+  { dx: -1, dy: 0 },
+  { dx: -1, dy: -1 },
+] as const;
 
 /**
  * For numbered items (guns, potions with charges), quantity represents the
@@ -181,6 +192,9 @@ export class GameSession {
           case 'USE_ITEM':
             this.onUseItem(playerId, msg);
             break;
+          case 'VOLUNTARY_RESPAWN':
+            this.onVoluntaryRespawn(playerId);
+            break;
           case 'PING':
             break; // no-op: keeps the connection alive
         }
@@ -321,17 +335,10 @@ export class GameSession {
     };
     if (msg.to === 'all') {
       this.chatHistory.push({ from: playerId, name: sender.name, text: filtered });
+      if (this.chatHistory.length > 100) this.chatHistory.shift();
       this.broadcast(s2c);
       if (triggered) {
-        const gmMsg: S2CMessage = {
-          type: 'MESSAGE',
-          from: 0,
-          name: 'GM',
-          to: 'all',
-          text: randomScold(),
-        };
-        this.broadcast(gmMsg);
-        this.chatHistory.push({ from: 0, name: 'GM', text: gmMsg.text });
+        this.broadcastGM(randomScold());
       }
     } else {
       const target = this.players.get(msg.to as number);
@@ -525,6 +532,113 @@ export class GameSession {
     if (ammoObj) this.tryReloadWeaponFromAmmo(player, ammoHand, ammoItem, ammoObj);
   }
 
+  /** Scan path for the first player occupying a tile. Pass excludeId to skip a player (e.g. the shooter). */
+  private findPlayerHitOnPath(
+    path: Array<{ x: number; y: number }>,
+    roomIdx: number,
+    excludeId?: number,
+  ): { player: Player; hitAtStep: number } | null {
+    for (let i = 0; i < path.length; i++) {
+      const { x, y } = path[i];
+      for (const p of this.players.values()) {
+        if (p.room !== roomIdx) continue;
+        if (excludeId !== undefined && p.id === excludeId) continue;
+        if (p.x === x && p.y === y) return { player: p, hitAtStep: i + 1 };
+      }
+    }
+    return null;
+  }
+
+  private calcMissilePath(
+    room: RoomData,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    range: number,
+    piercing: boolean,
+  ): Array<{ x: number; y: number }> {
+    const path: Array<{ x: number; y: number }> = [];
+    const adx = Math.abs(x1 - x0),
+      ady = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1,
+      sy = y0 < y1 ? 1 : -1;
+    let err = adx - ady;
+    let cx = x0,
+      cy = y0;
+    while (path.length < range) {
+      const e2 = 2 * err;
+      if (e2 > -ady) {
+        err -= ady;
+        cx += sx;
+      }
+      if (e2 < adx) {
+        err += adx;
+        cy += sy;
+      }
+      if (cx < 0 || cx >= GRID || cy < 0 || cy >= GRID) break;
+      const cell = room.spot?.[cx]?.[cy];
+      if (cell) {
+        const [flId, wlId] = cell;
+        const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
+        const floorObj = flId > 0 ? this.world.objects[flId] : null;
+        if (!piercing && wallObj && !wallObj.permeable) break;
+        if (!piercing && floorObj && !floorObj.permeable) break;
+      }
+      path.push({ x: cx, y: cy });
+      if (cx === x1 && cy === y1) break;
+    }
+    return path;
+  }
+
+  private triggerExplosion(
+    attacker: Player,
+    roomIdx: number,
+    landX: number,
+    landY: number,
+    boomObjType: number,
+    radius: number,
+    piercing: boolean,
+  ): void {
+    const boomObj = this.world.objects[boomObjType];
+    if (!boomObj) return;
+
+    const msPerStep = Math.max(50, Math.round(2500 / ((boomObj.speed ?? 5) * 2.2)));
+    const damage = boomObj.damage ?? 10;
+    const roomData = this.world.rooms[roomIdx];
+    if (!roomData) return;
+
+    for (const { dx, dy } of EXPLOSION_DIRS) {
+      const targetX = Math.max(0, Math.min(GRID - 1, landX + dx * radius));
+      const targetY = Math.max(0, Math.min(GRID - 1, landY + dy * radius));
+      const path = this.calcMissilePath(roomData, landX, landY, targetX, targetY, radius, piercing);
+      if (path.length === 0) continue;
+
+      // Find first player hit along this ray (attacker included — self-damage allowed)
+      const hit = this.findPlayerHitOnPath(path, roomIdx);
+      const hitPlayer = hit?.player ?? null;
+      const finalPath = path.slice(0, hit?.hitAtStep ?? path.length);
+      const id = this.nextMissileId++;
+      this.broadcastToRoom(roomIdx, {
+        type: 'MISSILE_START',
+        id,
+        room: roomIdx,
+        path: finalPath,
+        objType: boomObjType,
+        msPerStep,
+        dx,
+        dy,
+      });
+
+      const timer = setTimeout(() => {
+        this.activeMissiles.delete(id);
+        this.broadcastToRoom(roomIdx, { type: 'MISSILE_END', id });
+        if (hitPlayer) this.dealDamage(hitPlayer, damage, attacker);
+      }, finalPath.length * msPerStep);
+      this.activeMissiles.set(id, timer);
+    }
+  }
+
   private autoReloadHand(player: Player, hand: 'left' | 'right', itemType: number): void {
     const reloadSlot = player.inventory.findIndex(
       (item) => item !== null && item.type === itemType,
@@ -607,60 +721,20 @@ export class GameSession {
     const room = this.world.rooms[player.room];
     if (!room) return;
 
-    // Compute Bresenham path from player to target, capped at range
-    const path: Array<{ x: number; y: number }> = [];
-    {
-      const x0 = player.x,
-        y0 = player.y;
-      const x1 = msg.targetX,
-        y1 = msg.targetY;
-      const adx = Math.abs(x1 - x0),
-        ady = Math.abs(y1 - y0);
-      const sx = x0 < x1 ? 1 : -1,
-        sy = y0 < y1 ? 1 : -1;
-      let err = adx - ady;
-      let cx = x0,
-        cy = y0;
-      while (path.length < range) {
-        const e2 = 2 * err;
-        if (e2 > -ady) {
-          err -= ady;
-          cx += sx;
-        }
-        if (e2 < adx) {
-          err += adx;
-          cy += sy;
-        }
-        if (cx < 0 || cx >= GRID || cy < 0 || cy >= GRID) break;
-        const cell = room.spot?.[cx]?.[cy];
-        if (cell) {
-          const [flId, wlId] = cell;
-          const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
-          const floorObj = flId > 0 ? this.world.objects[flId] : null;
-          if (wallObj && !wallObj.permeable) break;
-          if (floorObj && !floorObj.permeable) break;
-        }
-        path.push({ x: cx, y: cy });
-        if (cx === x1 && cy === y1) break; // reached target tile
-      }
-    }
+    const path = this.calcMissilePath(
+      room,
+      player.x,
+      player.y,
+      msg.targetX,
+      msg.targetY,
+      range,
+      false,
+    );
 
-    // Find first player hit along path
-    let hitPlayer: Player | null = null;
-    let hitAtStep = path.length;
-    outer: for (let i = 0; i < path.length; i++) {
-      const { x, y } = path[i];
-      for (const other of this.players.values()) {
-        if (other.id === playerId || other.room !== player.room) continue;
-        if (other.x === x && other.y === y) {
-          hitPlayer = other;
-          hitAtStep = i + 1;
-          break outer;
-        }
-      }
-    }
-
-    const finalPath = path.slice(0, hitAtStep);
+    // Find first player hit along path (excluding the shooter)
+    const hit = this.findPlayerHitOnPath(path, player.room, playerId);
+    const hitPlayer = hit?.player ?? null;
+    const finalPath = path.slice(0, hit?.hitAtStep ?? path.length);
     if (finalPath.length === 0) return;
 
     const id = this.nextMissileId++;
@@ -686,6 +760,39 @@ export class GameSession {
       this.activeMissiles.delete(id);
       this.broadcastToRoom(player.room, { type: 'MISSILE_END', id });
       if (hitPlayer) this.dealDamage(hitPlayer, damage, player);
+      const landTile = finalPath[finalPath.length - 1];
+      // Trigger explosion for exploding weapons
+      if (obj.explodes) {
+        const boomObjType = obj.boombit ?? obj.movingobj ?? handItem.type;
+        const radius = Math.max(1, obj.explodes - 1);
+        const boomObj = this.world.objects[boomObjType];
+        const piercingFlag = (boomObj?.piercing ?? 0) > 0;
+        this.triggerExplosion(
+          player,
+          player.room,
+          landTile.x,
+          landTile.y,
+          boomObjType,
+          radius,
+          piercingFlag,
+        );
+      }
+      // Drop throwable items (lost+stop, non-exploding) at landing position
+      if (obj.lost && obj.stop && !obj.explodes) {
+        const tile = this.nearbyFreeTile(player.room, landTile.x, landTile.y);
+        if (tile) {
+          const roomMap = this.roomItems.get(player.room) ?? new Map<string, InventoryItem>();
+          roomMap.set(`${tile.x},${tile.y}`, handItem);
+          this.roomItems.set(player.room, roomMap);
+          this.broadcast({
+            type: 'ITEM_ADDED',
+            room: player.room,
+            x: tile.x,
+            y: tile.y,
+            item: handItem,
+          });
+        }
+      }
     }, travelMs);
     this.activeMissiles.set(id, timer);
   }
@@ -840,15 +947,7 @@ export class GameSession {
 
     // Announce death in global chat
     const killerDesc = killer ? killer.name : 'the void';
-    const deathMsg: S2CMessage = {
-      type: 'MESSAGE',
-      from: 0,
-      name: 'GM',
-      to: 'all',
-      text: `${victim.name} was slain by ${killerDesc}.`,
-    };
-    this.broadcast(deathMsg);
-    this.chatHistory.push({ from: 0, name: 'GM', text: deathMsg.text });
+    this.broadcastGM(`${victim.name} was slain by ${killerDesc}.`);
 
     // Drop all inventory items and notify victim their inventory is now empty
     this.dropPlayerItems(victim);
@@ -928,11 +1027,19 @@ export class GameSession {
       if (p.room === roomIdx) playerOccupied.add(`${p.x},${p.y}`);
     }
 
+    // Build a set of tiles blocked by recorded_objects (e.g. closed doors, walls).
+    const roBlocked = new Set<string>();
+    for (const ro of room.recorded_objects) {
+      const obj = ro.type > 0 ? this.world.objects[ro.type] : null;
+      if (obj && !obj.movement) roBlocked.add(`${ro.x},${ro.y}`);
+    }
+
     // Collect all walkable, unoccupied tiles
     const walkable: Array<{ x: number; y: number }> = [];
     for (let x = 0; x < GRID; x++) {
       for (let y = 0; y < GRID; y++) {
         if (playerOccupied.has(`${x},${y}`)) continue;
+        if (roBlocked.has(`${x},${y}`)) continue;
         const cell = room.spot[x]?.[y];
         if (!cell) continue;
         const [flId, wlId] = cell;
@@ -983,41 +1090,16 @@ export class GameSession {
   private doRespawn(victim: Player, killerName: string): void {
     victim.respawnTimer = null;
     victim.hp = victim.maxHp; // restore HP at respawn, not at death
-
-    const spawn = this.randomSpawnForTeam(victim.team);
-    if (spawn) {
-      console.log(
-        `[respawn] ${victim.name} team=${victim.team} spawn found: room=${spawn.room} (${spawn.x},${spawn.y})`,
-      );
-      victim.room = spawn.room;
-      victim.x = spawn.x;
-      victim.y = spawn.y;
-    } else {
-      console.warn(
-        `[respawn] ${victim.name} team=${victim.team} NO SPAWN FOUND — staying at room=${victim.room} (${victim.x},${victim.y})`,
-      );
-    }
-
     victim.dead = false;
 
-    // Broadcast alive state at new location
-    console.log(
-      `[respawn] broadcasting PLAYER_INFO for ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`,
-    );
-    this.broadcast(this.makePlayerInfo(victim));
-
-    // Tell the victim where they respawned
-    console.log(
-      `[respawn] sending YOU_RESPAWNED to ${victim.name}: room=${victim.room} (${victim.x},${victim.y})`,
-    );
-    this.send(victim.ws, { type: 'YOU_RESPAWNED', room: victim.room, x: victim.x, y: victim.y });
+    this.placePlayer(victim, 'respawn');
 
     this.broadcast({ type: 'PLAYER_HEALTH', id: victim.id, hp: victim.hp, maxHp: victim.maxHp });
     this.sendStats(victim);
     this.sendInventory(victim);
 
     console.log(
-      `[respawn] ${victim.name} respawn complete at room=${victim.room} (${victim.x},${victim.y}) (killed by ${killerName})`,
+      `[respawn] ${victim.name} complete at room=${victim.room} (${victim.x},${victim.y}) (killed by ${killerName})`,
     );
   }
 
@@ -1057,7 +1139,39 @@ export class GameSession {
     console.log(`[-] ${player.name} (id=${playerId}) left. Players: ${this.players.size}`);
   }
 
+  private onVoluntaryRespawn(playerId: number): void {
+    const player = this.players.get(playerId);
+    if (!player || player.dead) return;
+
+    this.dropPlayerItems(player);
+    this.placePlayer(player, 'voluntary-respawn');
+    this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
+    this.broadcastGM(`${player.name} chose to respawn.`);
+    this.sendInventory(player);
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private broadcastGM(text: string): void {
+    this.broadcast({ type: 'MESSAGE', from: 0, name: 'GM', to: 'all', text });
+    this.chatHistory.push({ from: 0, name: 'GM', text });
+    if (this.chatHistory.length > 100) this.chatHistory.shift();
+  }
+
+  // Move a player to a new spawn point and notify everyone.
+  private placePlayer(player: Player, context: string): void {
+    const spawn = this.randomSpawnForTeam(player.team);
+    if (spawn) {
+      console.log(`[${context}] ${player.name} spawn: room=${spawn.room} (${spawn.x},${spawn.y})`);
+      player.room = spawn.room;
+      player.x = spawn.x;
+      player.y = spawn.y;
+    } else {
+      console.warn(`[${context}] ${player.name} team=${player.team} no spawn — staying in place`);
+    }
+    this.broadcast(this.makePlayerInfo(player));
+    this.send(player.ws, { type: 'YOU_RESPAWNED', room: player.room, x: player.x, y: player.y });
+  }
 
   private sendInventory(player: Player): void {
     this.send(player.ws, {

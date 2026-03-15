@@ -32,6 +32,21 @@ module.exports = {
       script: 'dist/main.js',
       env:    { MAP: 'flag', PORT: 3004, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/flag` },
     },
+    {
+      name:   'ring',
+      script: 'dist/main.js',
+      env:    { MAP: 'ring', PORT: 3005, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/ring` },
+    },
+    {
+      name:   'ivarr',
+      script: 'dist/main.js',
+      env:    { MAP: 'ivarr', PORT: 3006, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/ivarr` },
+    },
+    {
+      name:   'playtesters',
+      script: 'dist/main.js',
+      env:    { MAP: 'playtesters', PORT: 3007, LOBBY_URL: LOBBY, PUBLIC_WS_URL: `wss://${DOMAIN}/ws/playtesters` },
+    },
     // Add more maps here following the same pattern.
     // Each map needs a unique PORT and a matching /ws/<mapname> block in nginx-example.conf.
   ],

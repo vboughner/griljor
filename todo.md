@@ -12,7 +12,11 @@
 - [x] consider including health bars on player list display so people can hunt weak players
 - [ ] get punching to work
 - [ ] figure out how to use ammo — numbered weapon items should consume charges until empty and reload from ammo in other hand
-- [ ] need to test grenades, and other things that you throw and which blow up (at a distance or on hitting something?)
+- [x] need to test grenades, and other things that you throw and which blow up (at a distance or on hitting something?)
+- [ ] bug: you cannot throw a grenade into the next room — instead your player moves toward the border; the grenade should blow up on the first square in the next room
+- [ ] test: exit squares — a grenade thrown at a room border should explode on the first square in the next room
+- [ ] test: explosion rays from the blast should be able to travel one square into an adjacent room as well
+- [ ] bug: missiles should go faster — a player can outrun a potted plant; consider giving missiles the same 40% speedup players received, or consider reverting the player speed increase
 - [ ] the bow disappears when empty and probably should not
 - [ ] add something to the title screen that mentions it is an old school game from 1989 and has been modernized, include a link to the repository
 - [ ] player should only be able to take things that are near it and not across the room
@@ -33,7 +37,7 @@
 - [ ] consider placing player list at the top of the display to make them more prominent
 - [ ] consider making it possible to know which room other players are in
 - [ ] there might be a bug when player reappears after death, they spawn in another room, appear then jump to another location in the same room quickly
-- [ ] when a player spawns in a locked room they cannot escape, maybe give them a give-up key that will give them a 5-second countdown to go to a new spawn location, and maybe that doesn't count as a death
+- [x] when a player spawns in a locked room they cannot escape, maybe give them a give-up key that will give them a 5-second countdown to go to a new spawn location, and maybe that doesn't count as a death
 - [ ] consider making the limited lighting feature work properly (where you can only see things near you and you have a flashlight)
 
 Make teams work:
@@ -55,7 +59,8 @@ Make teams work:
 - [ ] **day/night cycle** — some rooms are lit during the day and dark at night based on in-game time
 - [ ] **wearable items** — armor, rings, helmets with a slot system exist in item definitions but cannot be equipped
 - [ ] **spread/arc weapons** — shotguns, wide-arc blasters, and 360° explosions fire multiple projectiles; a whole weapon category is missing
-- [ ] **explosion system** — grenades and certain weapons are supposed to spawn explosion objects that deal area damage; flammable map objects can chain-react; currently everything is point-damage only
+- [x] **explosion system** — grenades and certain weapons spawn explosion objects that deal area damage in 8 directions
+- [ ] **flammable chain reactions** — flammable map objects (barrels, etc.) should ignite and explode when hit by an explosion; currently not implemented
 - [ ] **ammo reload from quiver** — bows should reload from arrows carried in inventory; currently they just run out
 - [ ] **object look/examine messages** — each item in the original had flavor text shown when looking at or examining it; currently only a name tooltip is shown
 

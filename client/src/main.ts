@@ -275,6 +275,7 @@ async function main(): Promise<void> {
   const mapLabel = document.getElementById('map-label') as HTMLElement;
   const status = document.getElementById('status') as HTMLElement;
   const leaveBtn = document.getElementById('leave-btn') as HTMLButtonElement;
+  const respawnBtn = document.getElementById('respawn-btn') as HTMLButtonElement;
   const chatLog = document.getElementById('chat-log') as HTMLElement;
   const chatInput = document.getElementById('chat-input') as HTMLInputElement;
   const chatSend = document.getElementById('chat-send') as HTMLButtonElement;
@@ -892,10 +893,13 @@ async function main(): Promise<void> {
         appendReport(
           `You were slain by ${msg.killerName}. Respawning in ${Math.round(msg.deadForMs / 1000)} seconds…`,
         );
+        cancelRespawn();
+        respawnBtn.disabled = true;
         game.notifyDied();
         void setPlayerDeadDisplay(localPlayerId, true);
       };
       network.onYouRespawned = (msg) => {
+        respawnBtn.disabled = false;
         void game.notifyRespawned(msg.room, msg.x, msg.y);
         void setPlayerDeadDisplay(localPlayerId, false);
       };
@@ -927,10 +931,65 @@ async function main(): Promise<void> {
     await currentGame?.setMode(currentMode);
   }
 
-  let leaveCountdown: ReturnType<typeof setInterval> | null = null;
+  // Returns a cancel function. When the countdown reaches zero, calls onConfirm().
+  // beforeStart (optional) is called the moment the countdown begins.
+  function makeCountdownButton(
+    btn: HTMLButtonElement,
+    idleLabel: string,
+    activePrefix: string,
+    onConfirm: () => void,
+    beforeStart?: () => void,
+  ): () => void {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    function cancel(): void {
+      if (timer !== null) {
+        clearInterval(timer);
+        timer = null;
+      }
+      btn.textContent = idleLabel;
+    }
+    btn.addEventListener('click', () => {
+      if (timer !== null) {
+        cancel();
+        return;
+      }
+      beforeStart?.();
+      let secs = 5;
+      btn.textContent = `${activePrefix} ${secs}…`;
+      timer = setInterval(() => {
+        secs--;
+        if (secs <= 0) {
+          cancel();
+          onConfirm();
+          return;
+        }
+        btn.textContent = `${activePrefix} ${secs}…`;
+      }, 1000);
+    });
+    return cancel;
+  }
+
+  let respawnWarned = false;
+
+  // cancelLeave is a forward reference — valid because it's only called on click, after init.
+  const cancelRespawn = makeCountdownButton(
+    respawnBtn,
+    'Respawn',
+    'Respawn',
+    () => currentNetwork?.sendVoluntaryRespawn(),
+    () => {
+      cancelLeave();
+      if (!respawnWarned) {
+        respawnWarned = true;
+        appendReport('Warning: respawning will drop all of your carried items.');
+      }
+    },
+  );
 
   function doLeave(): void {
+    cancelRespawn();
     cancelLeave();
+    respawnWarned = false;
     currentNetwork?.sendLeave();
     currentGame?.destroy();
     currentGame = null;
@@ -944,30 +1003,9 @@ async function main(): Promise<void> {
     refreshServerList();
   }
 
-  function cancelLeave(): void {
-    if (leaveCountdown !== null) {
-      clearInterval(leaveCountdown);
-      leaveCountdown = null;
-    }
-    leaveBtn.textContent = 'Leave Game';
-  }
-
-  leaveBtn.addEventListener('click', () => {
-    if (leaveCountdown !== null) {
-      cancelLeave();
-      return;
-    }
-    let secs = 5;
-    leaveBtn.textContent = `Leaving ${secs}…`;
-    leaveCountdown = setInterval(() => {
-      secs--;
-      if (secs <= 0) {
-        doLeave();
-        return;
-      }
-      leaveBtn.textContent = `Leaving ${secs}…`;
-    }, 1000);
-  });
+  const cancelLeave = makeCountdownButton(leaveBtn, 'Leave Game', 'Leaving', doLeave, () =>
+    cancelRespawn(),
+  );
 
   // Size the lobby logo canvas the same way the title screen sizes its top band
   const lobbyLogo = document.getElementById('lobby-logo') as HTMLCanvasElement;

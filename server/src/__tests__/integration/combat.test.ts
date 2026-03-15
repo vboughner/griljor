@@ -346,6 +346,62 @@ describe('combat', () => {
       .filter((m) => m.id === bob.id && m.x === 15 && m.y === 15);
     expect(bobMoved.length).toBe(0);
   });
+
+  it('thrown item (lost+stop) drops at landing tile after missile resolves', () => {
+    const alice = joinPlayer(session, 'Alice');
+    // Pick up potted plant from (2,2)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 2 });
+    alice.ws.receive({ type: 'PICKUP', x: 2, y: 2, hand: 'left' });
+    // Move to (1,1) and fire right — range:3 → path (2,1),(3,1),(4,1), lands at (4,1)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 1 });
+
+    // Missile not yet resolved
+    expect(alice.ws.messagesOfType('ITEM_ADDED').length).toBe(0);
+
+    // Advance past travel time (3 steps × ~284ms ≈ 852ms)
+    vi.advanceTimersByTime(2000);
+
+    const drops = alice.ws.messagesOfType('ITEM_ADDED');
+    expect(drops.some((m) => m.item.type === 5)).toBe(true); // potted plant dropped
+  });
+
+  it('exploding item (lost+stop+explodes) does NOT drop on the floor after travel', () => {
+    const alice = joinPlayer(session, 'Alice');
+    // Pick up grenade from (3,3)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 1 });
+    vi.advanceTimersByTime(2000);
+
+    const drops = alice.ws.messagesOfType('ITEM_ADDED');
+    expect(drops.some((m) => m.item.type === 6)).toBe(false); // grenade must NOT drop
+  });
+
+  it('thrown item lands near target player when hit tile is occupied', () => {
+    const alice = joinPlayer(session, 'Alice');
+    const bob = joinPlayer(session, 'Bob');
+    // Alice picks up potted plant
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 2 });
+    alice.ws.receive({ type: 'PICKUP', x: 2, y: 2, hand: 'left' });
+    // Alice at (1,1), Bob at (4,1) — plant flies into Bob at step 3 of range 3
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 4, y: 1 });
+    alice.ws.flush();
+    bob.ws.flush();
+
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 1 });
+    vi.advanceTimersByTime(2000);
+
+    // Plant should land somewhere near (4,1) even though Bob is standing there
+    const drops = alice.ws.messagesOfType('ITEM_ADDED').filter((m) => m.item.type === 5);
+    expect(drops.length).toBeGreaterThan(0);
+  });
 });
 
 describe('ammo reload', () => {
