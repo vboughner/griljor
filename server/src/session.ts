@@ -389,22 +389,39 @@ export class GameSession {
         this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
         this.send(other.ws, this.makePlayerInfo(player));
       } else {
-        // Same room: check LOS
+        // Same room: check directional LOS independently for each perspective
         const room = this.world.rooms[player.room];
-        const visible =
-          room !== undefined &&
-          spotIsVisible(room, this.world.objects, player.x, player.y, other.x, other.y);
-        if (visible) {
-          this.visibility.get(id)!.add(other.id);
-          this.visibility.get(other.id)?.add(id);
-          this.send(ws, this.makePlayerInfo(other));
-          this.send(ws, {
-            type: 'PLAYER_HEALTH',
-            id: other.id,
-            hp: other.hp,
-            maxHp: other.maxHp,
-          });
-          this.send(other.ws, this.makePlayerInfo(player));
+        if (room) {
+          const newCanSeeOther = spotIsVisible(
+            room,
+            this.world.objects,
+            player.x,
+            player.y,
+            other.x,
+            other.y,
+          );
+          const otherCanSeeNew = spotIsVisible(
+            room,
+            this.world.objects,
+            other.x,
+            other.y,
+            player.x,
+            player.y,
+          );
+          if (newCanSeeOther) {
+            this.visibility.get(id)!.add(other.id);
+            this.send(ws, this.makePlayerInfo(other));
+            this.send(ws, {
+              type: 'PLAYER_HEALTH',
+              id: other.id,
+              hp: other.hp,
+              maxHp: other.maxHp,
+            });
+          }
+          if (otherCanSeeNew) {
+            this.visibility.get(other.id)?.add(id);
+            this.send(other.ws, this.makePlayerInfo(player));
+          }
         }
       }
     }
@@ -486,44 +503,54 @@ export class GameSession {
         continue;
       }
 
-      // Same room: check LOS
-      const wasVisible = moverVisSet.has(other.id);
+      // Same room: check directional LOS independently for each perspective
       const room = this.world.rooms[mover.room];
-      const nowVisible =
-        room !== undefined &&
-        spotIsVisible(room, this.world.objects, mover.x, mover.y, other.x, other.y);
+      if (!room) continue;
 
-      // Update visibility sets (symmetric)
-      if (nowVisible) {
-        moverVisSet.add(other.id);
-        this.visibility.get(other.id)?.add(moverId);
-      } else {
-        moverVisSet.delete(other.id);
-        this.visibility.get(other.id)?.delete(moverId);
+      const otherVisSet = this.visibility.get(other.id);
+      const wasMoverSeeOther = moverVisSet.has(other.id);
+      const wasOtherSeeMover = otherVisSet?.has(moverId) ?? false;
+
+      // Can mover see other? (mover's tile excluded, other's tile included)
+      const nowMoverSeeOther = spotIsVisible(
+        room,
+        this.world.objects,
+        mover.x,
+        mover.y,
+        other.x,
+        other.y,
+      );
+      // Can other see mover? (other's tile excluded, mover's tile included)
+      const nowOtherSeeMover = spotIsVisible(
+        room,
+        this.world.objects,
+        other.x,
+        other.y,
+        mover.x,
+        mover.y,
+      );
+
+      // Update visibility sets
+      if (nowMoverSeeOther) moverVisSet.add(other.id);
+      else moverVisSet.delete(other.id);
+      if (otherVisSet) {
+        if (nowOtherSeeMover) otherVisSet.add(moverId);
+        else otherVisSet.delete(moverId);
       }
 
-      if (nowVisible && !wasVisible) {
-        // Case A: just became visible — introduce them to each other
+      // What other can see about mover
+      if (nowOtherSeeMover && !wasOtherSeeMover) {
         this.send(other.ws, this.makePlayerInfo(mover));
-        this.send(mover.ws, this.makePlayerInfo(other));
-        this.send(mover.ws, {
-          type: 'PLAYER_HEALTH',
-          id: other.id,
-          hp: other.hp,
-          maxHp: other.maxHp,
-        });
         this.send(other.ws, {
           type: 'PLAYER_HEALTH',
           id: moverId,
           hp: mover.hp,
           maxHp: mover.maxHp,
         });
-      } else if (!nowVisible && wasVisible) {
-        // Case B: just became hidden — tell both sides to hide
-        this.send(mover.ws, { type: 'PLAYER_HIDDEN', id: other.id });
+      } else if (!nowOtherSeeMover && wasOtherSeeMover) {
         this.send(other.ws, { type: 'PLAYER_HIDDEN', id: moverId });
-      } else if (nowVisible && wasVisible) {
-        // Case C: still visible — send normal position update to the other player
+      } else if (nowOtherSeeMover) {
+        // Still visible: send position update
         this.send(other.ws, {
           type: 'MY_LOCATION',
           id: moverId,
@@ -531,9 +558,21 @@ export class GameSession {
           x: mover.x,
           y: mover.y,
         });
-        // no need to update mover about other — other didn't move
       }
-      // Case D: !nowVisible && !wasVisible → nothing
+
+      // What mover can see about other (other didn't move, but mover's vantage changed)
+      if (nowMoverSeeOther && !wasMoverSeeOther) {
+        this.send(mover.ws, this.makePlayerInfo(other));
+        this.send(mover.ws, {
+          type: 'PLAYER_HEALTH',
+          id: other.id,
+          hp: other.hp,
+          maxHp: other.maxHp,
+        });
+      } else if (!nowMoverSeeOther && wasMoverSeeOther) {
+        this.send(mover.ws, { type: 'PLAYER_HIDDEN', id: other.id });
+      }
+      // If still mutually visible or still mutually hidden: nothing extra for mover's view of other
     }
   }
 
@@ -1494,28 +1533,45 @@ export class GameSession {
         continue;
       }
 
-      // Same room: check LOS
+      // Same room: check directional LOS independently for each perspective
       const room = this.world.rooms[player.room];
-      const visible =
-        room !== undefined &&
-        spotIsVisible(room, this.world.objects, player.x, player.y, other.x, other.y);
+      if (!room) continue;
 
-      if (visible) {
+      const playerCanSeeOther = spotIsVisible(
+        room,
+        this.world.objects,
+        player.x,
+        player.y,
+        other.x,
+        other.y,
+      );
+      const otherCanSeePlayer = spotIsVisible(
+        room,
+        this.world.objects,
+        other.x,
+        other.y,
+        player.x,
+        player.y,
+      );
+
+      if (playerCanSeeOther) {
         newVisSet.add(other.id);
-        this.visibility.get(other.id)?.add(player.id);
-        this.send(other.ws, this.makePlayerInfo(player));
         this.send(player.ws, this.makePlayerInfo(other));
-        this.send(other.ws, {
-          type: 'PLAYER_HEALTH',
-          id: player.id,
-          hp: player.hp,
-          maxHp: player.maxHp,
-        });
         this.send(player.ws, {
           type: 'PLAYER_HEALTH',
           id: other.id,
           hp: other.hp,
           maxHp: other.maxHp,
+        });
+      }
+      if (otherCanSeePlayer) {
+        this.visibility.get(other.id)?.add(player.id);
+        this.send(other.ws, this.makePlayerInfo(player));
+        this.send(other.ws, {
+          type: 'PLAYER_HEALTH',
+          id: player.id,
+          hp: player.hp,
+          maxHp: player.maxHp,
         });
       }
     }

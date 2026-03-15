@@ -205,4 +205,14 @@ describe('spotIsVisible', () => {
     room.spot![5][0] = [2, 0]; // opaque middle tile
     expect(spotIsVisible(room, objects, 3, 0, 7, 0)).toBe(false);
   });
+
+  it('LOS is directional: target on opaque tile blocks observer, not the reverse', () => {
+    // B is 3 tiles from A, standing on an opaque tile (simulates hiding in forest)
+    const room = openRoom();
+    room.spot![4][0] = [2, 0]; // opaque tile at B's position
+    // A cannot see B: B's opaque tile is the target, it IS checked
+    expect(spotIsVisible(room, objects, 1, 0, 4, 0)).toBe(false);
+    // B can see A: B's own tile is excluded, A's tile is transparent
+    expect(spotIsVisible(room, objects, 4, 0, 1, 0)).toBe(true);
+  });
 });
