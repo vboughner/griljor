@@ -33,9 +33,9 @@ const TILE = 32;
 const LETTER_PAD = 8;
 
 // Margins around the terrain viewport
-const MARGIN_X = 48; // left and right
-const MARGIN_BOTTOM = 48; // below terrain
-const MARGIN_TOP = 64; // gap between divider line and terrain top
+const MARGIN_X = 96; // left and right
+const MARGIN_BOTTOM = 80; // below terrain
+const MARGIN_TOP_TERRAIN = 32; // above terrain
 
 // ── Original scene.c terrain data (40×20 tile map) ───────────────────────────
 
@@ -619,37 +619,53 @@ export async function drawLogo(canvas: HTMLCanvasElement): Promise<void> {
 
 // ── Main entry point ─────────────────────────────────────────────────────────
 
-export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
+export async function runTitleScreen(
+  lettersCanvas: HTMLCanvasElement,
+  terrainCanvas: HTMLCanvasElement,
+): Promise<void> {
   let resolveP!: () => void;
   const done = new Promise<void>((r) => {
     resolveP = r;
   });
 
-  const W = window.innerWidth || 800;
-  const H = window.innerHeight || 600;
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d')!;
+  // Wait one frame so the browser has laid out the canvases
+  await new Promise<void>((r) => requestAnimationFrame(() => r()));
 
-  const topH = Math.floor(H / 4);
-  const bottomY = topH;
-  const bottomH = H - topH;
+  let W = lettersCanvas.offsetWidth || window.innerWidth || 800;
+  let lH = lettersCanvas.offsetHeight || 150;
+  lettersCanvas.width = W;
+  lettersCanvas.height = lH;
+  const lCtx = lettersCanvas.getContext('2d')!;
+
+  let tW = terrainCanvas.offsetWidth || W;
+  let tH = terrainCanvas.offsetHeight || 400;
+  terrainCanvas.width = tW;
+  terrainCanvas.height = tH;
+  const tCtx = terrainCanvas.getContext('2d')!;
 
   let animId = 0;
   let dismissed = false;
+  let resizeTimer = 0;
 
   function dismiss() {
     if (dismissed) return;
     dismissed = true;
     cancelAnimationFrame(animId);
+    clearTimeout(resizeTimer);
+    window.removeEventListener('resize', onResize);
     document.removeEventListener('keydown', onKey);
     document.removeEventListener('pointerdown', onPointer);
     resolveP();
   }
+  function onResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(relayout, 150);
+  }
   function onKey() {
     dismiss();
   }
-  function onPointer() {
+  function onPointer(e: PointerEvent) {
+    if ((e.target as Element)?.closest('a')) return;
     dismiss();
   }
   document.addEventListener('keydown', onKey);
@@ -679,21 +695,16 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
   if (dismissed) return done;
 
   // Terrain viewport: centered, with margins, no scrolling
-  const vpW = Math.min(W - 2 * MARGIN_X, mapW);
-  const vpH = Math.min(bottomH - MARGIN_BOTTOM - MARGIN_TOP, mapH);
-  const vpX = Math.floor((W - vpW) / 2);
-  const vpY = bottomY + MARGIN_TOP;
+  let vpW = Math.min(tW - 2 * MARGIN_X, mapW);
+  let vpH = Math.min(tH - MARGIN_BOTTOM - MARGIN_TOP_TERRAIN, mapH);
+  let vpX = Math.floor((tW - vpW) / 2);
+  const vpY = MARGIN_TOP_TERRAIN;
   // Fixed camera offset: show the center of the scene
-  const camX = Math.max(0, Math.floor((mapW - vpW) / 2));
+  let camX = Math.max(0, Math.floor((mapW - vpW) / 2));
   const camY = 0;
 
   // ── Letter layout ────────────────────────────────────────────────
-  const PROMPT_FONT_SIZE = 13;
-  const CREDIT_FONT_SIZE = 14;
-  const CREDIT_LINE_H = CREDIT_FONT_SIZE + 5;
-  const PROMPT_MARGIN = 8;
-  const promptY = topH - PROMPT_MARGIN;
-  const usableLetterH = promptY - PROMPT_FONT_SIZE - PROMPT_MARGIN * 2;
+  const usableLetterH = lH - 8;
 
   let scale = 1;
   for (const bm of rawLetters)
@@ -714,7 +725,7 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
     (h, bm) => Math.max(h, bm ? Math.floor(bm.height * scale) : 0),
     0,
   );
-  const letterBaseY = Math.max(0, Math.floor((usableLetterH - tallestLetter) / 4));
+  const letterBaseY = Math.max(0, Math.floor((lH - tallestLetter) / 2));
 
   const letterSprites: LetterSprite[] = rawLetters.map((bm, i) => {
     const w = bm ? Math.floor(bm.width * scale) : 48;
@@ -735,6 +746,59 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
 
   let allLettersDone = false;
   let startedCount = 1;
+
+  function relayout(): void {
+    W = lettersCanvas.offsetWidth || window.innerWidth || 800;
+    lH = lettersCanvas.offsetHeight || 150;
+    lettersCanvas.width = W;
+    lettersCanvas.height = lH;
+
+    tW = terrainCanvas.offsetWidth || W;
+    tH = terrainCanvas.offsetHeight || 400;
+    terrainCanvas.width = tW;
+    terrainCanvas.height = tH;
+
+    vpW = Math.min(tW - 2 * MARGIN_X, mapW);
+    vpH = Math.min(tH - MARGIN_BOTTOM - 8, mapH);
+    vpX = Math.floor((tW - vpW) / 2);
+    camX = Math.max(0, Math.floor((mapW - vpW) / 2));
+
+    // Recompute letter layout and jump letters to final positions
+    const usableH = lH - 8;
+    let newScale = 1;
+    for (const bm of rawLetters)
+      if (bm && bm.height > 0) newScale = Math.min(newScale, usableH / bm.height);
+    const totalW = rawLetters.reduce(
+      (s, bm) => s + Math.floor((bm?.width ?? 48) * newScale) + LETTER_PAD,
+      -LETTER_PAD,
+    );
+    if (totalW > W - 40) newScale *= (W - 40) / totalW;
+    const finalW = rawLetters.reduce(
+      (s, bm) => s + Math.floor((bm?.width ?? 48) * newScale) + LETTER_PAD,
+      -LETTER_PAD,
+    );
+    let xc = Math.max(20, Math.floor((W - finalW) / 2));
+    const tallest = rawLetters.reduce(
+      (h, bm) => Math.max(h, bm ? Math.floor(bm.height * newScale) : 0),
+      0,
+    );
+    const baseY = Math.max(0, Math.floor((lH - tallest) / 2));
+    for (let i = 0; i < letterSprites.length; i++) {
+      const s = letterSprites[i];
+      const bm = rawLetters[i];
+      s.w = bm ? Math.floor(bm.width * newScale) : 48;
+      s.h = bm ? Math.floor(bm.height * newScale) : 64;
+      s.targetX = xc;
+      s.targetY = baseY;
+      s.x = s.targetX;
+      s.done = true;
+      s.extraY = LETTER_NAMES[i] === 'j' ? Math.floor(s.h * 0.2) : 0;
+      xc += s.w + LETTER_PAD;
+    }
+    allLettersDone = true;
+  }
+
+  window.addEventListener('resize', onResize);
 
   // ── Walkers — spawn only on non-river tiles ───────────────────────
   const walkers: Walker[] = Array.from({ length: AVATARS.length }, (_, i) => {
@@ -775,14 +839,9 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
     animId = requestAnimationFrame(loop);
     frame++;
 
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, W, H);
-
-    // ── Top band: letters + prompt ───────────────────────────────
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, W, topH);
-    ctx.clip();
+    // ── Letters canvas ───────────────────────────────────────────
+    lCtx.fillStyle = '#1a1a1a';
+    lCtx.fillRect(0, 0, W, lH);
 
     if (!allLettersDone) {
       for (let i = 0; i < startedCount && i < letterSprites.length; i++) {
@@ -805,50 +864,18 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
     }
 
     for (const s of letterSprites)
-      if (s.bm && s.x > -s.w) ctx.drawImage(s.bm, s.x, s.targetY + s.extraY, s.w, s.h);
+      if (s.bm && s.x > -s.w) lCtx.drawImage(s.bm, s.x, s.targetY + s.extraY, s.w, s.h);
 
-    // Credits — placed just below the letters
-    const creditsTopY = letterBaseY + tallestLetter + 22;
-    ctx.font = `${CREDIT_FONT_SIZE}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#666';
-    ctx.fillText(
-      'An old school game from U.C. Berkeley, written in 1989\u20131991',
-      W / 2,
-      creditsTopY + CREDIT_LINE_H,
-    );
-    ctx.fillText(
-      'Original contributors: Van Boughner, Mel Nicholson, Albert Baker, Doug Stein, Trevor Pering,',
-      W / 2,
-      creditsTopY + CREDIT_LINE_H * 2,
-    );
-    ctx.fillText(
-      'Eric vanBezooijen, Stefan, and a number of others who contributed original art',
-      W / 2,
-      creditsTopY + CREDIT_LINE_H * 3,
-    );
+    // ── Terrain canvas ───────────────────────────────────────────
+    tCtx.fillStyle = '#1a1a1a';
+    tCtx.fillRect(0, 0, tW, tH);
 
-    ctx.fillText(
-      'This modern rewrite uses Claude Code heavily for porting and enhancing the original code',
-      W / 2,
-      creditsTopY + CREDIT_LINE_H * 5,
-    );
+    tCtx.save();
+    tCtx.beginPath();
+    tCtx.rect(vpX, vpY, vpW, vpH);
+    tCtx.clip();
 
-    ctx.fillStyle = '#888';
-    ctx.font = `${PROMPT_FONT_SIZE}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.fillText('press any key or click to continue', W / 2, promptY);
-    ctx.textAlign = 'left';
-
-    ctx.restore();
-
-    // ── Bottom band: fixed terrain + walkers ─────────────────────
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(vpX, vpY, vpW, vpH);
-    ctx.clip();
-
-    ctx.drawImage(mapCanvas, camX, camY, vpW, vpH, vpX, vpY, vpW, vpH);
+    tCtx.drawImage(mapCanvas, camX, camY, vpW, vpH, vpX, vpY, vpW, vpH);
 
     for (const w of walkers) {
       // Periodic random direction change
@@ -888,10 +915,10 @@ export async function runTitleScreen(canvas: HTMLCanvasElement): Promise<void> {
       const sx = vpX + (w.px - camX);
       const sy = vpY + (w.py - camY);
       if (sx > vpX - TILE && sx < vpX + vpW + TILE && sy > vpY - TILE && sy < vpY + vpH + TILE)
-        drawFace(ctx, w.sprite, sx, sy, TILE);
+        drawFace(tCtx, w.sprite, sx, sy, TILE);
     }
 
-    ctx.restore();
+    tCtx.restore();
   }
 
   loop();

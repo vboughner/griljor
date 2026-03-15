@@ -258,7 +258,8 @@ async function main(): Promise<void> {
 
   // DOM refs — title
   const titleScreen = document.getElementById('title-screen') as HTMLElement;
-  const titleCanvas = document.getElementById('title-canvas') as HTMLCanvasElement;
+  const titleLetters = document.getElementById('title-letters') as HTMLCanvasElement;
+  const titleTerrain = document.getElementById('title-terrain') as HTMLCanvasElement;
 
   // DOM refs — lobby
   const lobbyScreen = document.getElementById('lobby-screen') as HTMLElement;
@@ -346,8 +347,7 @@ async function main(): Promise<void> {
     clearTimeout(randomBtnTipTimer);
     hideTooltip();
     randomBtnTipTimer = window.setTimeout(
-      () =>
-        showTooltip('Refresh to a random avatar', e.clientX, e.clientY),
+      () => showTooltip('Refresh to a random avatar', e.clientX, e.clientY),
       1000,
     );
   });
@@ -1049,7 +1049,7 @@ async function main(): Promise<void> {
 
   showTitle();
   void refreshServerList(); // start fetching in background during title
-  await runTitleScreen(titleCanvas);
+  await runTitleScreen(titleLetters, titleTerrain);
   hideTitle();
   showLobby();
 }

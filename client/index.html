@@ -22,9 +22,36 @@
     #title-screen {
       position: fixed; inset: 0; z-index: 10;
       background: #1a1a1a;
-      display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+      display: flex; flex-direction: column; align-items: stretch;
     }
-    #title-canvas { display: block; width: 100%; height: 100%; position: absolute; inset: 0; }
+    #title-letters { display: block; width: 100%; height: 18vh; min-height: 100px; max-height: 200px; flex-shrink: 0; border: none; }
+    #title-credits {
+      flex-shrink: 0;
+      text-align: center;
+      font-family: monospace;
+      font-size: 14px;
+      color: #666;
+      padding: 12px 20px 0;
+      line-height: 1.8;
+    }
+
+    #title-github {
+      flex-shrink: 0;
+      text-align: center;
+      font-family: monospace;
+      padding: 8px 0 0;
+    }
+    #title-github a { color: #666; font-size: 14px; text-decoration: none; }
+    #title-github a:hover { color: #999; }
+    #title-prompt {
+      flex-shrink: 0;
+      text-align: center;
+      font-family: monospace;
+      font-size: 13px;
+      color: #888;
+      padding: 20px 0 6px;
+    }
+    #title-terrain { display: block; width: 100%; flex: 1; min-height: 0; border: none; }
 
     /* ── Lobby ── */
     #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 900px; }
@@ -368,7 +395,14 @@
 
   <!-- ── Title Screen ── -->
   <div id="title-screen">
-    <canvas id="title-canvas"></canvas>
+    <canvas id="title-letters"></canvas>
+    <div id="title-credits">
+      <div>Modern rewrite of an old game.</div>
+      <div>Thanks to the many contributors at U.C. Berkeley between 1989 &ndash; 1991</div>
+    </div>
+    <div id="title-github"><a href="https://github.com/vboughner/griljor" target="_blank" rel="noopener">See this on GitHub</a></div>
+    <div id="title-prompt">press any key or click to continue</div>
+    <canvas id="title-terrain"></canvas>
   </div>
 
   <!-- ── Lobby Screen ── -->
