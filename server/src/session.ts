@@ -609,6 +609,23 @@ export class GameSession {
       this.activeMissiles.delete(id);
       this.broadcastToRoom(player.room, { type: 'MISSILE_END', id });
       if (hitPlayer) this.dealDamage(hitPlayer, damage, player);
+      // Drop throwable items (lost+stop) at landing position
+      if (obj.lost && obj.stop) {
+        const landTile = finalPath[finalPath.length - 1];
+        const tile = this.nearbyFreeTile(player.room, landTile.x, landTile.y);
+        if (tile) {
+          const roomMap = this.roomItems.get(player.room) ?? new Map<string, InventoryItem>();
+          roomMap.set(`${tile.x},${tile.y}`, handItem);
+          this.roomItems.set(player.room, roomMap);
+          this.broadcast({
+            type: 'ITEM_ADDED',
+            room: player.room,
+            x: tile.x,
+            y: tile.y,
+            item: handItem,
+          });
+        }
+      }
     }, travelMs);
     this.activeMissiles.set(id, timer);
   }

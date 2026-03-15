@@ -53,6 +53,7 @@ export class MockWebSocket extends EventEmitter {
 //   2 = sword    (takeable, weapon, damage:30, range:5)
 //   3 = potion   (takeable, weight:1, health:-20)
 //   4 = wall     (movement:0, blocks passage)
+//   5 = potted plant (takeable, weapon, lost, stop, movingobj:5, range:3, speed:4)
 
 export function buildTestWorld(): World {
   // 20×20 grid; all cells are [floorId=1, wallId=0] → walkable
@@ -66,16 +67,30 @@ export function buildTestWorld(): World {
     { _index: 2, name: 'sword', takeable: true, weight: 5, weapon: true, damage: 30, range: 5 },
     { _index: 3, name: 'potion', takeable: true, weight: 1, health: -20 },
     { _index: 4, name: 'wall', movement: 0 }, // impassable wall
+    {
+      _index: 5,
+      name: 'potted plant',
+      takeable: true,
+      weight: 10,
+      weapon: true,
+      damage: 5,
+      range: 3,
+      lost: true,
+      stop: true,
+      movingobj: 5,
+      speed: 4,
+    },
   ];
 
   const room: RoomData = {
     name: 'test-room',
     floor: 0,
     team: 0,
-    // sword placed at (5,5), potion at (6,6)
+    // sword placed at (5,5), potion at (6,6), potted plant at (2,2)
     recorded_objects: [
       { x: 5, y: 5, type: 2, detail: 0 },
       { x: 6, y: 6, type: 3, detail: 0 },
+      { x: 2, y: 2, type: 5, detail: 0 },
     ],
     spot,
   };

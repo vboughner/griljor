@@ -21,6 +21,7 @@ export interface ObjDef {
   alternate?: number; // object type this becomes when toggled
   health?: number; // negative = restores HP on use
   lost?: boolean; // consumed on use (remove from inventory)
+  stop?: boolean; // projectile stops on impact and lands on the floor
 }
 
 export interface RecObj {
