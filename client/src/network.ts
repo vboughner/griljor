@@ -10,7 +10,8 @@ type C2SMessage =
   | { type: 'INV_SWAP'; slot: number; hand: 'left' | 'right' }
   | { type: 'FIRE_WEAPON'; hand: 'left' | 'right'; targetX: number; targetY: number }
   | { type: 'USE_ITEM'; hand: 'left' | 'right'; targetX: number; targetY: number }
-  | { type: 'PING' };
+  | { type: 'PING' }
+  | { type: 'VOLUNTARY_RESPAWN' };
 
 type S2CMessage =
   | {
@@ -207,6 +208,10 @@ export class GameNetwork {
 
   sendLeave(): void {
     this.send({ type: 'LEAVING_GAME' });
+  }
+
+  sendVoluntaryRespawn(): void {
+    this.send({ type: 'VOLUNTARY_RESPAWN' });
   }
 
   sendMessage(text: string): void {

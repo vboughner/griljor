@@ -37,7 +37,7 @@
 - [ ] consider placing player list at the top of the display to make them more prominent
 - [ ] consider making it possible to know which room other players are in
 - [ ] there might be a bug when player reappears after death, they spawn in another room, appear then jump to another location in the same room quickly
-- [ ] when a player spawns in a locked room they cannot escape, maybe give them a give-up key that will give them a 5-second countdown to go to a new spawn location, and maybe that doesn't count as a death
+- [x] when a player spawns in a locked room they cannot escape, maybe give them a give-up key that will give them a 5-second countdown to go to a new spawn location, and maybe that doesn't count as a death
 - [ ] consider making the limited lighting feature work properly (where you can only see things near you and you have a flashlight)
 
 Make teams work:
