@@ -33,19 +33,22 @@
 - [ ] there probably isn't anything keeping a 17th player from joining a max 16 player game
 - [ ] need a tutorial to help teach how to pickup and manipulate inventory and learn shortcut keys (or at least a help page)
 - [ ] do something different with the mouse controls (the big mouse looks funny)
+- [ ] we need to provide some hotkey discovery help in the UI
 - [ ] add hot key setting and mouse changes settings (but how will they save these, do we need profiles, or maybe just 3 good hotkey setting choices)
 - [ ] consider placing player list at the top of the display to make them more prominent
 - [ ] consider making it possible to know which room other players are in
 - [ ] there might be a bug when player reappears after death, they spawn in another room, appear then jump to another location in the same room quickly
 - [x] when a player spawns in a locked room they cannot escape, maybe give them a give-up key that will give them a 5-second countdown to go to a new spawn location, and maybe that doesn't count as a death
 - [ ] consider making the limited lighting feature work properly (where you can only see things near you and you have a flashlight)
+- [ ] when someone leaves the game after 5 seconds there should be a message that they left the game, but when someone disconnects suddenly, they should be said to have disconnected
+- [ ] the block gun in battle map, the blocks don't drop at end of flight
+- [ ] ammo count is a little hard to see as yellow, and is covered by the flame thrower ammo, it should be drawn on top and be a more contrasting color, like amber, and the number needs a mask behind it (a circle badge in black maybe?)
 
 Make teams work:
 - [x] players start in their team room
 - [x] add join team buttons (2 of them, and double the height of that map row for the avatars?)
 - [ ] display which team people are in the player list, make your team more obvious on the map (in colors?)
 - [ ] consider friendly fire options for teammates (i.e. cannot hurt members of your own team)
-
 
 ## Remaining Differences with Legacy
 - [x] **fire rate limiting** — legacy has an ~850ms cooldown between shots (adjustable per weapon via a `refire` field); currently you can fire infinitely fast

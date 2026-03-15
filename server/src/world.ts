@@ -21,6 +21,8 @@ export interface ObjDef {
   alternate?: number; // object type this becomes when toggled
   health?: number; // negative = restores HP on use
   lost?: boolean; // consumed on use (remove from inventory)
+  charges?: number; // bitmask: this ammo item reloads weapons where weapon.type & charges != 0
+  capacity?: number; // max charges a numbered weapon can hold
   stop?: boolean; // projectile stops on impact and lands on the floor
   explodes?: number; // non-zero: projectile explodes on impact (does not land as item)
   boombit?: number; // object type the weapon explodes into

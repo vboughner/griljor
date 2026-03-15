@@ -467,6 +467,71 @@ export class GameSession {
 
   // ── Combat ────────────────────────────────────────────────────────────────
 
+  /**
+   * Transfer charges from ammoItem (in `ammoHand`) into the compatible numbered weapon
+   * in the opposite hand, if one exists. Updates weight and auto-reloads ammo from
+   * inventory if the ammo stack is fully consumed.
+   *
+   * Returns true if any charges were transferred.
+   */
+  private tryReloadWeaponFromAmmo(
+    player: Player,
+    ammoHand: 'left' | 'right',
+    ammoItem: InventoryItem,
+    ammoObj: ObjDef,
+  ): boolean {
+    if (!ammoObj.charges) return false;
+
+    const weaponHand = ammoHand === 'left' ? 'right' : 'left';
+    const weaponItem = weaponHand === 'left' ? player.leftHand : player.rightHand;
+    if (!weaponItem) return false;
+
+    const weaponObj = this.world.objects[weaponItem.type];
+    if (!weaponObj?.numbered || !weaponObj.type) return false;
+    if ((ammoObj.charges & weaponObj.type) === 0) return false;
+
+    // Only reload if weapon isn't already at capacity
+    const capacity = weaponObj.capacity ?? Infinity;
+    if (weaponItem.quantity >= capacity) return false;
+
+    // How many charges can we transfer?
+    const needed = capacity - weaponItem.quantity;
+    const transfer = Math.min(ammoItem.quantity, needed);
+    if (transfer <= 0) return false;
+
+    // Update weapon
+    weaponItem.quantity += transfer;
+
+    // Update ammo — reduce quantity and weight for non-numbered ammo (stack items)
+    if (!ammoObj.numbered) {
+      player.currentWeight = Math.max(0, player.currentWeight - transfer * (ammoObj.weight ?? 0));
+    }
+    ammoItem.quantity -= transfer;
+
+    // Consume ammo item if depleted
+    if (ammoItem.quantity <= 0) {
+      if (ammoObj.numbered) {
+        // numbered ammo: remove the whole item (weight was flat per item)
+        player.currentWeight = Math.max(0, player.currentWeight - (ammoObj.weight ?? 0));
+      }
+      if (ammoHand === 'left') player.leftHand = null;
+      else player.rightHand = null;
+      // Pull next ammo of same type from inventory
+      this.autoReloadHand(player, ammoHand, ammoItem.type);
+    }
+
+    return true;
+  }
+
+  /** Try to reload the weapon in `weaponHand` using ammo from the opposite hand. */
+  private tryReloadFromOtherHand(player: Player, weaponHand: 'left' | 'right'): void {
+    const ammoHand = weaponHand === 'left' ? 'right' : 'left';
+    const ammoItem = ammoHand === 'left' ? player.leftHand : player.rightHand;
+    if (!ammoItem) return;
+    const ammoObj = this.world.objects[ammoItem.type];
+    if (ammoObj) this.tryReloadWeaponFromAmmo(player, ammoHand, ammoItem, ammoObj);
+  }
+
   /** Scan path for the first player occupying a tile. Pass excludeId to skip a player (e.g. the shooter). */
   private findPlayerHitOnPath(
     path: Array<{ x: number; y: number }>,
@@ -594,10 +659,23 @@ export class GameSession {
     if (!handItem) return;
 
     const obj = this.world.objects[handItem.type];
-    if (!obj?.weapon) return;
+    if (!obj?.weapon) {
+      // Non-weapon with charges: treat as active ammo use to reload other hand
+      if (obj?.charges) {
+        this.tryReloadWeaponFromAmmo(player, msg.hand, handItem, obj);
+        this.sendInventory(player);
+      }
+      return;
+    }
 
-    // For numbered items (guns, staves), require charges
-    if (obj.numbered && handItem.quantity <= 0) return;
+    // For numbered items (guns, staves), require charges; if empty try to reload first
+    if (obj.numbered && handItem.quantity <= 0) {
+      this.tryReloadFromOtherHand(player, msg.hand);
+      if (handItem.quantity <= 0) {
+        this.sendInventory(player); // update UI even if shot fails
+        return;
+      }
+    }
 
     // Enforce fire rate cooldown.
     // Pipeline emits refire as an unsigned byte; values > 127 are negative in the
@@ -617,9 +695,8 @@ export class GameSession {
     if (obj.numbered) {
       handItem.quantity--;
       if (handItem.quantity <= 0) {
-        player.currentWeight = Math.max(0, player.currentWeight - calcItemWeight(obj, handItem));
-        if (msg.hand === 'left') player.leftHand = null;
-        else player.rightHand = null;
+        // Try to reload from ammo in the other hand; weapon stays in hand either way
+        this.tryReloadFromOtherHand(player, msg.hand);
       }
       this.sendInventory(player);
     } else if (obj.lost) {
@@ -872,8 +949,9 @@ export class GameSession {
     const killerDesc = killer ? killer.name : 'the void';
     this.broadcastGM(`${victim.name} was slain by ${killerDesc}.`);
 
-    // Drop all inventory items
+    // Drop all inventory items and notify victim their inventory is now empty
     this.dropPlayerItems(victim);
+    this.sendInventory(victim);
 
     // Schedule respawn after tombstone delay
     this.scheduleRespawn(victim, killer);
