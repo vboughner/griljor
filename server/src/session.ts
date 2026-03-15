@@ -516,6 +516,15 @@ export class GameSession {
     return true;
   }
 
+  /** Try to reload the weapon in `weaponHand` using ammo from the opposite hand. */
+  private tryReloadFromOtherHand(player: Player, weaponHand: 'left' | 'right'): void {
+    const ammoHand = weaponHand === 'left' ? 'right' : 'left';
+    const ammoItem = ammoHand === 'left' ? player.leftHand : player.rightHand;
+    if (!ammoItem) return;
+    const ammoObj = this.world.objects[ammoItem.type];
+    if (ammoObj) this.tryReloadWeaponFromAmmo(player, ammoHand, ammoItem, ammoObj);
+  }
+
   private autoReloadHand(player: Player, hand: 'left' | 'right', itemType: number): void {
     const reloadSlot = player.inventory.findIndex(
       (item) => item !== null && item.type === itemType,
@@ -547,12 +556,7 @@ export class GameSession {
 
     // For numbered items (guns, staves), require charges; if empty try to reload first
     if (obj.numbered && handItem.quantity <= 0) {
-      const otherHand = msg.hand === 'left' ? 'right' : 'left';
-      const ammoItem = otherHand === 'left' ? player.leftHand : player.rightHand;
-      if (ammoItem) {
-        const ammoObj = this.world.objects[ammoItem.type];
-        if (ammoObj) this.tryReloadWeaponFromAmmo(player, otherHand, ammoItem, ammoObj);
-      }
+      this.tryReloadFromOtherHand(player, msg.hand);
       if (handItem.quantity <= 0) {
         this.sendInventory(player); // update UI even if shot fails
         return;
@@ -578,12 +582,7 @@ export class GameSession {
       handItem.quantity--;
       if (handItem.quantity <= 0) {
         // Try to reload from ammo in the other hand; weapon stays in hand either way
-        const otherHand = msg.hand === 'left' ? 'right' : 'left';
-        const ammoItem = otherHand === 'left' ? player.leftHand : player.rightHand;
-        if (ammoItem) {
-          const ammoObj = this.world.objects[ammoItem.type];
-          if (ammoObj) this.tryReloadWeaponFromAmmo(player, otherHand, ammoItem, ammoObj);
-        }
+        this.tryReloadFromOtherHand(player, msg.hand);
       }
       this.sendInventory(player);
     } else if (obj.lost) {
