@@ -349,6 +349,13 @@
     }
     #leave-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
 
+    #respawn-btn {
+      background: #101810; border: 1px solid #1a4a1a; color: #40a840;
+      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 13px;
+      transition: background 0.1s, border-color 0.1s; width: 100%;
+    }
+    #respawn-btn:hover { background: #122212; border-color: #2a6a2a; color: #60c860; }
+
   </style>
 </head>
 <body>
@@ -412,6 +419,7 @@
             <span id="hand-middle-count" class="hand-count"></span>
           </div>
           <div id="game-btns">
+            <button id="respawn-btn">Respawn</button>
             <button id="leave-btn">Leave Game</button>
           </div>
         </div>

@@ -210,6 +210,10 @@ export class GameNetwork {
     this.send({ type: 'LEAVING_GAME' });
   }
 
+  sendVoluntaryRespawn(): void {
+    this.send({ type: 'VOLUNTARY_RESPAWN' });
+  }
+
   sendMessage(text: string): void {
     this.send({ type: 'MESSAGE', to: 'all', text });
   }

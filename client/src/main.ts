@@ -275,6 +275,7 @@ async function main(): Promise<void> {
   const mapLabel = document.getElementById('map-label') as HTMLElement;
   const status = document.getElementById('status') as HTMLElement;
   const leaveBtn = document.getElementById('leave-btn') as HTMLButtonElement;
+  const respawnBtn = document.getElementById('respawn-btn') as HTMLButtonElement;
   const chatLog = document.getElementById('chat-log') as HTMLElement;
   const chatInput = document.getElementById('chat-input') as HTMLInputElement;
   const chatSend = document.getElementById('chat-send') as HTMLButtonElement;
@@ -927,6 +928,34 @@ async function main(): Promise<void> {
     await currentGame?.setMode(currentMode);
   }
 
+  let respawnCountdown: ReturnType<typeof setInterval> | null = null;
+
+  function cancelRespawn(): void {
+    if (respawnCountdown !== null) {
+      clearInterval(respawnCountdown);
+      respawnCountdown = null;
+    }
+    respawnBtn.textContent = 'Respawn';
+  }
+
+  respawnBtn.addEventListener('click', () => {
+    if (respawnCountdown !== null) {
+      cancelRespawn();
+      return;
+    }
+    let secs = 5;
+    respawnBtn.textContent = `Respawn ${secs}…`;
+    respawnCountdown = setInterval(() => {
+      secs--;
+      if (secs <= 0) {
+        cancelRespawn();
+        currentNetwork?.sendVoluntaryRespawn();
+        return;
+      }
+      respawnBtn.textContent = `Respawn ${secs}…`;
+    }, 1000);
+  });
+
   let leaveCountdown: ReturnType<typeof setInterval> | null = null;
 
   function doLeave(): void {
@@ -945,6 +974,7 @@ async function main(): Promise<void> {
   }
 
   function cancelLeave(): void {
+    cancelRespawn();
     if (leaveCountdown !== null) {
       clearInterval(leaveCountdown);
       leaveCountdown = null;
