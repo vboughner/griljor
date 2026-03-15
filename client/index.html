@@ -28,7 +28,9 @@
 
     /* ── Lobby ── */
     #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 900px; }
-    #lobby-logo { border: none; margin-top: -20px; margin-bottom: 24px; }
+    #lobby-header { display: flex; align-items: center; gap: 20px; width: 100%; margin-bottom: 24px; padding-top: 12px; }
+    #lobby-logo { border: none; image-rendering: pixelated; flex-shrink: 0; }
+    #lobby-title { font-size: 18px; color: #aaa; letter-spacing: 0.05em; flex: 1; text-align: center; }
     .lobby-panel { width: 100%; border: 1px solid #303030; margin-bottom: 40px; }
     .lobby-panel-hdr {
       padding: 5px 16px;
@@ -371,20 +373,23 @@
 
   <!-- ── Lobby Screen ── -->
   <div id="lobby-screen" style="display:none">
-    <canvas id="lobby-logo" style="display:block; image-rendering:pixelated;"></canvas>
+    <div id="lobby-header">
+      <canvas id="lobby-logo"></canvas>
+      <div id="lobby-title">Game Selection Lobby</div>
+    </div>
     <div class="lobby-panel">
-      <div class="lobby-panel-hdr">Player Setup</div>
+      <div class="lobby-panel-hdr">Choose Your Avatar and Name</div>
       <div id="lobby-controls">
         <div id="avatar-picker">
           <canvas id="avatar-preview" width="32" height="32" title="Choose avatar"></canvas>
 <div id="avatar-dropdown"></div>
         </div>
         <input id="player-name" maxlength="10" placeholder="name" spellcheck="false" autocomplete="off" />
-        <button id="random-avatar-btn" title="Random avatar">↻</button>
+        <button id="random-avatar-btn" >↻</button>
       </div>
     </div>
     <div class="lobby-panel lobby-panel-games" style="margin-bottom: 0">
-      <div class="lobby-panel-hdr">Available Games<span id="lobby-status">Loading…</span></div>
+      <div class="lobby-panel-hdr">Join a Game<span id="lobby-status">Loading…</span></div>
       <div id="server-list"></div>
     </div>
   </div>
