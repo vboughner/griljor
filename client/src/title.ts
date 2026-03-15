@@ -840,7 +840,7 @@ export async function runTitleScreen(
     frame++;
 
     // ── Letters canvas ───────────────────────────────────────────
-    lCtx.fillStyle = '#1a1a1a';
+    lCtx.fillStyle = '#111010';
     lCtx.fillRect(0, 0, W, lH);
 
     if (!allLettersDone) {
@@ -858,7 +858,7 @@ export async function runTitleScreen(
         const last = letterSprites[startedCount - 1];
         const totalDist = last.targetX - (-last.w - 10);
         const traveled = last.x - (-last.w - 10);
-        if (totalDist > 0 && traveled / totalDist >= 0.8) startedCount++;
+        if (totalDist > 0 && traveled / totalDist >= 0.35) startedCount++;
       }
       if (letterSprites.every((s) => s.done)) allLettersDone = true;
     }
@@ -867,7 +867,7 @@ export async function runTitleScreen(
       if (s.bm && s.x > -s.w) lCtx.drawImage(s.bm, s.x, s.targetY + s.extraY, s.w, s.h);
 
     // ── Terrain canvas ───────────────────────────────────────────
-    tCtx.fillStyle = '#1a1a1a';
+    tCtx.fillStyle = '#111010';
     tCtx.fillRect(0, 0, tW, tH);
 
     tCtx.save();

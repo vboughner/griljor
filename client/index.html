@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #1a1a1a;
+      background: #111010;
       color: #ccc;
       font-family: monospace;
       display: flex;
@@ -19,39 +19,105 @@
     h1 { font-size: 1.4em; color: #aaa; letter-spacing: 2px; }
 
     /* ── Title ── */
+    @keyframes titleFadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes titlePulse {
+      0%, 100% { opacity: 0.85; }
+      50%       { opacity: 0.2; }
+    }
+
     #title-screen {
       position: fixed; inset: 0; z-index: 10;
-      background: #1a1a1a;
+      background: #111010;
       display: flex; flex-direction: column; align-items: stretch;
     }
-    #title-letters { display: block; width: 100%; height: 18vh; min-height: 100px; max-height: 200px; flex-shrink: 0; border: none; }
+    /* CRT scanline overlay */
+    #title-screen::before {
+      content: '';
+      position: absolute; inset: 0; z-index: 99;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent 0px, transparent 3px,
+        rgba(0,0,0,0.13) 3px, rgba(0,0,0,0.13) 4px
+      );
+    }
+
+    #title-letters {
+      display: block; width: 100%;
+      height: 18vh; min-height: 100px; max-height: 200px;
+      flex-shrink: 0; border: none;
+      box-shadow:
+        inset 0 0 80px rgba(0,0,0,0.4),
+        inset 0 -12px 32px rgba(0,0,0,0.35);
+    }
+
     #title-credits {
       flex-shrink: 0;
       text-align: center;
       font-family: monospace;
-      font-size: 14px;
-      color: #666;
-      padding: 12px 20px 0;
+      font-size: 15px;
+      color: #b8842a;
       line-height: 1.8;
+      padding: 10px 20px 0;
+      animation: titleFadeUp 0.7s ease-out 0.2s both;
     }
-
-    #title-github {
-      flex-shrink: 0;
-      text-align: center;
-      font-family: monospace;
-      padding: 8px 0 0;
+    #title-credits a {
+      color: #b8842a;
+      text-decoration: none;
+      transition: color 0.2s;
     }
-    #title-github a { color: #666; font-size: 14px; text-decoration: none; }
-    #title-github a:hover { color: #999; }
+    #title-credits a:hover { color: #d4a040; }
     #title-prompt {
       flex-shrink: 0;
       text-align: center;
       font-family: monospace;
-      font-size: 13px;
-      color: #888;
-      padding: 20px 0 6px;
+      font-size: 15px;
+      color: #b8842a;
+      padding: 18px 0 0;
+      animation: titleFadeUp 0.7s ease-out 0.6s both,
+                 titlePulse 2.2s ease-in-out 1.4s infinite;
     }
-    #title-terrain { display: block; width: 100%; flex: 1; min-height: 0; border: none; }
+    #title-separator {
+      flex-shrink: 0;
+      height: 1px;
+      margin: 14px 10% 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(130, 100, 38, 0.35) 20%,
+        rgba(170, 135, 52, 0.6) 50%,
+        rgba(130, 100, 38, 0.35) 80%,
+        transparent
+      );
+      animation: titleFadeUp 0.7s ease-out 0.55s both;
+    }
+    #title-terrain-wrapper {
+      position: relative;
+      flex: 1; min-height: 0;
+      margin: 12px 0 20px;
+      border: none;
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.6),
+        inset 0 0 80px rgba(0,0,0,0.35),
+        0 -4px 24px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    #title-terrain {
+      position: absolute; inset: 0;
+      display: block; width: 100%; height: 100%;
+      border: none;
+    }
+    #title-terrain-vignette {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(to right,  rgba(10,9,8,0.75) 0%, transparent 18%),
+        linear-gradient(to left,   rgba(10,9,8,0.75) 0%, transparent 18%),
+        linear-gradient(to top,    rgba(10,9,8,0.88) 0%, transparent 22%);
+    }
 
     /* ── Lobby ── */
     #lobby-screen { display: flex; flex-direction: column; align-items: center; gap: 0; width: 100%; max-width: 900px; }
@@ -397,12 +463,16 @@
   <div id="title-screen">
     <canvas id="title-letters"></canvas>
     <div id="title-credits">
-      <div>Modern rewrite of an old game.</div>
+      <div>Modern rewrite of an old game (<a href="https://github.com/vboughner/griljor" target="_blank" rel="noopener">find this on GitHub</a>)</div>
       <div>Thanks to the many contributors at U.C. Berkeley between 1989 &ndash; 1991</div>
     </div>
-    <div id="title-github"><a href="https://github.com/vboughner/griljor" target="_blank" rel="noopener">See this on GitHub</a></div>
+
+    <div id="title-separator"></div>
     <div id="title-prompt">press any key or click to continue</div>
-    <canvas id="title-terrain"></canvas>
+    <div id="title-terrain-wrapper">
+      <canvas id="title-terrain"></canvas>
+      <div id="title-terrain-vignette"></div>
+    </div>
   </div>
 
   <!-- ── Lobby Screen ── -->
