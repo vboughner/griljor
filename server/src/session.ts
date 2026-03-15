@@ -9,9 +9,8 @@ const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
 
 // AFK idle detection
-// NOTE: Set to small values for testing; restore to minutes for production.
-const AFK_IDLE_MS = 5 * 1000; // idle time before first warning (testing: 5s)
-const AFK_WARN_INTERVAL_MS = 1 * 1000; // interval between warnings (testing: 1s)
+const AFK_IDLE_MS = 5 * 60 * 1000; // idle time before first warning (5 min)
+const AFK_WARN_INTERVAL_MS = 1 * 60 * 1000; // interval between warnings (1 min)
 const AFK_GRACE_MINUTES = 5; // number of warnings before kick
 
 const EXPLOSION_DIRS = [
