@@ -506,6 +506,18 @@ export class GameSession {
         // Case A: just became visible — introduce them to each other
         this.send(other.ws, this.makePlayerInfo(mover));
         this.send(mover.ws, this.makePlayerInfo(other));
+        this.send(mover.ws, {
+          type: 'PLAYER_HEALTH',
+          id: other.id,
+          hp: other.hp,
+          maxHp: other.maxHp,
+        });
+        this.send(other.ws, {
+          type: 'PLAYER_HEALTH',
+          id: moverId,
+          hp: mover.hp,
+          maxHp: mover.maxHp,
+        });
       } else if (!nowVisible && wasVisible) {
         // Case B: just became hidden — tell both sides to hide
         this.send(mover.ws, { type: 'PLAYER_HIDDEN', id: other.id });
@@ -1269,11 +1281,18 @@ export class GameSession {
     victim.dead = true;
     const killerName = killer?.name ?? 'the void'; // capture now; killer may disconnect before timer fires
 
-    // Broadcast tombstone state at death location
+    // Broadcast tombstone state at death location, respecting LOS
     console.log(
       `[respawn] ${victim.name} is dead; broadcasting tombstone at room=${victim.room} (${victim.x},${victim.y})`,
     );
-    this.broadcast(this.makePlayerInfo(victim));
+    const tombstoneInfo = this.makePlayerInfo(victim);
+    const victimVisSet = this.visibility.get(victim.id);
+    for (const other of this.players.values()) {
+      if (other.id === victim.id) continue;
+      if (other.room !== victim.room || victimVisSet?.has(other.id)) {
+        this.send(other.ws, tombstoneInfo);
+      }
+    }
 
     console.log(
       `[respawn] sending YOU_DIED to ${victim.name} (ws readyState=${victim.ws.readyState}): deadForMs=${RESPAWN_DELAY_MS}`,
@@ -1486,6 +1505,18 @@ export class GameSession {
         this.visibility.get(other.id)?.add(player.id);
         this.send(other.ws, this.makePlayerInfo(player));
         this.send(player.ws, this.makePlayerInfo(other));
+        this.send(other.ws, {
+          type: 'PLAYER_HEALTH',
+          id: player.id,
+          hp: player.hp,
+          maxHp: player.maxHp,
+        });
+        this.send(player.ws, {
+          type: 'PLAYER_HEALTH',
+          id: other.id,
+          hp: other.hp,
+          maxHp: other.maxHp,
+        });
       }
     }
   }
