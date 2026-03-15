@@ -8,6 +8,11 @@ const MAX_WEIGHT = 150;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
 
+// AFK idle detection
+const AFK_IDLE_MS = 5 * 60 * 1000; // idle time before first warning (5 min)
+const AFK_WARN_INTERVAL_MS = 1 * 60 * 1000; // interval between warnings (1 min)
+const AFK_GRACE_MINUTES = 5; // number of warnings before kick
+
 const EXPLOSION_DIRS = [
   { dx: 0, dy: -1 },
   { dx: 1, dy: -1 },
@@ -60,6 +65,9 @@ interface Player {
   dead: boolean;
   respawnTimer: ReturnType<typeof setTimeout> | null;
   lastFireTime: number;
+  afkIdleTimer: ReturnType<typeof setTimeout> | null;
+  afkWarnTimer: ReturnType<typeof setTimeout> | null;
+  afkWarningsLeft: number;
 }
 
 interface ChatEntry {
@@ -102,6 +110,9 @@ export class GameSession {
   }
 
   destroy(): void {
+    for (const player of this.players.values()) {
+      this.clearAfkTimers(player);
+    }
     if (this.regenInterval !== null) {
       clearInterval(this.regenInterval);
       this.regenInterval = null;
@@ -167,6 +178,8 @@ export class GameSession {
       if (msg.type === 'JOIN') {
         this.onJoin(ws, msg);
       } else if (playerId !== undefined) {
+        const afkPlayer = this.players.get(playerId);
+        if (afkPlayer && msg.type !== 'PING') this.resetAfkTimer(afkPlayer);
         switch (msg.type) {
           case 'MY_LOCATION':
             this.onLocation(playerId, msg);
@@ -249,6 +262,9 @@ export class GameSession {
       dead: false,
       respawnTimer: null,
       lastFireTime: 0,
+      afkIdleTimer: null,
+      afkWarnTimer: null,
+      afkWarningsLeft: 0,
     };
     this.players.set(id, player);
 
@@ -310,6 +326,7 @@ export class GameSession {
     this.sendStats(player);
 
     console.log(`[+] ${msg.name} (id=${id}) joined. Players: ${this.players.size}`);
+    this.startAfkTimer(player);
   }
 
   private onLocation(playerId: number, msg: Extract<C2SMessage, { type: 'MY_LOCATION' }>): void {
@@ -1113,6 +1130,7 @@ export class GameSession {
       clearTimeout(player.respawnTimer);
       player.respawnTimer = null;
     }
+    this.clearAfkTimers(player);
 
     this.dropPlayerItems(player);
 
@@ -1151,6 +1169,70 @@ export class GameSession {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  private startAfkTimer(player: Player): void {
+    this.clearAfkTimers(player);
+    player.afkIdleTimer = setTimeout(() => {
+      player.afkIdleTimer = null;
+      player.afkWarningsLeft = AFK_GRACE_MINUTES;
+      this.sendAfkWarning(player);
+    }, AFK_IDLE_MS);
+  }
+
+  private clearAfkTimers(player: Player): void {
+    if (player.afkIdleTimer !== null) {
+      clearTimeout(player.afkIdleTimer);
+      player.afkIdleTimer = null;
+    }
+    if (player.afkWarnTimer !== null) {
+      clearTimeout(player.afkWarnTimer);
+      player.afkWarnTimer = null;
+    }
+  }
+
+  private sendAfkWarning(player: Player): void {
+    const mins = player.afkWarningsLeft;
+    this.send(player.ws, {
+      type: 'MESSAGE',
+      from: 0,
+      name: 'GM',
+      to: player.id,
+      text: `You'll be kicked from the game in another ${mins} minute${mins === 1 ? '' : 's'} if you are still inactive.`,
+    });
+    player.afkWarningsLeft--;
+    if (player.afkWarningsLeft <= 0) {
+      // Grace period exhausted — kick the player
+      player.afkWarnTimer = setTimeout(() => {
+        player.afkWarnTimer = null;
+        this.onLeave(player.id);
+        try {
+          player.ws.close();
+        } catch {
+          /* already closed */
+        }
+      }, AFK_WARN_INTERVAL_MS);
+    } else {
+      player.afkWarnTimer = setTimeout(() => {
+        player.afkWarnTimer = null;
+        this.sendAfkWarning(player);
+      }, AFK_WARN_INTERVAL_MS);
+    }
+  }
+
+  private resetAfkTimer(player: Player): void {
+    const wasWarning = player.afkWarningsLeft > 0 || player.afkWarnTimer !== null;
+    this.startAfkTimer(player);
+    if (wasWarning) {
+      player.afkWarningsLeft = 0;
+      this.send(player.ws, {
+        type: 'MESSAGE',
+        from: 0,
+        name: 'GM',
+        to: player.id,
+        text: 'Welcome back, I see you are still active!',
+      });
+    }
+  }
 
   private broadcastGM(text: string): void {
     this.broadcast({ type: 'MESSAGE', from: 0, name: 'GM', to: 'all', text });
