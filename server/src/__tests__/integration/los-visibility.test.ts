@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { GameSession } from '../../session';
-import { buildTestWorld, joinPlayer } from './helpers';
+import { buildTestWorld, joinPlayer, MockWebSocket } from './helpers';
 import { World, ObjDef, RoomData } from '../../world';
 
 // ── LOS Test World ────────────────────────────────────────────────────────────
