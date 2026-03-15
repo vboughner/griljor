@@ -30,6 +30,79 @@ const EXPLOSION_DIRS = [
  * per-item, not per-charge.  For non-numbered stackable items, multiply by
  * the stack size.
  */
+// ── Line-of-sight helpers ──────────────────────────────────────────────────
+
+/**
+ * Walk from (x1,y1) toward (x2,y2) one Chebyshev step at a time.
+ * Returns each step's tile, NOT including the start tile (x1,y1).
+ * Stops when (x2,y2) is reached.
+ */
+export function chebyshevPath(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): Array<{ x: number; y: number }> {
+  const path: Array<{ x: number; y: number }> = [];
+  let cx = x1;
+  let cy = y1;
+  while (cx !== x2 || cy !== y2) {
+    if (cx !== x2) cx += Math.sign(x2 - cx);
+    if (cy !== y2) cy += Math.sign(y2 - cy);
+    path.push({ x: cx, y: cy });
+  }
+  return path;
+}
+
+/**
+ * Returns true if any object on tile (x,y) does NOT have transparent:true,
+ * meaning it blocks line of sight.
+ */
+export function tileViewBlocked(
+  room: RoomData,
+  objects: Array<ObjDef | null>,
+  x: number,
+  y: number,
+): boolean {
+  const cell = room.spot?.[x]?.[y];
+  if (cell) {
+    const [flId, wlId] = cell;
+    const flObj = flId > 0 ? objects[flId] : null;
+    if (flObj != null && flObj.transparent !== true) return true;
+    const wlObj = wlId > 0 ? objects[wlId] : null;
+    if (wlObj != null && wlObj.transparent !== true) return true;
+  }
+  for (const ro of room.recorded_objects) {
+    if (ro.x === x && ro.y === y) {
+      const roObj = objects[ro.type];
+      if (roObj != null && roObj.transparent !== true) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns true if tile (x2,y2) is visible from tile (x1,y1).
+ * Adjacent tiles (1 Chebyshev step) are always visible.
+ * The looker's own tile (x1,y1) is not checked; the target tile IS checked.
+ */
+export function spotIsVisible(
+  room: RoomData,
+  objects: Array<ObjDef | null>,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+): boolean {
+  if (x1 === x2 && y1 === y2) return true;
+  const path = chebyshevPath(x1, y1, x2, y2);
+  if (path.length <= 1) return true; // adjacent — always visible
+  for (const { x, y } of path) {
+    if (tileViewBlocked(room, objects, x, y)) return false;
+  }
+  return true;
+}
+
 export function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryItem): number {
   if (!obj) return 0;
   if (obj.numbered) return obj.weight ?? 0;
@@ -98,6 +171,9 @@ export class GameSession {
 
   private onPlayerCountChange?: () => void;
   private regenInterval: ReturnType<typeof setInterval> | null = null;
+
+  // viewerId → Set of visible player IDs (symmetric)
+  private visibility = new Map<number, Set<number>>();
 
   constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
     this.onPlayerCountChange = opts?.onPlayerCountChange;
@@ -225,6 +301,20 @@ export class GameSession {
     });
   }
 
+  private initVisibility(id: number): void {
+    this.visibility.set(id, new Set());
+  }
+
+  private clearVisibility(id: number): void {
+    const visSet = this.visibility.get(id);
+    if (visSet) {
+      for (const otherId of visSet) {
+        this.visibility.get(otherId)?.delete(id);
+      }
+    }
+    this.visibility.delete(id);
+  }
+
   private onJoin(ws: WebSocket, msg: Extract<C2SMessage, { type: 'JOIN' }>): void {
     if (this.resetTimer !== null) {
       clearTimeout(this.resetTimer);
@@ -277,6 +367,7 @@ export class GameSession {
     }
     this.wsToId.set(ws, id);
     this.onPlayerCountChange?.();
+    this.initVisibility(id);
 
     // Tell the new player they're accepted and send existing players' info
     this.send(ws, {
@@ -293,13 +384,46 @@ export class GameSession {
 
     for (const other of this.players.values()) {
       if (other.id === id) continue;
-      this.send(ws, this.makePlayerInfo(other));
-      // Also send their current HP so the new player sees health bars
-      this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
+      if (other.room !== player.room) {
+        // Different room: no position reveal — players only learn about each other via LOS
+        continue;
+      } else {
+        // Same room: check directional LOS independently for each perspective
+        const room = this.world.rooms[player.room];
+        if (room) {
+          const newCanSeeOther = spotIsVisible(
+            room,
+            this.world.objects,
+            player.x,
+            player.y,
+            other.x,
+            other.y,
+          );
+          const otherCanSeeNew = spotIsVisible(
+            room,
+            this.world.objects,
+            other.x,
+            other.y,
+            player.x,
+            player.y,
+          );
+          if (newCanSeeOther) {
+            this.visibility.get(id)!.add(other.id);
+            this.send(ws, this.makePlayerInfo(other));
+            this.send(ws, {
+              type: 'PLAYER_HEALTH',
+              id: other.id,
+              hp: other.hp,
+              maxHp: other.maxHp,
+            });
+          }
+          if (otherCanSeeNew) {
+            this.visibility.get(other.id)?.add(id);
+            this.send(other.ws, this.makePlayerInfo(player));
+          }
+        }
+      }
     }
-
-    // Tell everyone else about the new player
-    this.broadcast(this.makePlayerInfo(player), id);
 
     // Replay chat history for the new player
     for (const entry of this.chatHistory) {
@@ -326,6 +450,13 @@ export class GameSession {
     this.sendInventory(player);
     this.sendStats(player);
 
+    // Sync health for all players in both directions, regardless of room or LOS
+    for (const other of this.players.values()) {
+      if (other.id === id) continue;
+      this.send(ws, { type: 'PLAYER_HEALTH', id: other.id, hp: other.hp, maxHp: other.maxHp });
+      this.send(other.ws, { type: 'PLAYER_HEALTH', id, hp: player.hp, maxHp: player.maxHp });
+    }
+
     console.log(`[+] ${msg.name} (id=${id}) joined. Players: ${this.players.size}`);
     this.startAfkTimer(player);
   }
@@ -334,10 +465,112 @@ export class GameSession {
     const player = this.players.get(playerId);
     if (!player) return;
     if (player.dead) return;
+
+    const prevRoom = player.room;
+    if (msg.room !== prevRoom) {
+      // Room changed: hide mover from all players in the old room (both directions)
+      for (const other of this.players.values()) {
+        if (other.id === playerId || other.room !== prevRoom) continue;
+        const otherVisSet = this.visibility.get(other.id);
+        if (otherVisSet?.has(playerId)) {
+          this.send(other.ws, { type: 'PLAYER_HIDDEN', id: playerId });
+          otherVisSet.delete(playerId);
+        }
+      }
+      this.visibility.get(playerId)?.clear();
+    }
+
     player.room = msg.room;
     player.x = msg.x;
     player.y = msg.y;
-    this.broadcast({ type: 'MY_LOCATION', id: playerId, room: msg.room, x: msg.x, y: msg.y });
+    this.updateVisibilityOnMove(playerId);
+  }
+
+  private updateVisibilityOnMove(moverId: number): void {
+    const mover = this.players.get(moverId);
+    if (!mover) return;
+    const moverVisSet = this.visibility.get(moverId);
+    if (!moverVisSet) return;
+
+    for (const other of this.players.values()) {
+      if (other.id === moverId) continue;
+
+      if (other.room !== mover.room) {
+        // Different room: no position reveal
+        continue;
+      }
+
+      // Same room: check directional LOS independently for each perspective
+      const room = this.world.rooms[mover.room];
+      if (!room) continue;
+
+      const otherVisSet = this.visibility.get(other.id);
+      const wasMoverSeeOther = moverVisSet.has(other.id);
+      const wasOtherSeeMover = otherVisSet?.has(moverId) ?? false;
+
+      // Can mover see other? (mover's tile excluded, other's tile included)
+      const nowMoverSeeOther = spotIsVisible(
+        room,
+        this.world.objects,
+        mover.x,
+        mover.y,
+        other.x,
+        other.y,
+      );
+      // Can other see mover? (other's tile excluded, mover's tile included)
+      const nowOtherSeeMover = spotIsVisible(
+        room,
+        this.world.objects,
+        other.x,
+        other.y,
+        mover.x,
+        mover.y,
+      );
+
+      // Update visibility sets
+      if (nowMoverSeeOther) moverVisSet.add(other.id);
+      else moverVisSet.delete(other.id);
+      if (otherVisSet) {
+        if (nowOtherSeeMover) otherVisSet.add(moverId);
+        else otherVisSet.delete(moverId);
+      }
+
+      // What other can see about mover
+      if (nowOtherSeeMover && !wasOtherSeeMover) {
+        this.send(other.ws, this.makePlayerInfo(mover));
+        this.send(other.ws, {
+          type: 'PLAYER_HEALTH',
+          id: moverId,
+          hp: mover.hp,
+          maxHp: mover.maxHp,
+        });
+      } else if (!nowOtherSeeMover && wasOtherSeeMover) {
+        this.send(other.ws, { type: 'PLAYER_HIDDEN', id: moverId });
+      } else if (nowOtherSeeMover) {
+        // Still visible: send position update
+        this.send(other.ws, {
+          type: 'MY_LOCATION',
+          id: moverId,
+          room: mover.room,
+          x: mover.x,
+          y: mover.y,
+        });
+      }
+
+      // What mover can see about other (other didn't move, but mover's vantage changed)
+      if (nowMoverSeeOther && !wasMoverSeeOther) {
+        this.send(mover.ws, this.makePlayerInfo(other));
+        this.send(mover.ws, {
+          type: 'PLAYER_HEALTH',
+          id: other.id,
+          hp: other.hp,
+          maxHp: other.maxHp,
+        });
+      } else if (!nowMoverSeeOther && wasMoverSeeOther) {
+        this.send(mover.ws, { type: 'PLAYER_HIDDEN', id: other.id });
+      }
+      // If still mutually visible or still mutually hidden: nothing extra for mover's view of other
+    }
   }
 
   private onMessage(playerId: number, msg: Extract<C2SMessage, { type: 'MESSAGE' }>): void {
@@ -1084,11 +1317,18 @@ export class GameSession {
     victim.dead = true;
     const killerName = killer?.name ?? 'the void'; // capture now; killer may disconnect before timer fires
 
-    // Broadcast tombstone state at death location
+    // Broadcast tombstone state at death location, respecting LOS
     console.log(
       `[respawn] ${victim.name} is dead; broadcasting tombstone at room=${victim.room} (${victim.x},${victim.y})`,
     );
-    this.broadcast(this.makePlayerInfo(victim));
+    const tombstoneInfo = this.makePlayerInfo(victim);
+    const victimVisSet = this.visibility.get(victim.id);
+    for (const other of this.players.values()) {
+      if (other.id === victim.id) continue;
+      if (other.room !== victim.room || victimVisSet?.has(other.id)) {
+        this.send(other.ws, tombstoneInfo);
+      }
+    }
 
     console.log(
       `[respawn] sending YOU_DIED to ${victim.name} (ws readyState=${victim.ws.readyState}): deadForMs=${RESPAWN_DELAY_MS}`,
@@ -1137,6 +1377,7 @@ export class GameSession {
 
     this.players.delete(playerId);
     this.wsToId.delete(player.ws);
+    this.clearVisibility(playerId);
     this.broadcast({ type: 'LEAVING_GAME', id: playerId });
     if (this.players.size === 0) {
       if (this.world.resetOnEmpty) {
@@ -1252,8 +1493,84 @@ export class GameSession {
     } else {
       console.warn(`[${context}] ${player.name} team=${player.team} no spawn — staying in place`);
     }
-    this.broadcast(this.makePlayerInfo(player));
+    this.recomputeVisibilityAfterTeleport(player);
     this.send(player.ws, { type: 'YOU_RESPAWNED', room: player.room, x: player.x, y: player.y });
+  }
+
+  /**
+   * Called after a player teleports (respawn, voluntary respawn).
+   * Hides the player from everyone who could see them before, clears their
+   * visibility set, then recomputes who can see them at the new position and
+   * sends appropriate PLAYER_INFO reveals.
+   */
+  private recomputeVisibilityAfterTeleport(player: Player): void {
+    // Hide from everyone who currently sees this player
+    const oldVisSet = this.visibility.get(player.id);
+    if (oldVisSet) {
+      for (const otherId of oldVisSet) {
+        const other = this.players.get(otherId);
+        if (other) {
+          this.send(other.ws, { type: 'PLAYER_HIDDEN', id: player.id });
+          this.visibility.get(otherId)?.delete(player.id);
+        }
+      }
+      oldVisSet.clear();
+    }
+
+    const newVisSet = this.visibility.get(player.id) ?? new Set<number>();
+    this.visibility.set(player.id, newVisSet);
+
+    // Recompute visibility for all others
+    for (const other of this.players.values()) {
+      if (other.id === player.id) continue;
+
+      if (other.room !== player.room) {
+        // Different room: no position reveal
+        continue;
+      }
+
+      // Same room: check directional LOS independently for each perspective
+      const room = this.world.rooms[player.room];
+      if (!room) continue;
+
+      const playerCanSeeOther = spotIsVisible(
+        room,
+        this.world.objects,
+        player.x,
+        player.y,
+        other.x,
+        other.y,
+      );
+      const otherCanSeePlayer = spotIsVisible(
+        room,
+        this.world.objects,
+        other.x,
+        other.y,
+        player.x,
+        player.y,
+      );
+
+      if (playerCanSeeOther) {
+        newVisSet.add(other.id);
+        this.send(player.ws, this.makePlayerInfo(other));
+        this.send(player.ws, {
+          type: 'PLAYER_HEALTH',
+          id: other.id,
+          hp: other.hp,
+          maxHp: other.maxHp,
+        });
+      }
+      if (otherCanSeePlayer) {
+        this.visibility.get(other.id)?.add(player.id);
+        this.send(other.ws, this.makePlayerInfo(player));
+        this.send(other.ws, {
+          type: 'PLAYER_HEALTH',
+          id: player.id,
+          hp: player.hp,
+          maxHp: player.maxHp,
+        });
+      }
+    }
   }
 
   private sendInventory(player: Player): void {

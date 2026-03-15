@@ -76,7 +76,8 @@ type S2CMessage =
   | { type: 'PLAYER_HEAL'; playerId: number; room: number; x: number; y: number; amount: number }
   | { type: 'YOU_DIED'; killedBy: number; killerName: string; deadForMs: number }
   | { type: 'YOU_RESPAWNED'; room: number; x: number; y: number }
-  | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number };
+  | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number }
+  | { type: 'PLAYER_HIDDEN'; id: number };
 
 export class GameNetwork {
   private ws: WebSocket;
@@ -104,6 +105,7 @@ export class GameNetwork {
   onYouRespawned: (msg: Extract<S2CMessage, { type: 'YOU_RESPAWNED' }>) => void = () => {};
   onRoomObjectChanged: (msg: Extract<S2CMessage, { type: 'ROOM_OBJECT_CHANGED' }>) => void =
     () => {};
+  onPlayerHidden: (msg: Extract<S2CMessage, { type: 'PLAYER_HIDDEN' }>) => void = () => {};
   onClose: () => void = () => {};
 
   constructor(url: string) {
@@ -194,6 +196,9 @@ export class GameNetwork {
           break;
         case 'ROOM_OBJECT_CHANGED':
           this.onRoomObjectChanged(msg);
+          break;
+        case 'PLAYER_HIDDEN':
+          this.onPlayerHidden(msg);
           break;
       }
     });
