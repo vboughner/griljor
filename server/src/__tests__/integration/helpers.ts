@@ -54,7 +54,8 @@ export class MockWebSocket extends EventEmitter {
 //   3 = potion   (takeable, weight:1, health:-20)
 //   4 = wall     (movement:0, blocks passage)
 //   5 = potted plant (takeable, weapon, lost, stop, movingobj:5, range:3, speed:4)
-//   6 = hand grenade (takeable, weapon, lost, stop, explodes:2, movingobj:6, range:4, speed:6)
+//   6 = hand grenade (takeable, weapon, lost, stop, explodes:2, movingobj:6, boombit:7, range:4, speed:6)
+//   7 = explosion    (movingobj:7, directional, speed:4, damage:20, stop:true)
 
 export function buildTestWorld(): World {
   // 20×20 grid; all cells are [floorId=1, wallId=0] → walkable
@@ -93,7 +94,18 @@ export function buildTestWorld(): World {
       stop: true,
       explodes: 2,
       movingobj: 6,
+      boombit: 7,
       speed: 6,
+    },
+    {
+      _index: 7,
+      name: 'explosion',
+      movement: 9,
+      stop: true,
+      movingobj: 7,
+      directional: true,
+      speed: 4,
+      damage: 20,
     },
   ];
 
