@@ -1002,7 +1002,9 @@ export class GameSession {
       player.x = spawn.x;
       player.y = spawn.y;
     } else {
-      console.warn(`[voluntary-respawn] ${player.name} team=${player.team} no spawn found — staying in place`);
+      console.warn(
+        `[voluntary-respawn] ${player.name} team=${player.team} no spawn found — staying in place`,
+      );
     }
 
     this.broadcast(this.makePlayerInfo(player));
