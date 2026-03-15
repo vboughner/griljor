@@ -13,6 +13,10 @@
 - [ ] get punching to work
 - [ ] figure out how to use ammo — numbered weapon items should consume charges until empty and reload from ammo in other hand
 - [x] need to test grenades, and other things that you throw and which blow up (at a distance or on hitting something?)
+- [ ] bug: you cannot throw a grenade into the next room — instead your player moves toward the border; the grenade should blow up on the first square in the next room
+- [ ] test: exit squares — a grenade thrown at a room border should explode on the first square in the next room
+- [ ] test: explosion rays from the blast should be able to travel one square into an adjacent room as well
+- [ ] bug: missiles should go faster — a player can outrun a potted plant; consider giving missiles the same 40% speedup players received, or consider reverting the player speed increase
 - [ ] the bow disappears when empty and probably should not
 - [ ] add something to the title screen that mentions it is an old school game from 1989 and has been modernized, include a link to the repository
 - [ ] player should only be able to take things that are near it and not across the room
