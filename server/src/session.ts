@@ -66,7 +66,6 @@ interface Player {
   dead: boolean;
   respawnTimer: ReturnType<typeof setTimeout> | null;
   lastFireTime: number;
-  lastActivityAt: number;
   afkIdleTimer: ReturnType<typeof setTimeout> | null;
   afkWarnTimer: ReturnType<typeof setTimeout> | null;
   afkWarningsLeft: number;
@@ -112,6 +111,9 @@ export class GameSession {
   }
 
   destroy(): void {
+    for (const player of this.players.values()) {
+      this.clearAfkTimers(player);
+    }
     if (this.regenInterval !== null) {
       clearInterval(this.regenInterval);
       this.regenInterval = null;
@@ -261,7 +263,6 @@ export class GameSession {
       dead: false,
       respawnTimer: null,
       lastFireTime: 0,
-      lastActivityAt: Date.now(),
       afkIdleTimer: null,
       afkWarnTimer: null,
       afkWarningsLeft: 0,
@@ -1221,7 +1222,6 @@ export class GameSession {
 
   private resetAfkTimer(player: Player): void {
     const wasWarning = player.afkWarningsLeft > 0 || player.afkWarnTimer !== null;
-    player.lastActivityAt = Date.now();
     this.startAfkTimer(player);
     if (wasWarning) {
       player.afkWarningsLeft = 0;

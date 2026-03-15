@@ -123,4 +123,25 @@ describe('AFK timeout', () => {
     const gm = alice.ws.messagesOfType('MESSAGE').filter((m) => m.name === 'GM');
     expect(gm.some((m) => m.text.includes('kicked'))).toBe(true);
   });
+
+  it('closes the socket after kicking the player', () => {
+    const alice = joinPlayer(session, 'Alice');
+
+    // Idle timer + 5 warning intervals + kick timer
+    vi.advanceTimersByTime(5001 + 5 * 1001);
+
+    expect(alice.ws.readyState).toBe(3); // WebSocket.CLOSED = 3
+  });
+
+  it('handles disconnect during warning phase without errors', () => {
+    const alice = joinPlayer(session, 'Alice');
+
+    vi.advanceTimersByTime(5001); // enter warning phase
+
+    // Player disconnects manually mid-warning
+    alice.ws.close();
+
+    // Advancing time should not throw or send messages to the now-gone player
+    expect(() => vi.advanceTimersByTime(5000)).not.toThrow();
+  });
 });
