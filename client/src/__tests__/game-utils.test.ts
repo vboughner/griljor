@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { isTileBlocked, findNextStep, computeBresenhamPath, buildExitMap } from '../game-utils';
+import {
+  isTileBlocked,
+  findNextStep,
+  computeBresenhamPath,
+  buildExitMap,
+  computeBfsPath,
+} from '../game-utils';
 import { RoomData, ObjDef } from '../types';
 
 /** Helpers to build minimal test fixtures */
@@ -185,5 +191,63 @@ describe('buildExitMap', () => {
     room.recorded_objects = [makeRecObj(1, 1, 7, -1, -1, -1)];
     const objects = makeObjects({ 7: { exit: true } });
     expect(buildExitMap(room, objects)).toEqual(new Map());
+  });
+});
+
+describe('computeBfsPath', () => {
+  it('returns empty array when already at target', () => {
+    const room = emptyRoom();
+    expect(computeBfsPath(5, 5, 5, 5, room, [])).toEqual([]);
+  });
+
+  it('returns direct path in open space', () => {
+    const room = emptyRoom();
+    const path = computeBfsPath(5, 5, 8, 5, room, []);
+    expect(path[path.length - 1]).toEqual({ x: 8, y: 5 });
+    expect(path[0]).toEqual({ x: 6, y: 5 });
+    expect(path.length).toBe(3);
+  });
+
+  it('returns empty array when target is unreachable', () => {
+    const room = emptyRoom();
+    const objects = makeObjects({ 99: { movement: 0 } });
+    for (const [dx, dy] of [
+      [0, 1],
+      [0, -1],
+      [1, 0],
+      [-1, 0],
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ]) {
+      room.spot![10 + dx][10 + dy] = [0, 99];
+    }
+    expect(computeBfsPath(5, 5, 10, 10, room, objects)).toEqual([]);
+  });
+
+  it('navigates around a wall — no oscillation', () => {
+    const room = emptyRoom();
+    const objects = makeObjects({ 99: { movement: 0 } });
+    for (let y = 3; y <= 7; y++) room.spot![5][y] = [0, 99];
+    const path = computeBfsPath(4, 5, 7, 5, room, objects);
+    expect(path[path.length - 1]).toEqual({ x: 7, y: 5 });
+    for (const step of path) {
+      expect(isTileBlocked(step.x, step.y, room, objects)).toBe(false);
+    }
+    let cx = 4,
+      cy = 5;
+    for (const step of path) {
+      expect(Math.abs(step.x - cx)).toBeLessThanOrEqual(1);
+      expect(Math.abs(step.y - cy)).toBeLessThanOrEqual(1);
+      cx = step.x;
+      cy = step.y;
+    }
+  });
+
+  it('path does not include the starting tile', () => {
+    const room = emptyRoom();
+    const path = computeBfsPath(3, 3, 5, 3, room, []);
+    expect(path.every((p) => !(p.x === 3 && p.y === 3))).toBe(true);
   });
 });

@@ -133,6 +133,60 @@ export function computeBresenhamPath(
   return path;
 }
 
+/**
+ * Full BFS path from (x0,y0) to (x1,y1) through walkable tiles.
+ * Returns the sequence of tiles to visit (not including start).
+ * Returns [] if already at target or no path exists.
+ */
+export function computeBfsPath(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  room: RoomData,
+  objects: ObjDef[],
+  exitKeys?: Set<string>,
+): Array<{ x: number; y: number }> {
+  if (x0 === x1 && y0 === y1) return [];
+  const NONE = -1;
+  const visited = new Uint8Array(GRID * GRID);
+  const prev = new Int16Array(GRID * GRID).fill(NONE);
+  const queue: Array<{ x: number; y: number }> = [];
+  visited[y0 * GRID + x0] = 1;
+  queue.push({ x: x0, y: y0 });
+  let found = false;
+  outer: while (queue.length > 0) {
+    const { x, y } = queue.shift()!;
+    for (const [dx, dy] of STEP_DIRS) {
+      const nx = x + dx,
+        ny = y + dy;
+      if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+      if (isTileBlocked(nx, ny, room, objects, exitKeys)) continue;
+      const k = ny * GRID + nx;
+      if (visited[k]) continue;
+      visited[k] = 1;
+      prev[k] = y * GRID + x;
+      if (nx === x1 && ny === y1) {
+        found = true;
+        break outer;
+      }
+      queue.push({ x: nx, y: ny });
+    }
+  }
+  if (!found) return [];
+  const path: Array<{ x: number; y: number }> = [];
+  let cx = x1,
+    cy = y1;
+  while (cx !== x0 || cy !== y0) {
+    path.unshift({ x: cx, y: cy });
+    const p = prev[cy * GRID + cx];
+    if (p === NONE) return [];
+    cx = p % GRID;
+    cy = Math.floor(p / GRID);
+  }
+  return path;
+}
+
 export function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, ExitTile> {
   const map = new Map<string, ExitTile>();
   for (const ro of room.recorded_objects ?? []) {
