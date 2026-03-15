@@ -275,6 +275,25 @@ describe('LOS visibility — players in different rooms', () => {
     expect(b.ws.messagesOfType('PLAYER_HIDDEN').some((m) => m.id === a.id)).toBe(false);
   });
 
+  it('player exiting a room sends PLAYER_HIDDEN to observers left behind', () => {
+    // A and B in room 0, open floor — they can see each other
+    const a = joinAt(session, 'Alice', 0, 5, 5);
+    const b = joinAt(session, 'Bob', 0, 7, 5);
+
+    expect(b.ws.messagesOfType('PLAYER_INFO').some((m) => m.id === a.id)).toBe(true);
+    a.ws.flush();
+    b.ws.flush();
+
+    // A exits to room 1
+    a.ws.receive({ type: 'MY_LOCATION', room: 1, x: 5, y: 5 });
+
+    // B should receive PLAYER_HIDDEN for A
+    expect(b.ws.messagesOfType('PLAYER_HIDDEN').some((m) => m.id === a.id)).toBe(true);
+    // B should NOT receive A's new position in room 1
+    expect(b.ws.messagesOfType('MY_LOCATION').some((m) => m.id === a.id)).toBe(false);
+    expect(b.ws.messagesOfType('PLAYER_INFO').some((m) => m.id === a.id)).toBe(false);
+  });
+
   it('movements in a different room are not revealed to players in other rooms', () => {
     // A and B both join, then separate into different rooms
     const a = joinPlayer(session, 'Alice');

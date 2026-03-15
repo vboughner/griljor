@@ -467,18 +467,16 @@ export class GameSession {
 
     const prevRoom = player.room;
     if (msg.room !== prevRoom) {
-      // Room changed: hide mover from everyone who could see them in the old room
-      const moverVisSet = this.visibility.get(playerId);
-      if (moverVisSet) {
-        for (const otherId of moverVisSet) {
-          const other = this.players.get(otherId);
-          if (other && other.room === prevRoom) {
-            this.send(other.ws, { type: 'PLAYER_HIDDEN', id: playerId });
-            this.visibility.get(otherId)?.delete(playerId);
-          }
+      // Room changed: hide mover from all players in the old room (both directions)
+      for (const other of this.players.values()) {
+        if (other.id === playerId || other.room !== prevRoom) continue;
+        const otherVisSet = this.visibility.get(other.id);
+        if (otherVisSet?.has(playerId)) {
+          this.send(other.ws, { type: 'PLAYER_HIDDEN', id: playerId });
+          otherVisSet.delete(playerId);
         }
-        moverVisSet.clear();
       }
+      this.visibility.get(playerId)?.clear();
     }
 
     player.room = msg.room;
