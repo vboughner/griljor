@@ -46,6 +46,7 @@ interface RemotePlayer {
   y: number;
   sprite: ImageData | null;
   dead: boolean;
+  team: number;
 }
 
 export class Game {
@@ -96,6 +97,9 @@ export class Game {
   // local player HP for speed penalty
   private myHp = 100;
   private myMaxHp = 100;
+
+  private myTeam = 0;
+  private boxOtherPlayers = true;
 
   // tile hover debug mode (toggled by ?)
   private hoverMode = false;
@@ -175,6 +179,14 @@ export class Game {
           // Sample delay from the tile we just arrived on (same as click-to-move)
           this.moveReadyAt = Date.now() + this.getMoveDelay();
         });
+        return;
+      }
+
+      // Toggle player indicator boxes
+      if (e.key === 'o') {
+        e.preventDefault();
+        this.boxOtherPlayers = !this.boxOtherPlayers;
+        void this.render();
         return;
       }
 
@@ -310,6 +322,7 @@ export class Game {
         y: msg.y,
         sprite,
         dead: msg.dead,
+        team: msg.team,
       });
       await this.render();
     };
@@ -494,6 +507,10 @@ export class Game {
 
   setMyId(id: number): void {
     this.myId = id;
+  }
+
+  setMyTeam(team: number): void {
+    this.myTeam = team;
   }
 
   public notifyDied(): void {
@@ -781,7 +798,7 @@ export class Game {
     const others: OtherPlayer[] = [];
     for (const p of this.otherPlayers.values()) {
       if (p.room === this.currentRoom) {
-        others.push({ px: p.x, py: p.y, sprite: p.sprite, dead: p.dead });
+        others.push({ px: p.x, py: p.y, sprite: p.sprite, dead: p.dead, team: p.team });
       }
     }
 
@@ -798,6 +815,10 @@ export class Game {
       this.objects,
       this.objset,
       this.tombstoneSprite,
+      this.myTeam,
+      this.boxOtherPlayers,
+      this.mapData.map.teams_supported > 1,
+      this.isDead,
     );
     this.drawBorderIndicators(room);
     await this.drawMissiles();

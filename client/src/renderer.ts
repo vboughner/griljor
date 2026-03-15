@@ -129,6 +129,32 @@ export interface OtherPlayer {
   py: number;
   sprite: ImageData | null;
   dead?: boolean;
+  team: number;
+}
+
+/**
+ * Returns the stroke style for a player indicator box, or null if no indicator
+ * should be drawn.
+ *
+ * @param teamsEnabled  true when the map has more than 1 team (teams_supported > 1)
+ * @param localTeam     the local player's team number
+ * @param otherTeam     the other player's team number
+ * @param boxOtherPlayers  master toggle — false means no indicators for anyone
+ */
+const INDICATOR_TEAMMATE = '#00cc00';
+const INDICATOR_ENEMY = '#ffffff';
+
+export function playerIndicatorStyle(
+  teamsEnabled: boolean,
+  localTeam: number,
+  otherTeam: number,
+  boxOtherPlayers: boolean,
+): { color: string; lineWidth: number } | null {
+  if (!boxOtherPlayers) return null;
+  if (teamsEnabled && otherTeam !== 0 && otherTeam === localTeam) {
+    return { color: INDICATOR_TEAMMATE, lineWidth: 2 };
+  }
+  return { color: INDICATOR_ENEMY, lineWidth: 1 };
 }
 
 /**
@@ -146,6 +172,10 @@ export async function renderFrame(
   objects: ObjDef[] = [],
   objset: string = '',
   tombstoneSprite: ImageData | null = null,
+  localTeam: number = 0,
+  boxOtherPlayers: boolean = false,
+  teamsEnabled: boolean = false,
+  isDead: boolean = false,
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bg, 0, 0);
@@ -172,6 +202,16 @@ export async function renderFrame(
       ctx.fillStyle = getColorMode() === 'dark' ? '#aaa' : '#666';
       ctx.fillRect(BORDER + other.px * TILE + 8, BORDER + other.py * TILE + 8, 16, 16);
     }
+    if (boxOtherPlayers && !other.dead) {
+      const style = playerIndicatorStyle(teamsEnabled, localTeam, other.team, boxOtherPlayers);
+      if (style) {
+        ctx.save();
+        ctx.strokeStyle = style.color;
+        ctx.lineWidth = style.lineWidth;
+        ctx.strokeRect(BORDER + other.px * TILE, BORDER + other.py * TILE, TILE, TILE);
+        ctx.restore();
+      }
+    }
   }
 
   // Draw local player on top
@@ -181,5 +221,13 @@ export async function renderFrame(
   } else {
     ctx.fillStyle = getColorMode() === 'dark' ? '#fff' : '#000';
     ctx.fillRect(BORDER + px * TILE + 8, BORDER + py * TILE + 8, 16, 16);
+  }
+
+  if (boxOtherPlayers && !isDead) {
+    ctx.save();
+    ctx.strokeStyle = INDICATOR_TEAMMATE;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(BORDER + px * TILE, BORDER + py * TILE, TILE, TILE);
+    ctx.restore();
   }
 }

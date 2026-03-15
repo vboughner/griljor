@@ -23,6 +23,7 @@ type S2CMessage =
       room: number;
       x: number;
       y: number;
+      team: number;
     }
   | { type: 'REJECTED'; msg: string }
   | {
@@ -37,6 +38,7 @@ type S2CMessage =
       deaths: number;
       joinedAt: number;
       dead: boolean;
+      team: number;
     }
   | { type: 'PLAYER_STATS'; id: number; kills: number; deaths: number }
   | { type: 'MY_LOCATION'; id: number; room: number; x: number; y: number }
