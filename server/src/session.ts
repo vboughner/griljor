@@ -67,12 +67,15 @@ export function tileViewBlocked(
   const cell = room.spot?.[x]?.[y];
   if (cell) {
     const [flId, wlId] = cell;
-    if (flId > 0 && objects[flId]?.transparent !== true) return true;
-    if (wlId > 0 && objects[wlId]?.transparent !== true) return true;
+    const flObj = flId > 0 ? objects[flId] : null;
+    if (flObj != null && flObj.transparent !== true) return true;
+    const wlObj = wlId > 0 ? objects[wlId] : null;
+    if (wlObj != null && wlObj.transparent !== true) return true;
   }
   for (const ro of room.recorded_objects) {
     if (ro.x === x && ro.y === y) {
-      if (objects[ro.type]?.transparent !== true) return true;
+      const roObj = objects[ro.type];
+      if (roObj != null && roObj.transparent !== true) return true;
     }
   }
   return false;
