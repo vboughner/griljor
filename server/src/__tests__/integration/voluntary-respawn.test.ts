@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GameSession } from '../../session';
 import { buildTestWorld, joinPlayer } from './helpers';
 
@@ -67,14 +67,35 @@ describe('voluntary respawn', () => {
   });
 
   it('is ignored when the player is already dead', () => {
-    const alice = joinPlayer(session, 'Alice');
-    // Simulate dead state by directly marking the player dead via the session internals.
-    // We can't easily trigger actual death here without combat setup, so we test the
-    // guard indirectly: a second VOLUNTARY_RESPAWN right after the first must not
-    // send a second YOU_RESPAWNED (the player is still alive after the first, so this
-    // test verifies we at least get exactly one YOU_RESPAWNED per voluntary respawn call).
-    alice.ws.receive({ type: 'VOLUNTARY_RESPAWN' });
-    const count1 = alice.ws.messagesOfType('YOU_RESPAWNED').length;
-    expect(count1).toBe(1);
+    vi.useFakeTimers();
+    try {
+      const alice = joinPlayer(session, 'Alice');
+      const bob = joinPlayer(session, 'Bob');
+
+      // Arm Bob with the sword at (5,5)
+      bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
+      bob.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+
+      // Position both players
+      alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 10 });
+      bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
+
+      // Fire 4 shots (sword damage=30, Alice hp=100, need 4 hits to kill)
+      for (let i = 0; i < 4; i++) {
+        bob.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 5, targetY: 10 });
+        vi.advanceTimersByTime(500); // advance enough for missile to land
+        vi.advanceTimersByTime(900); // advance past fire-rate cooldown (850ms)
+      }
+
+      // Verify Alice is dead
+      expect(alice.ws.lastOfType('YOU_DIED')).toBeDefined();
+      alice.ws.flush();
+
+      // Voluntary respawn while dead must be ignored
+      alice.ws.receive({ type: 'VOLUNTARY_RESPAWN' });
+      expect(alice.ws.lastOfType('YOU_RESPAWNED')).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
