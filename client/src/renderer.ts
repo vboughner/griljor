@@ -152,7 +152,7 @@ export function playerIndicatorStyle(
 ): { color: string; lineWidth: number } | null {
   if (!boxOtherPlayers) return null;
   if (teamsEnabled && otherTeam !== 0 && otherTeam === localTeam) {
-    return { color: INDICATOR_TEAMMATE, lineWidth: 2 };
+    return { color: INDICATOR_TEAMMATE, lineWidth: 1 };
   }
   return { color: INDICATOR_ENEMY, lineWidth: 1 };
 }
@@ -208,7 +208,7 @@ export async function renderFrame(
         ctx.save();
         ctx.strokeStyle = style.color;
         ctx.lineWidth = style.lineWidth;
-        ctx.strokeRect(BORDER + other.px * TILE, BORDER + other.py * TILE, TILE, TILE);
+        ctx.strokeRect(BORDER + other.px * TILE + 1, BORDER + other.py * TILE + 1, TILE - 2, TILE - 2);
         ctx.restore();
       }
     }
@@ -226,8 +226,8 @@ export async function renderFrame(
   if (boxOtherPlayers && !isDead) {
     ctx.save();
     ctx.strokeStyle = INDICATOR_TEAMMATE;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(BORDER + px * TILE, BORDER + py * TILE, TILE, TILE);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(BORDER + px * TILE + 1, BORDER + py * TILE + 1, TILE - 2, TILE - 2);
     ctx.restore();
   }
 }

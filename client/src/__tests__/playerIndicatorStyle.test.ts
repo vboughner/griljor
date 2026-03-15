@@ -10,7 +10,7 @@ describe('playerIndicatorStyle', () => {
 
   it('returns green teammate style in a 2-team game', () => {
     const style = playerIndicatorStyle(true, 1, 1, true);
-    expect(style).toEqual({ color: '#00cc00', lineWidth: 2 });
+    expect(style).toEqual({ color: '#00cc00', lineWidth: 1 });
   });
 
   it('returns white enemy style in a 2-team game', () => {
