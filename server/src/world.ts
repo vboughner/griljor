@@ -21,6 +21,8 @@ export interface ObjDef {
   alternate?: number; // object type this becomes when toggled
   health?: number; // negative = restores HP on use
   lost?: boolean; // consumed on use (remove from inventory)
+  charges?: number; // bitmask: this ammo item reloads weapons where weapon.type & charges != 0
+  capacity?: number; // max charges a numbered weapon can hold
 }
 
 export interface RecObj {

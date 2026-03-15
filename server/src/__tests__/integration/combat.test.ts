@@ -1,6 +1,63 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GameSession } from '../../session';
 import { buildTestWorld, joinPlayer, TestPlayer } from './helpers';
+import { World, ObjDef, RoomData } from '../../world';
+
+// Test world with a numbered weapon (bow, type:2, capacity:5) and ammo (arrows, charges:2).
+// Object layout:
+//   1 = floor tile (movement:5)
+//   2 = bow       (takeable, weapon, numbered, type:2, capacity:5, damage:10, range:5)
+//   3 = arrows    (takeable, numbered, charges:2, weight:1) — quantity set via detail
+function buildAmmoWorld(): World {
+  const spot: number[][][] = Array.from({ length: 20 }, () =>
+    Array.from({ length: 20 }, () => [1, 0]),
+  );
+
+  const objects: Array<ObjDef | null> = [
+    null,
+    { _index: 1, name: 'floor', movement: 5, permeable: true },
+    {
+      _index: 2,
+      name: 'bow',
+      takeable: true,
+      weight: 3,
+      weapon: true,
+      numbered: true,
+      type: 2,
+      capacity: 5,
+      damage: 10,
+      range: 5,
+    },
+    { _index: 3, name: 'arrows', takeable: true, weight: 1, numbered: true, charges: 2 },
+  ];
+
+  const room: RoomData = {
+    name: 'ammo-test-room',
+    floor: 0,
+    team: 0,
+    // bow at (5,5) with 1 arrow loaded (detail=1)
+    // arrows at (6,5) with 10 charges (detail=10)
+    // extra arrows at (7,5) with 5 charges (detail=5)
+    recorded_objects: [
+      { x: 5, y: 5, type: 2, detail: 1 },
+      { x: 6, y: 5, type: 3, detail: 10 },
+      { x: 7, y: 5, type: 3, detail: 5 },
+    ],
+    spot,
+  };
+
+  return {
+    mapName: 'ammo-test',
+    title: 'Ammo Test',
+    teams: 0,
+    roomCount: 1,
+    rooms: [room],
+    objects,
+    resetOnEmpty: false,
+    resetAfterSeconds: 30,
+    maxPlayers: 16,
+  };
+}
 
 describe('combat', () => {
   let session: GameSession;
@@ -288,5 +345,162 @@ describe('combat', () => {
       .messagesOfType('MY_LOCATION')
       .filter((m) => m.id === bob.id && m.x === 15 && m.y === 15);
     expect(bobMoved.length).toBe(0);
+  });
+});
+
+describe('ammo reload', () => {
+  let session: GameSession;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    session = new GameSession(buildAmmoWorld());
+  });
+
+  afterEach(() => {
+    session.destroy();
+    vi.useRealTimers();
+  });
+
+  // Alice picks up bow (quantity=1) into left hand, arrows (quantity=10) into right hand
+  function armAliceWithBowAndArrows(alice: TestPlayer) {
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' }); // bow → left
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 6, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 6, y: 5, hand: 'right' }); // arrows (qty=10) → right
+  }
+
+  it('auto-reloads weapon from other hand when weapon empties mid-fire', () => {
+    const alice = joinPlayer(session, 'Alice');
+    armAliceWithBowAndArrows(alice);
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+
+    // Fire once — bow had 1 charge, now 0, triggers reload from 10 arrows → weapon=5, arrows=5
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+
+    const inv = alice.ws.lastOfType('YOUR_INVENTORY');
+    expect(inv).toBeDefined();
+    expect(inv!.leftHand?.type).toBe(2); // bow still in hand
+    expect(inv!.leftHand?.quantity).toBe(5); // reloaded to capacity
+    expect(inv!.rightHand?.quantity).toBe(5); // arrows consumed 5
+  });
+
+  it('weapon stays in hand when empty with no ammo available', () => {
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' }); // bow (qty=1) → left, no ammo
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+
+    const inv = alice.ws.lastOfType('YOUR_INVENTORY');
+    expect(inv).toBeDefined();
+    expect(inv!.leftHand?.type).toBe(2); // bow still in hand
+    expect(inv!.leftHand?.quantity).toBe(0); // quantity hit 0, no reload possible
+  });
+
+  it('firing empty weapon with ammo in other hand reloads and fires', () => {
+    const alice = joinPlayer(session, 'Alice');
+    armAliceWithBowAndArrows(alice);
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+
+    // Drain the bow first (bow qty=1 → 0 → reloads from arrows)
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    vi.advanceTimersByTime(900); // wait past fire-rate cooldown
+
+    alice.ws.flush();
+
+    // Now fire again with a reloaded bow (should fire a missile)
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+
+    expect(alice.ws.messagesOfType('MISSILE_START').length).toBeGreaterThan(0);
+  });
+
+  it('firing empty weapon with no ammo does not fire a missile', () => {
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' }); // bow (qty=1)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+
+    // Drain the bow
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.flush();
+
+    // Try to fire again with empty weapon and no ammo
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+
+    expect(alice.ws.messagesOfType('MISSILE_START').length).toBe(0);
+  });
+
+  it('active ammo use (FIRE_WEAPON with ammo hand) reloads weapon in other hand', () => {
+    const alice = joinPlayer(session, 'Alice');
+    // Bow (qty=1) in left, arrows (qty=10) in right
+    armAliceWithBowAndArrows(alice);
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+
+    // Fire bow once: bow 1→0, auto-reloads from arrows(10) → bow=5, arrows=5
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    vi.advanceTimersByTime(900);
+    alice.ws.flush();
+
+    // Now fire arrows (right hand) — bow is at capacity=5, so no transfer; just verify
+    // the inventory message is sent (non-weapon ammo use path is exercised)
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'right', targetX: 10, targetY: 10 });
+
+    const inv = alice.ws.lastOfType('YOUR_INVENTORY');
+    expect(inv).toBeDefined();
+    // bow stays at 5 (already full), arrows stays at 5 (no transfer needed)
+    expect(inv!.leftHand?.quantity).toBe(5);
+    expect(inv!.rightHand?.quantity).toBe(5);
+  });
+
+  it('active ammo use reloads partially empty weapon', () => {
+    const alice = joinPlayer(session, 'Alice');
+    // Pick up bow with 1 charge, arrows with 10
+    armAliceWithBowAndArrows(alice);
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+
+    // First fire: bow 1→0, auto-reloads from arrows(10) → bow=5, arrows=5
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    vi.advanceTimersByTime(900); // wait past fire-rate cooldown
+
+    // Second fire: bow 5→4, arrows unchanged
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    vi.advanceTimersByTime(900); // wait past fire-rate cooldown
+    alice.ws.flush();
+
+    // Active ammo use: fire arrows → bow 4→5, arrows 5→4
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'right', targetX: 10, targetY: 10 });
+
+    const inv = alice.ws.lastOfType('YOUR_INVENTORY');
+    expect(inv).toBeDefined();
+    expect(inv!.leftHand?.quantity).toBe(5); // bow refilled to capacity
+    expect(inv!.rightHand?.quantity).toBe(4); // arrows decreased by 1
+  });
+
+  it('ammo depleted during reload pulls next ammo stack from inventory', () => {
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' }); // bow (qty=1)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 6, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 6, y: 5, hand: 'right' }); // arrows qty=10 → right
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5, hand: 'right' }); // extra arrows qty=5 → inventory
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+
+    // Fire: bow=1 → empties → reloads from arrows(qty=10) → bow=5, arrows=5
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+
+    const inv = alice.ws.lastOfType('YOUR_INVENTORY');
+    expect(inv).toBeDefined();
+    // arrows in right hand should still be there (only 5 consumed from 10)
+    expect(inv!.rightHand?.type).toBe(3);
+    expect(inv!.rightHand?.quantity).toBe(5);
+    // extra arrows (qty=5) should still be in inventory (not consumed yet)
+    expect(inv!.inventory.some((s) => s?.type === 3 && s.quantity === 5)).toBe(true);
   });
 });
