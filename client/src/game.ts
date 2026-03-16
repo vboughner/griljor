@@ -701,7 +701,7 @@ export class Game {
 
   /** Delay in ms for one step. movement field is a speed 1-9 (9=fastest).
    *  Absent movement means blocked (0); open tiles with no object default to 9.
-   *  When hurt, movement slows proportionally (at 50% HP → 2× delay). */
+   *  When hurt, movement slows proportionally (at 50% HP → ~1.41× delay). */
   private getMoveDelay(): number {
     const room = this.mapData.rooms[this.currentRoom];
     const flId = room.spot?.[this.px]?.[this.py]?.[0] ?? 0;
