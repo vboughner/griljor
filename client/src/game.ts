@@ -13,6 +13,7 @@ import { GameNetwork } from './network';
 import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
 import { stepDelay, applyHpPenalty } from './utils';
 import { isTileBlocked, computeBfsPath, buildExitMap, ExitTile } from './game-utils';
+import { tileIsVisible, tileViewBlocked } from './los';
 
 const GRID = 20;
 const TOMBSTONE_BIT = '/sprites/bitmaps/tombbit.png';
@@ -104,11 +105,18 @@ export class Game {
   // tile hover debug mode (toggled by ?)
   private hoverMode = false;
 
+  // fog-of-war visibility overlay (toggled by v, on by default)
+  private fogEnabled = true;
+  // per-tile current fog alpha (0 = fully lit, 0.2 = fully dimmed); starts fully fogged
+  private fogAlpha: number[][] = Array.from({ length: GRID }, () => new Array(GRID).fill(0.2));
+  private fogAnimFrame: number | null = null;
+
   private destroyed = false;
 
   // Render concurrency guard: at most one render in flight; queue one more if needed
   private renderInProgress = false;
   private renderQueued = false;
+  private visibilityGrid: boolean[][] = [];
 
   constructor(
     mapData: MapFile,
@@ -179,6 +187,15 @@ export class Game {
           // Sample delay from the tile we just arrived on (same as click-to-move)
           this.moveReadyAt = Date.now() + this.getMoveDelay();
         });
+        return;
+      }
+
+      // Toggle fog-of-war visibility overlay
+      if (e.key === 'v') {
+        e.preventDefault();
+        this.fogEnabled = !this.fogEnabled;
+        if (this.fogEnabled) this.computeVisibility();
+        else void this.render();
         return;
       }
 
@@ -443,6 +460,7 @@ export class Game {
       }
       if (msg.room === this.currentRoom) {
         this.roomBg = null; // door appearance changed — rebuild background
+        this.computeVisibility();
         await this.render();
       }
     };
@@ -477,6 +495,7 @@ export class Game {
 
   destroy(): void {
     this.destroyed = true;
+    if (this.fogAnimFrame !== null) cancelAnimationFrame(this.fogAnimFrame);
     window.removeEventListener('keydown', this.onKeyDown);
     this.stopMoving();
     for (const anim of this.missiles.values()) {
@@ -535,6 +554,7 @@ export class Game {
     this.currentRoom = index;
     this.px = px;
     this.py = py;
+    this.computeVisibility();
     this.roomBg = null;
     this.exitMap = buildExitMap(this.mapData.rooms[index], this.objects);
     this.exitKeys = new Set(this.exitMap.keys());
@@ -588,6 +608,7 @@ export class Game {
 
     this.px = nx;
     this.py = ny;
+    this.computeVisibility();
     this.network?.sendLocation(this.currentRoom, this.px, this.py);
 
     await this.render();
@@ -771,6 +792,96 @@ export class Game {
 
   // ── Rendering ──────────────────────────────────────────────────────────────
 
+  private computeVisibility(): void {
+    if (!this.fogEnabled) return;
+    const room = this.mapData.rooms[this.currentRoom];
+    if (!room) {
+      this.visibilityGrid = [];
+      return;
+    }
+    const grid: boolean[][] = [];
+    for (let x = 0; x < GRID; x++) {
+      grid[x] = [];
+      for (let y = 0; y < GRID; y++) {
+        grid[x][y] = tileIsVisible(room, this.objects, this.px, this.py, x, y);
+      }
+    }
+    // Second pass: reveal blocking tiles (walls) adjacent to visible open tiles.
+    // A wall face is visible if you can see the floor beside it, even when the
+    // diagonal path to the corner is blocked by an adjacent wall.
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        if (grid[x][y] || !isTileBlocked(x, y, room, this.objects)) continue;
+        for (const [dx, dy] of [
+          [0, 1],
+          [0, -1],
+          [1, 0],
+          [-1, 0],
+          [1, 1],
+          [1, -1],
+          [-1, 1],
+          [-1, -1],
+        ]) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+          if (grid[nx][ny] && !tileViewBlocked(room, this.objects, nx, ny)) {
+            grid[x][y] = true;
+            break;
+          }
+        }
+      }
+    }
+
+    this.visibilityGrid = grid;
+    if (this.fogEnabled) this.startFogAnimation();
+  }
+
+  private startFogAnimation(): void {
+    if (this.fogAnimFrame !== null) return;
+    this.fogAnimFrame = requestAnimationFrame(() => this.tickFogAnimation());
+  }
+
+  private tickFogAnimation(): void {
+    this.fogAnimFrame = null;
+    if (!this.fogEnabled) return;
+    // ~300ms transition: 0.2 target alpha / 18 frames at 60fps
+    const STEP = 0.2 / 18;
+    let anyChanging = false;
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        const target = this.visibilityGrid[x]?.[y] ? 0 : 0.2;
+        const current = this.fogAlpha[x][y];
+        if (Math.abs(current - target) <= STEP) {
+          this.fogAlpha[x][y] = target;
+        } else {
+          this.fogAlpha[x][y] += current < target ? STEP : -STEP;
+          anyChanging = true;
+        }
+      }
+    }
+    void this.render();
+    if (anyChanging && !this.destroyed) {
+      this.fogAnimFrame = requestAnimationFrame(() => this.tickFogAnimation());
+    }
+  }
+
+  private drawFogOverlay(): void {
+    const ctx = this.canvas.getContext('2d')!;
+    ctx.save();
+    ctx.fillStyle = '#000';
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        const alpha = this.fogAlpha[x]?.[y] ?? 0.2;
+        if (alpha > 0) {
+          ctx.globalAlpha = alpha;
+          ctx.fillRect(BORDER + x * TILE, BORDER + y * TILE, TILE, TILE);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
   private async render(): Promise<void> {
     if (this.destroyed) return;
     if (this.renderInProgress) {
@@ -825,6 +936,7 @@ export class Game {
       this.mapData.map.teams_supported > 1,
       this.isDead,
     );
+    if (this.fogEnabled) this.drawFogOverlay();
     this.drawBorderIndicators(room);
     await this.drawMissiles();
     this.drawHitMarkers();
@@ -888,7 +1000,7 @@ export class Game {
     const ctx = this.canvas.getContext('2d')!;
     const t = (this.screenFlashUntil - now) / 200; // 1→0
     ctx.save();
-    ctx.globalAlpha = t * 0.35;
+    ctx.globalAlpha = t * 0.2;
     ctx.fillStyle = '#ff0000';
     const w = this.canvas.width;
     const h = this.canvas.height;
