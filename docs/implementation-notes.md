@@ -15,7 +15,7 @@ npm run test:server    # server only
 npm run test:client    # client only
 ```
 
-**151 tests total** (98 server, 53 client) as of the big-fixing-2 branch.
+**182 tests total** (96 server, 86 client) as of the fog-of-war branch.
 
 ### Server test layout (`server/src/__tests__/`)
 
@@ -56,6 +56,8 @@ All client tests cover pure functions only (no canvas or DOM rendering):
 | `game-utils.test.ts` | `isTileBlocked`, `computeBresenhamPath`, `findNextStep`, `buildExitMap` |
 | `tooltip.test.ts` | `buildItemHtml` — HTML output for various item types |
 | `speedPenalty.test.ts` | `applyHpPenalty` — HP-based movement penalty, cap, divide-by-zero guards |
+| `los.test.ts` | `chebyshevPath`, `tileViewBlocked`, `spotIsVisible`, `tileIsVisible` — full LOS function coverage including client-specific edge cases (optional `recorded_objects`, absent `spot` field) |
+| `playerIndicatorStyle.test.ts` | Player indicator box colour logic |
 
 ### Timer discipline in integration tests
 
@@ -2153,3 +2155,55 @@ Updates happen in three places:
 
 Legacy implementation: `legacy/src/sight.c` (`spot_is_visible`, `update_vision`).
 Research notes: `docs/legacy-light-and-sight.md`.
+
+---
+
+## Phase 17 — Client-Side Fog of War
+
+Tiles outside the local player's current line of sight are dimmed with a semi-transparent overlay. The effect is purely cosmetic and client-side — it uses no server communication. Toggled with the `v` key (on by default).
+
+### New module: `client/src/los.ts`
+
+Three functions ported from `server/src/session.ts` plus one new rendering-specific variant:
+
+**`chebyshevPath(x1, y1, x2, y2)`** — identical to the server version. Walks from `(x1,y1)` to `(x2,y2)` one 8-directional Chebyshev step at a time, returning each intermediate tile excluding the start.
+
+**`tileViewBlocked(room, objects, x, y)`** — identical to the server version, with one difference: guards `room.recorded_objects ?? []` because `recorded_objects` is optional on the client's `RoomData` type (absent in diag-format maps).
+
+**`spotIsVisible(room, objects, x1, y1, x2, y2)`** — identical to the server version. Checks all tiles on the path including the target. Used for player-to-player visibility semantics (can you see someone hiding in a forest?). Kept for completeness and testing symmetry with the server.
+
+**`tileIsVisible(room, objects, x1, y1, x2, y2)`** — new rendering variant. Checks all intermediate tiles on the path **excluding the target tile**. This means a wall tile is visible if the path to it is clear — you can see the face of a wall even though you cannot see through it. `spotIsVisible` would incorrectly mark opaque target tiles as not visible.
+
+### Visibility grid computation (`computeVisibility()` in `Game`)
+
+Called on every player move, room change, and door-open event. Does nothing when fog is disabled.
+
+**First pass** — runs `tileIsVisible(room, objects, px, py, x, y)` for all 400 tiles (20×20), producing a `boolean[][]` grid.
+
+**Second pass** — wall-face expansion. Iterates all non-visible tiles; if the tile is non-walkable (`isTileBlocked`) and any of its 8 neighbours is both visible and non-blocking (`!tileViewBlocked`), the tile is marked visible. This handles two cases:
+- **Corner walls**: the diagonal Chebyshev path to a corner wall clips through an adjacent wall, making the first pass miss it. The corner is still visible because you can see the open floor beside it.
+- **Transparent walls**: walls with `transparent: true` (LOS passes through them, but movement is blocked) were skipped by the first pass's path-blocking logic in some geometries. The second pass catches them via their walkable neighbours.
+
+The second pass is restricted to non-walkable tiles to prevent floor tiles behind walls from being revealed via diagonal adjacency.
+
+### Animated overlay (`tickFogAnimation()` / `drawFogOverlay()`)
+
+Each tile has a current alpha value in `fogAlpha: number[][]`, initialised to `0.35` (fully dimmed). The target alpha is `0` for visible tiles and `0.35` for non-visible tiles.
+
+**`startFogAnimation()`** — queues a `requestAnimationFrame` tick if one is not already running.
+
+**`tickFogAnimation()`** — steps every tile's current alpha toward its target by `0.35 / 18` per frame (~300 ms at 60 fps), then calls `render()`. Re-queues itself while any tile is still mid-transition; stops when all tiles have reached their targets or fog is disabled.
+
+**`drawFogOverlay()`** — called from `doRender()` after `renderFrame()` and before `drawBorderIndicators()`. Uses `ctx.globalAlpha` per tile with `ctx.fillStyle = '#000'` to draw a black rectangle over each non-fully-lit tile. Missiles, hit markers, border indicators, and the screen flash all render above the fog.
+
+### Behaviour details
+
+- **On first enable** (`v` key): `computeVisibility()` is called immediately, so the visibility grid is current; the animation then fades visible tiles in from `0.35 → 0`.
+- **On disable**: `tickFogAnimation()` returns immediately on the next frame, stopping the loop. `drawFogOverlay()` is skipped, so all tiles instantly revert to full brightness.
+- **On room entry**: `computeVisibility()` is called in `goToRoom()`. The existing `fogAlpha` values carry over from the previous room (old visible tiles animate to dimmed, new visible tiles animate to lit).
+- **On door open**: `computeVisibility()` is called in `onRoomObjectChanged()` before re-rendering, so newly revealed areas fade in immediately when a door is opened.
+- **Players in fog**: other players are already absent from hidden tiles due to the server's `PLAYER_HIDDEN` mechanism (Phase 16). The fog overlay additionally conceals them if they happen to be on a tile that the server has revealed but the client geometry would dim.
+
+### Key binding
+
+`v` — toggle fog of war on/off. State is held in `Game.fogEnabled` (default `true`).
