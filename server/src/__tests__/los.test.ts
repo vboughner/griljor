@@ -10,7 +10,16 @@ function makeObj(overrides: Partial<ObjDef> = {}): ObjDef {
 
 /** Minimal empty room with no spots and no recorded_objects */
 function emptyRoom(): RoomData {
-  return { name: 'test', floor: 0, team: 0, recorded_objects: [] };
+  return {
+    name: 'test',
+    floor: 0,
+    team: 0,
+    recorded_objects: [],
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
+  };
 }
 
 /** Build a room whose spot array contains a single set cell at (x,y) */
@@ -18,7 +27,17 @@ function roomWithSpot(x: number, y: number, flId: number, wlId: number): RoomDat
   const spot: number[][][] = [];
   spot[x] = [];
   spot[x][y] = [flId, wlId];
-  return { name: 'test', floor: 0, team: 0, recorded_objects: [], spot };
+  return {
+    name: 'test',
+    floor: 0,
+    team: 0,
+    recorded_objects: [],
+    spot,
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
+  };
 }
 
 // ── chebyshevPath ────────────────────────────────────────────────────────────
@@ -116,6 +135,10 @@ describe('tileViewBlocked', () => {
       floor: 0,
       team: 0,
       recorded_objects: [{ x: 3, y: 3, type: 1, detail: 0 }],
+      exitNorth: -1,
+      exitEast: -1,
+      exitSouth: -1,
+      exitWest: -1,
     };
     const objects: Array<ObjDef | null> = [null, makeObj({ _index: 1 })];
     expect(tileViewBlocked(room, objects, 3, 3)).toBe(true);
@@ -127,6 +150,10 @@ describe('tileViewBlocked', () => {
       floor: 0,
       team: 0,
       recorded_objects: [{ x: 3, y: 3, type: 1, detail: 0 }],
+      exitNorth: -1,
+      exitEast: -1,
+      exitSouth: -1,
+      exitWest: -1,
     };
     const objects: Array<ObjDef | null> = [null, makeObj({ _index: 1, transparent: true })];
     expect(tileViewBlocked(room, objects, 3, 3)).toBe(false);
@@ -158,7 +185,17 @@ describe('spotIsVisible', () => {
         spot[x][y] = [1, 0]; // transparent floor, no wall
       }
     }
-    return { name: 'test', floor: 0, team: 0, recorded_objects: [], spot };
+    return {
+      name: 'test',
+      floor: 0,
+      team: 0,
+      recorded_objects: [],
+      spot,
+      exitNorth: -1,
+      exitEast: -1,
+      exitSouth: -1,
+      exitWest: -1,
+    };
   }
 
   it('same tile is always visible', () => {

@@ -45,6 +45,10 @@ export interface RoomData {
   team: number; // 0 = neutral, 1+ = team-owned
   recorded_objects: RecObj[];
   spot?: number[][][]; // [x][y][2]; absent in diag-format maps
+  exitNorth: number; // adjacent room index, -1 = no exit
+  exitEast: number;
+  exitSouth: number;
+  exitWest: number;
 }
 
 export interface World {
@@ -78,6 +82,10 @@ export async function loadWorld(mapName: string): Promise<World> {
       team?: number;
       recorded_objects?: RecObj[];
       spot: number[][][];
+      exit_north?: number;
+      exit_east?: number;
+      exit_south?: number;
+      exit_west?: number;
     }>;
   };
 
@@ -101,6 +109,10 @@ export async function loadWorld(mapName: string): Promise<World> {
     team: r.team ?? 0,
     recorded_objects: r.recorded_objects ?? [],
     spot: r.spot,
+    exitNorth: r.exit_north ?? -1,
+    exitEast: r.exit_east ?? -1,
+    exitSouth: r.exit_south ?? -1,
+    exitWest: r.exit_west ?? -1,
   }));
 
   return {

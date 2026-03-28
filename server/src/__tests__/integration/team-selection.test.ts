@@ -13,8 +13,28 @@ function buildMultiTeamWorld(): World {
 
   const objects = [null, { _index: 1, name: 'floor', movement: 5, permeable: true }];
 
-  const room1: RoomData = { name: 'team1-room', floor: 0, team: 1, recorded_objects: [], spot };
-  const room2: RoomData = { name: 'team2-room', floor: 0, team: 2, recorded_objects: [], spot };
+  const room1: RoomData = {
+    name: 'team1-room',
+    floor: 0,
+    team: 1,
+    recorded_objects: [],
+    spot,
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
+  };
+  const room2: RoomData = {
+    name: 'team2-room',
+    floor: 0,
+    team: 2,
+    recorded_objects: [],
+    spot,
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
+  };
 
   return {
     mapName: 'test-multi',

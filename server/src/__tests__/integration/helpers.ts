@@ -133,6 +133,10 @@ export function buildTestWorld(): World {
       { x: 3, y: 3, type: 6, detail: 0 },
     ],
     spot,
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
   };
 
   return {
