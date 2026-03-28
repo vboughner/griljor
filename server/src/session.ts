@@ -854,7 +854,7 @@ export class GameSession {
     const boomObj = this.world.objects[boomObjType];
     if (!boomObj) return;
 
-    const msPerStep = Math.max(50, Math.round(2500 / ((boomObj.speed ?? 5) * 2.2)));
+    const msPerStep = Math.max(50, Math.round(1500 / ((boomObj.speed ?? 5) * 2.2)));
     const damage = boomObj.damage ?? 10;
     const roomData = this.world.rooms[roomIdx];
     if (!roomData) return;
@@ -991,8 +991,8 @@ export class GameSession {
     const id = this.nextMissileId++;
     const speed = bulletObj?.speed ?? obj.speed ?? 5;
     // Match original formula: missile_wait = CLICKS_PER_MOVE*5 / speed / MISSILE_SPEED_FACTOR
-    // With CLICKS_PER_MOVE=500, MISSILE_SPEED_FACTOR=2.2 → msPerStep = 2500/(speed*2.2)
-    const msPerStep = Math.max(50, Math.round(2500 / (speed * 2.2)));
+    // With CLICKS_PER_MOVE=500, MISSILE_SPEED_FACTOR=2.2 → msPerStep = 1500/(speed*2.2)
+    const msPerStep = Math.max(50, Math.round(1500 / (speed * 2.2)));
 
     this.broadcastToRoom(player.room, {
       type: 'MISSILE_START',
