@@ -81,6 +81,8 @@ export class Game {
 
   // floating damage number markers
   private hitMarkers: HitMarker[] = [];
+  // punch hit bitmap overlays
+  private punchMarkers: Array<{ x: number; y: number; until: number }> = [];
   // screen flash end time (ms) when local player takes damage
   private screenFlashUntil = 0;
 
@@ -468,6 +470,13 @@ export class Game {
     net.onPlayerHidden = async (msg) => {
       this.otherPlayers.delete(msg.id);
       await this.render();
+    };
+
+    net.onPunch = (msg) => {
+      if (msg.room !== this.currentRoom) return;
+      this.punchMarkers.push({ x: msg.x, y: msg.y, until: Date.now() + 350 });
+      void this.render();
+      setTimeout(() => void this.render(), 360);
     };
   }
 
@@ -940,6 +949,7 @@ export class Game {
     this.drawBorderIndicators(room);
     await this.drawMissiles();
     this.drawHitMarkers();
+    await this.drawPunchMarkers(this.canvas.getContext('2d')!);
     this.drawScreenFlash();
     this.roomInfo.textContent = room.name && room.name !== 'no name' ? room.name : '';
   }
@@ -992,6 +1002,23 @@ export class Game {
     }
     ctx.globalAlpha = 1;
     ctx.restore();
+  }
+
+  private async drawPunchMarkers(ctx: CanvasRenderingContext2D): Promise<void> {
+    const now = Date.now();
+    this.punchMarkers = this.punchMarkers.filter((m) => now < m.until);
+    if (this.punchMarkers.length === 0) return;
+
+    const sprite = await loadSprite('/sprites/bit/hit.png');
+    if (!sprite) return;
+
+    const oc = new OffscreenCanvas(sprite.width, sprite.height);
+    const oc2d = oc.getContext('2d')!;
+    oc2d.putImageData(sprite, 0, 0);
+
+    for (const m of this.punchMarkers) {
+      ctx.drawImage(oc, BORDER + m.x * TILE, BORDER + m.y * TILE);
+    }
   }
 
   private drawScreenFlash(): void {
