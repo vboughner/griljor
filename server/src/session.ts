@@ -24,6 +24,9 @@ const EXPLOSION_DIRS = [
   { dx: -1, dy: -1 },
 ] as const;
 
+export const PUNCH_DAMAGE = 5;
+export const PUNCH_COOLDOWN_MS = 600;
+
 /**
  * For numbered items (guns, potions with charges), quantity represents the
  * charge count — the item itself is still ONE physical object. Weight is
@@ -138,6 +141,7 @@ interface Player {
   dead: boolean;
   respawnTimer: ReturnType<typeof setTimeout> | null;
   lastFireTime: number;
+  lastPunchedAt: number;
   afkIdleTimer: ReturnType<typeof setTimeout> | null;
   afkWarnTimer: ReturnType<typeof setTimeout> | null;
   afkWarningsLeft: number;
@@ -352,6 +356,7 @@ export class GameSession {
       dead: false,
       respawnTimer: null,
       lastFireTime: 0,
+      lastPunchedAt: 0,
       afkIdleTimer: null,
       afkWarnTimer: null,
       afkWarningsLeft: 0,
@@ -907,7 +912,10 @@ export class GameSession {
     if (player.dead) return;
 
     const handItem = msg.hand === 'left' ? player.leftHand : player.rightHand;
-    if (!handItem) return;
+    if (!handItem) {
+      this.onPunch(player, msg);
+      return;
+    }
 
     const obj = this.world.objects[handItem.type];
     if (!obj?.weapon) {
@@ -990,8 +998,7 @@ export class GameSession {
 
     const id = this.nextMissileId++;
     const speed = bulletObj?.speed ?? obj.speed ?? 5;
-    // Match original formula: missile_wait = CLICKS_PER_MOVE*5 / speed / MISSILE_SPEED_FACTOR
-    // With CLICKS_PER_MOVE=500, MISSILE_SPEED_FACTOR=2.2 → msPerStep = 1500/(speed*2.2)
+    // Tuned: 40% faster than legacy formula 2500/(speed*2.2)
     const msPerStep = Math.max(50, Math.round(1500 / (speed * 2.2)));
 
     this.broadcastToRoom(player.room, {
@@ -1046,6 +1053,41 @@ export class GameSession {
       }
     }, travelMs);
     this.activeMissiles.set(id, timer);
+  }
+
+  private onPunch(player: Player, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
+    if (Date.now() - player.lastPunchedAt < PUNCH_COOLDOWN_MS) return;
+
+    const dx = Math.sign(msg.targetX - player.x);
+    const dy = Math.sign(msg.targetY - player.y);
+    if (dx === 0 && dy === 0) return;
+
+    const targetX = player.x + dx;
+    const targetY = player.y + dy;
+
+    // Consume cooldown regardless of whether a player is hit
+    player.lastPunchedAt = Date.now();
+
+    // Broadcast visual to everyone in room
+    this.broadcastToRoom(player.room, {
+      type: 'PUNCH',
+      room: player.room,
+      x: targetX,
+      y: targetY,
+    });
+
+    // Apply damage to any player on the adjacent tile
+    for (const [, other] of this.players) {
+      if (
+        other !== player &&
+        other.room === player.room &&
+        other.x === targetX &&
+        other.y === targetY
+      ) {
+        this.dealDamage(other, PUNCH_DAMAGE, player);
+        break;
+      }
+    }
   }
 
   private onUseItem(playerId: number, msg: Extract<C2SMessage, { type: 'USE_ITEM' }>): void {
