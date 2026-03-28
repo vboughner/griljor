@@ -152,6 +152,56 @@ export function buildTestWorld(): World {
   };
 }
 
+// ── buildTwoRoomWorld ──────────────────────────────────────────────────────
+//
+// Two-room world for cross-room grenade tests.
+// Room 0 exits south → room 1. Room 1 exits north → room 0.
+// Same object table as buildTestWorld.
+
+export function buildTwoRoomWorld(): World {
+  const spot: number[][][] = Array.from({ length: 20 }, () =>
+    Array.from({ length: 20 }, () => [1, 0]),
+  );
+
+  const objects = buildTestWorld().objects; // reuse same object table
+
+  const roomNorth: RoomData = {
+    name: 'north-room',
+    floor: 0,
+    team: 0,
+    recorded_objects: [{ x: 3, y: 3, type: 6, detail: 0 }], // grenade for pickup
+    spot: spot.map((col) => col.map((cell) => [...cell] as [number, number])),
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: 1,
+    exitWest: -1,
+  };
+
+  const roomSouth: RoomData = {
+    name: 'south-room',
+    floor: 0,
+    team: 0,
+    recorded_objects: [],
+    spot: spot.map((col) => col.map((cell) => [...cell] as [number, number])),
+    exitNorth: 0,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
+  };
+
+  return {
+    mapName: 'two-room-test',
+    title: 'Two Room Test',
+    teams: 0,
+    roomCount: 2,
+    rooms: [roomNorth, roomSouth],
+    objects,
+    resetOnEmpty: false,
+    resetAfterSeconds: 30,
+    maxPlayers: 16,
+  };
+}
+
 // ── joinPlayer ─────────────────────────────────────────────────────────────
 
 export interface TestPlayer {

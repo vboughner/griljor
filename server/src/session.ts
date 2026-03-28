@@ -847,6 +847,16 @@ export class GameSession {
     return path;
   }
 
+  private getRoomExit(roomIdx: number, dx: number, dy: number): number {
+    const room = this.world.rooms[roomIdx];
+    if (!room) return -1;
+    if (dy === -1 && dx === 0) return room.exitNorth;
+    if (dx === 1 && dy === 0) return room.exitEast;
+    if (dy === 1 && dx === 0) return room.exitSouth;
+    if (dx === -1 && dy === 0) return room.exitWest;
+    return -1; // diagonals and zero-vector: no cross-room
+  }
+
   private triggerExplosion(
     attacker: Player,
     roomIdx: number,
@@ -1025,15 +1035,85 @@ export class GameSession {
         const radius = Math.max(1, obj.explodes - 1);
         const boomObj = this.world.objects[boomObjType];
         const piercingFlag = (boomObj?.piercing ?? 0) > 0;
-        this.triggerExplosion(
-          player,
-          player.room,
-          landTile.x,
-          landTile.y,
-          boomObjType,
-          radius,
-          piercingFlag,
-        );
+
+        // Cross-room: if a lost thrown weapon reached the room edge AND an exit exists
+        // in the throw direction, continue the missile into the next room and explode there.
+        let crossedRoom = false;
+        if (obj.lost && !hitPlayer && finalPath.length < range) {
+          const onEdge =
+            (dy === -1 && landTile.y === 0) ||
+            (dx === 1 && landTile.x === GRID - 1) ||
+            (dy === 1 && landTile.y === GRID - 1) ||
+            (dx === -1 && landTile.x === 0);
+
+          if (onEdge) {
+            const nextRoomIdx = this.getRoomExit(player.room, dx, dy);
+            const nextRoom = nextRoomIdx >= 0 ? this.world.rooms[nextRoomIdx] : null;
+
+            if (nextRoom) {
+              crossedRoom = true;
+
+              // Entry tile in next room
+              const entryX = dy !== 0 ? landTile.x : dx === 1 ? 0 : GRID - 1;
+              const entryY = dx !== 0 ? landTile.y : dy === 1 ? 0 : GRID - 1;
+              const remainingRange = range - finalPath.length;
+
+              const contPath = this.calcMissilePath(
+                nextRoom,
+                entryX,
+                entryY,
+                entryX + dx * remainingRange,
+                entryY + dy * remainingRange,
+                remainingRange,
+                piercingFlag,
+              );
+
+              const contId = this.nextMissileId++;
+              const contTilePath = contPath.length > 0 ? contPath : [{ x: entryX, y: entryY }];
+
+              this.broadcastToRoom(nextRoomIdx, {
+                type: 'MISSILE_START',
+                id: contId,
+                room: nextRoomIdx,
+                path: contTilePath,
+                objType: movingObjType,
+                msPerStep,
+                dx,
+                dy,
+              });
+
+              const contTravelMs = contTilePath.length * msPerStep;
+              const landInNext = contTilePath[contTilePath.length - 1];
+
+              const contTimer = setTimeout(() => {
+                this.activeMissiles.delete(contId);
+                this.broadcastToRoom(nextRoomIdx, { type: 'MISSILE_END', id: contId });
+                this.triggerExplosion(
+                  player,
+                  nextRoomIdx,
+                  landInNext.x,
+                  landInNext.y,
+                  boomObjType,
+                  radius,
+                  piercingFlag,
+                );
+              }, contTravelMs);
+              this.activeMissiles.set(contId, contTimer);
+            }
+          }
+        }
+
+        if (!crossedRoom) {
+          this.triggerExplosion(
+            player,
+            player.room,
+            landTile.x,
+            landTile.y,
+            boomObjType,
+            radius,
+            piercingFlag,
+          );
+        }
       }
       // Drop throwable items (lost+stop, non-exploding) at landing position
       if (obj.lost && obj.stop && !obj.explodes) {
