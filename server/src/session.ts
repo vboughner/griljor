@@ -4,7 +4,7 @@ import { World, ObjDef, RecObj, RoomData } from './world';
 import { filterText, randomScold } from './filter';
 
 const INV_SIZE = 35;
-const MAX_WEIGHT = 150;
+const MAX_WEIGHT = 200;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
 export const PICKUP_RANGE = 4; // max Chebyshev distance to pick up an item
