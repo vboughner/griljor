@@ -556,7 +556,7 @@ async function main(): Promise<void> {
     }
     const tag = (document.activeElement as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-    if (e.key === 'h') {
+    if (e.key === 'h' || e.key === '?') {
       e.preventDefault();
       if (helpModal.classList.contains('open')) closeHelp();
       else openHelp();

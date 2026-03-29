@@ -223,7 +223,7 @@ export class Game {
       }
 
       // Toggle tile hover debug mode
-      if (e.key === '?') {
+      if (e.key === 'i') {
         e.preventDefault();
         this.hoverMode = !this.hoverMode;
         this.canvas.style.cursor = this.hoverMode ? 'crosshair' : '';
