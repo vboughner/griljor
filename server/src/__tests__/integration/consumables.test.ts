@@ -40,6 +40,10 @@ function buildConsumableWorld(): World {
       { x: 7, y: 7, type: 5, detail: 0 }, // grenade
     ],
     spot,
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
   };
 
   return {

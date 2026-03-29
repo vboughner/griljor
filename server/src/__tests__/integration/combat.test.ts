@@ -44,6 +44,10 @@ function buildAmmoWorld(): World {
       { x: 7, y: 5, type: 3, detail: 5 },
     ],
     spot,
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
   };
 
   return {

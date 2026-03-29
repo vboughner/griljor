@@ -24,6 +24,9 @@ const EXPLOSION_DIRS = [
   { dx: -1, dy: -1 },
 ] as const;
 
+export const PUNCH_DAMAGE = 10;
+export const PUNCH_COOLDOWN_MS = 400;
+
 /**
  * For numbered items (guns, potions with charges), quantity represents the
  * charge count — the item itself is still ONE physical object. Weight is
@@ -116,6 +119,12 @@ export function calcFireCooldown(refire?: number): number {
   return Math.round(850 * (1 - x / 5));
 }
 
+/** Travel time per tile for a missile of the given speed (1–9).
+ *  speed=9 → ~76ms/step, speed=1 → ~682ms/step, floor 50ms. */
+export function calcMsPerStep(speed: number): number {
+  return Math.max(50, Math.round(1500 / (speed * 2.2)));
+}
+
 interface Player {
   id: number;
   name: string;
@@ -138,6 +147,7 @@ interface Player {
   dead: boolean;
   respawnTimer: ReturnType<typeof setTimeout> | null;
   lastFireTime: number;
+  lastPunchedAt: number;
   afkIdleTimer: ReturnType<typeof setTimeout> | null;
   afkWarnTimer: ReturnType<typeof setTimeout> | null;
   afkWarningsLeft: number;
@@ -352,6 +362,7 @@ export class GameSession {
       dead: false,
       respawnTimer: null,
       lastFireTime: 0,
+      lastPunchedAt: 0,
       afkIdleTimer: null,
       afkWarnTimer: null,
       afkWarningsLeft: 0,
@@ -842,6 +853,16 @@ export class GameSession {
     return path;
   }
 
+  private getRoomExit(roomIdx: number, dx: number, dy: number): number {
+    const room = this.world.rooms[roomIdx];
+    if (!room) return -1;
+    if (dy === -1 && dx === 0) return room.exitNorth;
+    if (dx === 1 && dy === 0) return room.exitEast;
+    if (dy === 1 && dx === 0) return room.exitSouth;
+    if (dx === -1 && dy === 0) return room.exitWest;
+    return -1; // diagonals and zero-vector: no cross-room
+  }
+
   private triggerExplosion(
     attacker: Player,
     roomIdx: number,
@@ -854,7 +875,7 @@ export class GameSession {
     const boomObj = this.world.objects[boomObjType];
     if (!boomObj) return;
 
-    const msPerStep = Math.max(50, Math.round(2500 / ((boomObj.speed ?? 5) * 2.2)));
+    const msPerStep = calcMsPerStep(boomObj.speed ?? 5);
     const damage = boomObj.damage ?? 10;
     const roomData = this.world.rooms[roomIdx];
     if (!roomData) return;
@@ -907,7 +928,10 @@ export class GameSession {
     if (player.dead) return;
 
     const handItem = msg.hand === 'left' ? player.leftHand : player.rightHand;
-    if (!handItem) return;
+    if (!handItem) {
+      this.onPunch(player, msg);
+      return;
+    }
 
     const obj = this.world.objects[handItem.type];
     if (!obj?.weapon) {
@@ -990,9 +1014,7 @@ export class GameSession {
 
     const id = this.nextMissileId++;
     const speed = bulletObj?.speed ?? obj.speed ?? 5;
-    // Match original formula: missile_wait = CLICKS_PER_MOVE*5 / speed / MISSILE_SPEED_FACTOR
-    // With CLICKS_PER_MOVE=500, MISSILE_SPEED_FACTOR=2.2 → msPerStep = 2500/(speed*2.2)
-    const msPerStep = Math.max(50, Math.round(2500 / (speed * 2.2)));
+    const msPerStep = calcMsPerStep(speed);
 
     this.broadcastToRoom(player.room, {
       type: 'MISSILE_START',
@@ -1018,6 +1040,66 @@ export class GameSession {
         const radius = Math.max(1, obj.explodes - 1);
         const boomObj = this.world.objects[boomObjType];
         const piercingFlag = (boomObj?.piercing ?? 0) > 0;
+
+        if (obj.lost && !hitPlayer && finalPath.length < range) {
+          const onEdge =
+            (dy === -1 && landTile.y === 0) ||
+            (dx === 1 && landTile.x === GRID - 1) ||
+            (dy === 1 && landTile.y === GRID - 1) ||
+            (dx === -1 && landTile.x === 0);
+          const nextRoomIdx = onEdge ? this.getRoomExit(player.room, dx, dy) : -1;
+          const nextRoom = nextRoomIdx >= 0 ? this.world.rooms[nextRoomIdx] : null;
+
+          if (nextRoom) {
+            const entryX = dy !== 0 ? landTile.x : dx === 1 ? 0 : GRID - 1;
+            const entryY = dx !== 0 ? landTile.y : dy === 1 ? 0 : GRID - 1;
+            const remainingRange = range - finalPath.length;
+
+            const contPath = this.calcMissilePath(
+              nextRoom,
+              entryX,
+              entryY,
+              entryX + dx * remainingRange,
+              entryY + dy * remainingRange,
+              remainingRange,
+              piercingFlag,
+            );
+
+            const contId = this.nextMissileId++;
+            const contTilePath = contPath.length > 0 ? contPath : [{ x: entryX, y: entryY }];
+
+            this.broadcastToRoom(nextRoomIdx, {
+              type: 'MISSILE_START',
+              id: contId,
+              room: nextRoomIdx,
+              path: contTilePath,
+              objType: movingObjType,
+              msPerStep,
+              dx,
+              dy,
+            });
+
+            const contTravelMs = contTilePath.length * msPerStep;
+            const landInNext = contTilePath[contTilePath.length - 1];
+
+            const contTimer = setTimeout(() => {
+              this.activeMissiles.delete(contId);
+              this.broadcastToRoom(nextRoomIdx, { type: 'MISSILE_END', id: contId });
+              this.triggerExplosion(
+                player,
+                nextRoomIdx,
+                landInNext.x,
+                landInNext.y,
+                boomObjType,
+                radius,
+                piercingFlag,
+              );
+            }, contTravelMs);
+            this.activeMissiles.set(contId, contTimer);
+            return; // grenade continues in next room; skip in-room explosion
+          }
+        }
+
         this.triggerExplosion(
           player,
           player.room,
@@ -1046,6 +1128,31 @@ export class GameSession {
       }
     }, travelMs);
     this.activeMissiles.set(id, timer);
+  }
+
+  private onPunch(player: Player, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
+    if (Date.now() - player.lastPunchedAt < PUNCH_COOLDOWN_MS) return;
+
+    const dx = Math.sign(msg.targetX - player.x);
+    const dy = Math.sign(msg.targetY - player.y);
+    if (dx === 0 && dy === 0) return;
+
+    const targetX = player.x + dx;
+    const targetY = player.y + dy;
+
+    player.lastPunchedAt = Date.now();
+
+    this.broadcastToRoom(player.room, {
+      type: 'PUNCH',
+      room: player.room,
+      x: targetX,
+      y: targetY,
+      dx,
+      dy,
+    });
+
+    const hit = this.findPlayerHitOnPath([{ x: targetX, y: targetY }], player.room, player.id);
+    if (hit) this.dealDamage(hit.player, PUNCH_DAMAGE, player);
   }
 
   private onUseItem(playerId: number, msg: Extract<C2SMessage, { type: 'USE_ITEM' }>): void {

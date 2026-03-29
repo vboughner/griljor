@@ -40,6 +40,10 @@ function buildLosTestWorld(): World {
     team: 0,
     recorded_objects: [],
     spot,
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
   };
 
   return {
@@ -74,8 +78,28 @@ function buildTwoRoomWorld(): World {
     teams: 0,
     roomCount: 2,
     rooms: [
-      { name: 'room-0', floor: 0, team: 0, recorded_objects: [], spot: makeSpot() },
-      { name: 'room-1', floor: 0, team: 0, recorded_objects: [], spot: makeSpot() },
+      {
+        name: 'room-0',
+        floor: 0,
+        team: 0,
+        recorded_objects: [],
+        spot: makeSpot(),
+        exitNorth: -1,
+        exitEast: -1,
+        exitSouth: -1,
+        exitWest: -1,
+      },
+      {
+        name: 'room-1',
+        floor: 0,
+        team: 0,
+        recorded_objects: [],
+        spot: makeSpot(),
+        exitNorth: -1,
+        exitEast: -1,
+        exitSouth: -1,
+        exitWest: -1,
+      },
     ],
     objects,
     resetOnEmpty: false,
