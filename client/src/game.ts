@@ -105,6 +105,11 @@ export class Game {
   // tile hover debug mode (toggled by ?)
   private hoverMode = false;
 
+  // pickup highlight overlay (toggled by p, on by default)
+  private showPickupHighlights = true;
+  private currentWeight = 0;
+  private maxWeight = 150;
+
   // fog-of-war visibility overlay (toggled by v, on by default)
   private fogEnabled = true;
   // per-tile current fog alpha (0 = fully lit, 0.2 = fully dimmed); starts fully fogged
@@ -196,6 +201,14 @@ export class Game {
         this.fogEnabled = !this.fogEnabled;
         if (this.fogEnabled) this.computeVisibility();
         else void this.render();
+        return;
+      }
+
+      // Toggle pickup highlight overlay
+      if (e.key === 'p') {
+        e.preventDefault();
+        this.showPickupHighlights = !this.showPickupHighlights;
+        void this.render();
         return;
       }
 
@@ -481,6 +494,13 @@ export class Game {
   setMyHp(hp: number, maxHp: number): void {
     this.myHp = hp;
     this.myMaxHp = maxHp;
+  }
+
+  /** Update carry weight so the renderer can tint too-heavy items red. */
+  setWeight(current: number, max: number): void {
+    this.currentWeight = current;
+    this.maxWeight = max;
+    void this.render();
   }
 
   private addHitMarker(x: number, y: number, damage: number, isHeal: boolean): void {
@@ -935,6 +955,10 @@ export class Game {
       this.boxOtherPlayers,
       this.mapData.map.teams_supported > 1,
       this.isDead,
+      room,
+      this.showPickupHighlights,
+      this.currentWeight,
+      this.maxWeight,
     );
     if (this.fogEnabled) this.drawFogOverlay();
     this.drawBorderIndicators(room);

@@ -891,6 +891,7 @@ async function main(): Promise<void> {
       network.onInventory = (msg) => {
         void updateInventoryPanel(msg);
         game.setHands(msg.leftHand, msg.rightHand);
+        game.setWeight(msg.currentWeight, msg.maxWeight);
       };
 
       network.onYourStats = (msg) => {

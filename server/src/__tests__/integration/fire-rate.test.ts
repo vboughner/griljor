@@ -16,7 +16,8 @@ describe('fire rate limiting', () => {
   });
 
   function armPlayer(player: TestPlayer, x = 1, y = 1) {
-    player.ws.receive({ type: 'MY_LOCATION', room: 0, x, y });
+    // Stand at the sword to pick it up (proximity enforcement requires being within range)
+    player.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
     player.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
     player.ws.receive({ type: 'MY_LOCATION', room: 0, x, y });
   }

@@ -7,6 +7,7 @@ const INV_SIZE = 35;
 const MAX_WEIGHT = 150;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
+export const PICKUP_RANGE = 4; // max Chebyshev distance to pick up an item
 
 // AFK idle detection
 const AFK_IDLE_MS = 5 * 60 * 1000; // idle time before first warning (5 min)
@@ -617,6 +618,36 @@ export class GameSession {
         other.y === msg.y
       )
         return;
+    }
+
+    const room = this.world.rooms[player.room];
+
+    // Proximity: Chebyshev distance must be within PICKUP_RANGE
+    if (Math.max(Math.abs(msg.x - player.x), Math.abs(msg.y - player.y)) > PICKUP_RANGE) return;
+
+    // Visibility: LOS must not be blocked
+    if (!spotIsVisible(room, this.world.objects, player.x, player.y, msg.x, msg.y)) return;
+
+    // Walkability: every tile along the Chebyshev path (including destination)
+    // must be walkable — catches transparent-but-unwalkable tiles like windows.
+    for (const { x, y } of chebyshevPath(player.x, player.y, msg.x, msg.y)) {
+      const cell = room.spot?.[x]?.[y];
+      if (cell) {
+        const [flId, wlId] = cell;
+        if (flId || wlId) {
+          const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
+          const floorObj = flId > 0 ? this.world.objects[flId] : null;
+          if (wallObj && !wallObj.movement) return;
+          if (floorObj && !floorObj.movement) return;
+        }
+      }
+      for (const ro of room.recorded_objects) {
+        if (ro.x === x && ro.y === y && ro.type > 0) {
+          const roObj = this.world.objects[ro.type];
+          if (roObj?.takeable) continue; // floor items don't block movement
+          if (roObj && !roObj.movement) return;
+        }
+      }
     }
 
     const obj = this.world.objects[item.type];

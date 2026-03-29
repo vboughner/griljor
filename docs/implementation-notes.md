@@ -15,7 +15,7 @@ npm run test:server    # server only
 npm run test:client    # client only
 ```
 
-**182 tests total** (96 server, 86 client) as of the fog-of-war branch.
+**247 tests total** (161 server, 86 client) as of the pickup-proximity branch.
 
 ### Server test layout (`server/src/__tests__/`)
 
@@ -40,6 +40,7 @@ npm run test:client    # client only
 | `regen.test.ts` | 1 HP/tick regen, PLAYER_HEALTH broadcast, no over-heal, dead players not healed |
 | `consumables.test.ts` | Heal on USE_ITEM, PLAYER_HEAL broadcast, lost item removal, full-HP guard, burden decrement, auto-reload from inventory, PLAYER_HIT broadcast, dead-player damage guard, lost weapon consumed on fire, pickup blocked by occupying player |
 | `explosion.test.ts` | Grenade produces 8 explosion rays on landing, boombit object type used, MISSILE_END per ray, blast radius damage, kill attribution, boombit fallback to movingobj |
+| `pickup-proximity.test.ts` | Out-of-range rejection, boundary pickup, same-tile pickup, LOS-blocked rejection, transparent-but-unwalkable (window) rejection, unwalkable destination rejection |
 
 **`helpers.ts`** exports:
 - `MockWebSocket` — captures S→C messages; `receive(msg)` to inject C→S; `flush()`, `close()`
@@ -2207,3 +2208,37 @@ Each tile has a current alpha value in `fogAlpha: number[][]`, initialised to `0
 ### Key binding
 
 `v` — toggle fog of war on/off. State is held in `Game.fogEnabled` (default `true`).
+
+---
+
+## Phase 17 — Proximity-based pickup with visual highlights
+
+**Goal**: Enforce that items can only be picked up when they are physically reachable, and visually indicate which items are in range.
+
+### Pickup enforcement (server)
+
+`onPickup()` in `session.ts` now rejects a pickup unless all three conditions hold:
+
+1. **Proximity**: Chebyshev distance from player to item ≤ `PICKUP_RANGE` (default 4).
+2. **Visibility**: `spotIsVisible()` returns true — no opaque object on the LOS path.
+3. **Reachable path**: every tile along the Chebyshev path (including the destination) is walkable — catches transparent-but-impassable tiles such as windows.
+
+The path walkability check iterates `chebyshevPath()` and tests each tile against both `room.spot` and `room.recorded_objects` (skipping `takeable` items, which lie on the floor and don't block movement).
+
+`PICKUP_RANGE` is exported from `session.ts` so it can be adjusted in one place.
+
+### Pickup highlights (client)
+
+`renderer.ts` draws a color tint over floor items after rendering the sprite, using `OffscreenCanvas` + `source-atop` compositing so only the item's own non-transparent pixels are tinted — the floor behind the item is unaffected.
+
+- **Green (`#5aad70`)** — item is within range, LOS is clear, path is walkable, and you have enough carry capacity.
+- **Brown (`#6b4210`, same as burden bar)** — item is in range and reachable but too heavy to pick up.
+- No tint — item is out of range, behind a wall/window, or on an unreachable tile.
+
+The client runs the same three checks independently (using `spotIsVisible` from `los.ts`, `pathIsWalkable` from `game-utils.ts`, and `PICKUP_RANGE` from `game-utils.ts`). Weight state is updated via `Game.setWeight()`, which also triggers a re-render so highlights refresh immediately when burden changes after a pickup or drop.
+
+`p` — toggle pickup highlights on/off. State is held in `Game.showPickupHighlights` (default `true`).
+
+### `pathIsWalkable` and `isTileBlocked` fix
+
+A pre-existing issue in `isTileBlocked` (`game-utils.ts`) caused `recorded_objects` with no `movement` field (including all takeable floor items) to be treated as blocking. Fixed by skipping objects with `takeable: true` in the recorded-objects loop — floor items don't block player movement. The same skip was applied to the server's path walkability check.

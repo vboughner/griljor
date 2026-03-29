@@ -1,5 +1,7 @@
 import { RoomData, ObjDef, InventoryItem } from './types';
 import { loadMaskedSprite, loadSprite, loadOpaqueTile, getColorMode } from './assets';
+import { spotIsVisible } from './los';
+import { PICKUP_RANGE, pathIsWalkable } from './game-utils';
 
 export const TILE = 32;
 const GRID = 20;
@@ -206,6 +208,10 @@ export async function renderFrame(
   boxOtherPlayers: boolean = false,
   teamsEnabled: boolean = false,
   isDead: boolean = false,
+  room: RoomData | null = null,
+  showPickupHighlights: boolean = false,
+  currentWeight: number = 0,
+  maxWeight: number = 150,
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bg, 0, 0);
@@ -216,9 +222,33 @@ export async function renderFrame(
     const obj = objects[item.type];
     if (!obj?.bitmap) continue;
     const imgData = await spriteForObj(obj, objset);
-    if (imgData) {
-      const bm = await getBitmap(imgData);
-      ctx.drawImage(bm, BORDER + ix * TILE, BORDER + iy * TILE, TILE, TILE);
+    if (!imgData) continue;
+    const bm = await getBitmap(imgData);
+    ctx.drawImage(bm, BORDER + ix * TILE, BORDER + iy * TILE, TILE, TILE);
+
+    if (showPickupHighlights && room) {
+      const dist = Math.max(Math.abs(ix - px), Math.abs(iy - py));
+      if (
+        dist <= PICKUP_RANGE &&
+        spotIsVisible(room, objects, px, py, ix, iy) &&
+        pathIsWalkable(px, py, ix, iy, room, objects)
+      ) {
+        const itemWeight = obj.numbered ? (obj.weight ?? 0) : (obj.weight ?? 0) * item.quantity;
+        const tooHeavy = currentWeight + itemWeight > maxWeight;
+        const tintColor = tooHeavy ? '#6b4210' : '#5aad70';
+
+        // Tint only the item's own pixels by compositing onto a temporary canvas.
+        // source-atop fills the tint color only where the sprite has opaque pixels,
+        // leaving the transparent (non-item) areas unchanged.
+        const tmp = new OffscreenCanvas(TILE, TILE);
+        const tmpCtx = tmp.getContext('2d')!;
+        tmpCtx.drawImage(bm, 0, 0, TILE, TILE);
+        tmpCtx.globalCompositeOperation = 'source-atop';
+        tmpCtx.globalAlpha = 0.55;
+        tmpCtx.fillStyle = tintColor;
+        tmpCtx.fillRect(0, 0, TILE, TILE);
+        ctx.drawImage(tmp, BORDER + ix * TILE, BORDER + iy * TILE);
+      }
     }
   }
 
