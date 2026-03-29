@@ -279,15 +279,22 @@ export class Game {
         const tileOccupied = [...this.otherPlayers.values()].some(
           (p) => p.room === this.currentRoom && p.x === tx && p.y === ty,
         );
-        if (!tileOccupied && this.floorItems.get(this.currentRoom)?.has(key)) {
+        const room = this.mapData.rooms[this.currentRoom];
+        const dist = Math.max(Math.abs(tx - this.px), Math.abs(ty - this.py));
+        const hasDoorAtTile =
+          dist === 1 &&
+          room?.recorded_objects?.some(
+            (ro) => ro.x === tx && ro.y === ty && (this.objects[ro.type]?.swings ?? false),
+          );
+        if (handObj?.opens && hasDoorAtTile) {
+          // Key in hand, adjacent door — use key even if a floor item is also on this tile
+          this.network?.sendUseItem(hand, tx, ty);
+        } else if (!tileOccupied && this.floorItems.get(this.currentRoom)?.has(key)) {
           this.network?.sendPickup(tx, ty, hand);
         } else if ((handObj?.health ?? 0) < 0) {
           // Consumable: use on self regardless of where the player clicked
           this.network?.sendUseItem(hand, this.px, this.py);
-        } else if (
-          handObj?.opens &&
-          Math.max(Math.abs(tx - this.px), Math.abs(ty - this.py)) === 1
-        ) {
+        } else if (handObj?.opens && dist === 1) {
           // Holding an opener adjacent to target tile — use it (open/close door)
           this.network?.sendUseItem(hand, tx, ty);
         } else if (tx !== this.px || ty !== this.py) {

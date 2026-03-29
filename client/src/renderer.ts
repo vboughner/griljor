@@ -220,7 +220,8 @@ export async function renderFrame(
   // Tint only the item's own pixels by compositing onto a temporary canvas.
   // source-atop fills the tint color only where the sprite has opaque pixels,
   // leaving the transparent (non-item) areas unchanged.
-  const tintCanvas = showPickupHighlights && room ? new OffscreenCanvas(TILE, TILE) : null;
+  const tintCanvas =
+    showPickupHighlights && room && !isDead ? new OffscreenCanvas(TILE, TILE) : null;
   const tintCtx = tintCanvas?.getContext('2d') ?? null;
   if (tintCtx) {
     tintCtx.globalCompositeOperation = 'source-atop';
