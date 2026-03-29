@@ -15,15 +15,15 @@ Later Playability:
 - [ ] add a button near the inventory for dropping everything
 
 ## Feedback from play
-- [ ] some stuff is too heavy, increase the burden player can carry to 200
-- [ ] no sound yet, add some rudimentary sounds?
-- [ ] don't let player in lobby reuse an existing name in game they are joining (case insensitive check)
+- [x] some stuff is too heavy, increase the burden player can carry to 200
+- [x] don't let player in lobby reuse an existing name in game they are joining (case insensitive check)
 - [ ] sometimes seeing people in rooms when they are not really there anymore
-- [ ] when player clicks on a square they cannot travel to, they should at least travel as close as they can get to there (i.e. next to a wall if that is what you clicked on)
+- [x] when player clicks on a square they cannot travel to, they should at least travel as close as they can get to there (i.e. next to a wall if that is what you clicked on)
 - [ ] consider something new to help you understand when you are invisible to others
 - [ ] check this bug: are you still visible to others when standing on a potted plant?
 - [ ] consider in team games, making all teammates visible everywhere (this might be at the same time we save them from friendly fire)
 - [ ] player list doesn't immediately include other people that have joined the game until you see them for the first time, they should be announced when they join
+- [ ] no sound yet, add some rudimentary sounds?
 
 ## Maps
 - [ ] fix initial spawn in locked room without a key in castle map

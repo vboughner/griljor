@@ -22,9 +22,9 @@ function drawMoveIcon(canvas: HTMLCanvasElement): void {
       const idx = y * SLOT_W + x;
       const isSet = (bytes[idx >> 3] >> (idx & 7)) & 1;
       const p = idx * 4;
-      img.data[p] = 150;
-      img.data[p + 1] = 200;
-      img.data[p + 2] = 255;
+      img.data[p] = 210;
+      img.data[p + 1] = 170;
+      img.data[p + 2] = 60;
       img.data[p + 3] = isSet ? 0 : 200;
     }
   }
@@ -35,9 +35,14 @@ export function initActionCards(): void {
   drawMoveIcon(document.getElementById('move-icon') as HTMLCanvasElement);
 }
 
-export function setActiveItem(imgData: ImageData | null, name: string | null): void {
+export function setActiveItem(
+  imgData: ImageData | null,
+  name: string | null,
+  count: number | null,
+): void {
   const canvas = document.getElementById('active-item-icon') as HTMLCanvasElement;
   const nameEl = document.getElementById('active-item-name') as HTMLElement;
+  const countEl = document.getElementById('active-item-count') as HTMLElement;
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, SLOT_W, SLOT_H);
   if (imgData) {
@@ -45,5 +50,6 @@ export function setActiveItem(imgData: ImageData | null, name: string | null): v
     tmp.getContext('2d')!.putImageData(imgData, 0, 0);
     ctx.drawImage(tmp, 0, 0, SLOT_W, SLOT_H);
   }
-  nameEl.textContent = name ?? 'nothing';
+  nameEl.textContent = name ?? 'holding nothing';
+  countEl.textContent = count !== null ? String(count) : '';
 }

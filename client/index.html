@@ -279,7 +279,7 @@
       display: flex;
       gap: 8px;
       margin-bottom: 10px;
-      align-items: flex-end;
+      align-items: stretch;
     }
     .action-card {
       flex: 1;
@@ -292,9 +292,10 @@
       border-radius: 3px;
       position: relative;
       min-width: 0;
+      min-height: 87px;
     }
     #card-use  { border-color: #7a5a10; box-shadow: inset 0 0 8px #3a2a0040; }
-    #card-move { border-color: #1a3a5a; box-shadow: inset 0 0 8px #0a1a2a40; }
+    #card-move { border-color: #7a5a10; box-shadow: inset 0 0 8px #3a2a0040; }
     .card-badge {
       position: absolute;
       top: 3px;
@@ -307,22 +308,50 @@
       line-height: 1.4;
     }
     .lmb { background: #7a5a10; color: #ffc; }
-    .rmb { background: #1a3a5a; color: #adf; }
+    .rmb { background: #7a5a10; color: #ffc; }
     .action-card canvas { margin-top: 14px; display: block; }
     #active-item-name, .card-label {
       font-size: 9px;
       color: #888;
       text-align: center;
-      margin-top: 3px;
-      max-width: 64px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      margin-top: 5px;
+      max-width: 80px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      line-height: 1.3;
     }
-    #active-item-name { color: #bba060; }
+    .card-label, .card-text-wrap {
+      color: #bba060;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #active-item-name {
+      color: #bba060;
+      word-break: break-word;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
     #hand-left-count { display: none; }
+    .active-item-wrap {
+      position: relative;
+      width: 32px;
+      height: 32px;
+      margin-top: 14px;
+    }
+    .active-item-wrap canvas { margin-top: 0; display: block; }
+    .active-count {
+      position: absolute;
+      bottom: 1px;
+      right: 2px;
+      font-size: 9px;
+      color: #ff0;
+      pointer-events: none;
+      line-height: 1;
+    }
 
     /* ── Player list ── */
     #player-list-panel {
@@ -331,7 +360,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      padding-top: 115px;
+      padding-top: 112px;
     }
     #player-list {
       flex: 1;
@@ -459,7 +488,7 @@
     #player-name { width: 160px; padding-top: 6px; padding-bottom: 6px; font-size: 15px; height: 32px; background: #1e1e1e; border-color: #52380e; }
     #player-name:hover { border-color: #7a5220; }
     #player-name:focus, #player-name:active { outline: none; border-color: #b8842a; }
-    #game-btns { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    #game-btns { display: flex; flex-direction: column; gap: 8px; flex: 1; justify-content: center; }
     #game-btns #leave-btn { width: 100%; }
     #leave-btn {
       background: #1e1910; border: 1px solid #52380e; color: #b8842a;
@@ -546,8 +575,11 @@
         <div id="action-cards">
           <div class="action-card" id="card-use">
             <span class="card-badge lmb">LMB</span>
-            <canvas id="active-item-icon" width="32" height="32"></canvas>
-            <span id="active-item-name">nothing</span>
+            <div class="active-item-wrap">
+              <canvas id="active-item-icon" width="32" height="32"></canvas>
+              <span id="active-item-count" class="active-count"></span>
+            </div>
+            <div class="card-text-wrap"><span id="active-item-name">holding nothing</span></div>
           </div>
           <div class="action-card" id="card-move">
             <span class="card-badge rmb">RMB</span>

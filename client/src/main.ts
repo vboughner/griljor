@@ -73,7 +73,7 @@ async function drawAvatarOnCanvas(canvas: HTMLCanvasElement, avatarName: string)
   await drawImageDataOnCanvas(canvas, imgData);
 }
 
-const INV_SIZE = 35;
+const INV_SIZE = 21;
 
 // Inventory panel state
 let invObjects: ObjDef[] = [];
@@ -179,7 +179,8 @@ async function updateInventoryPanel(msg: {
   const leftImg = msg.leftHand ? await getItemImgData(msg.leftHand) : null;
   const leftHandObj = msg.leftHand ? invObjects[msg.leftHand.type] : null;
   const leftHandName = leftHandObj?.name ?? null;
-  setActiveItem(leftImg, leftHandName);
+  const leftHandCount = leftHandObj?.numbered && msg.leftHand ? msg.leftHand.quantity : null;
+  setActiveItem(leftImg, leftHandName, leftHandCount);
 
   // Update active item card click handler (drop on left/right click)
   const cardUse = document.getElementById('card-use');

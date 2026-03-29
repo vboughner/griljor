@@ -3,7 +3,7 @@ import { C2SMessage, S2CMessage, InventoryItem } from './protocol';
 import { World, ObjDef, RecObj, RoomData } from './world';
 import { filterText, randomScold } from './filter';
 
-const INV_SIZE = 35;
+const INV_SIZE = 21;
 const MAX_WEIGHT = 150;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
