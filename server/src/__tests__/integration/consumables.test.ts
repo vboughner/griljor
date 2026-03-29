@@ -80,10 +80,10 @@ describe('consumables', () => {
     alice: ReturnType<typeof joinPlayer>,
   ) {
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    bob.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' }); // sword
+    bob.ws.receive({ type: 'PICKUP', x: 5, y: 5 }); // sword
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 9, y: 10 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 10 });
-    bob.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    bob.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
     vi.advanceTimersByTime(500);
   }
 
@@ -95,14 +95,14 @@ describe('consumables', () => {
 
     // Alice picks up a potion into left hand
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
 
     // Bob damages Alice by 30 HP → she's at 70
     bobShotsAliceOnce(bob, alice);
     alice.ws.flush();
 
     // Alice uses potion on herself (heals 20 → 90 HP)
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 10, targetY: 10 });
 
     const stats = alice.ws.lastOfType('YOUR_STATS');
     expect(stats).toBeDefined();
@@ -113,11 +113,11 @@ describe('consumables', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
     bobShotsAliceOnce(bob, alice);
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 10, targetY: 10 });
 
     const heals = bob.ws.messagesOfType('PLAYER_HEAL');
     expect(heals.some((m) => m.playerId === alice.id)).toBe(true);
@@ -129,11 +129,11 @@ describe('consumables', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
     bobShotsAliceOnce(bob, alice);
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 10, targetY: 10 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
     expect(inv).toBeDefined();
@@ -143,11 +143,11 @@ describe('consumables', () => {
   it('potion not consumed when HP is already full', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
     alice.ws.flush();
 
     // Alice is at full HP — use should be silently rejected
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 3, targetY: 3 });
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 3, targetY: 3 });
 
     expect(alice.ws.messagesOfType('YOUR_INVENTORY').length).toBe(0);
   });
@@ -158,11 +158,11 @@ describe('consumables', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' }); // potion weight=2
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 }); // potion weight=2
     bobShotsAliceOnce(bob, alice);
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 10, targetY: 10 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
     expect(inv!.currentWeight).toBe(0);
@@ -176,15 +176,15 @@ describe('consumables', () => {
 
     // Pick up potion A into left hand, potion B spills into inventory
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' }); // potion A → left hand
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 }); // potion A → left hand
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 4, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 4, y: 3, hand: 'left' }); // potion B → inventory[0]
+    alice.ws.receive({ type: 'PICKUP', x: 4, y: 3 }); // potion B → inventory[0]
 
     // Damage alice enough to use two potions (40 HP so both potions restore up to cap)
     bobShotsAliceOnce(bob, alice); // -30 → 70 HP
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 10, targetY: 10 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
     // Potion A consumed → potion B should auto-move to left hand
@@ -200,12 +200,12 @@ describe('consumables', () => {
     const bob = joinPlayer(session, 'Bob');
 
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    bob.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    bob.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 1 });
     alice.ws.flush();
 
-    bob.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+    bob.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
     vi.advanceTimersByTime(500);
 
     const hits = alice.ws.messagesOfType('PLAYER_HIT');
@@ -218,19 +218,19 @@ describe('consumables', () => {
 
     // Arm and position bob to kill alice (4 × 30 = 120 > 100)
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    bob.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    bob.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 1 });
 
     for (let i = 0; i < 4; i++) {
-      bob.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      bob.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(900);
     }
 
     alice.ws.flush();
 
     // Alice is dead — fire at her again
-    bob.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+    bob.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
     vi.advanceTimersByTime(500);
 
     expect(alice.ws.messagesOfType('PLAYER_HIT').length).toBe(0);
@@ -241,11 +241,11 @@ describe('consumables', () => {
   it('lost weapon is removed from hand after being fired', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 7 });
-    alice.ws.receive({ type: 'PICKUP', x: 7, y: 7, hand: 'left' }); // grenade
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 7 }); // grenade
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
     expect(inv).toBeDefined();
@@ -255,34 +255,34 @@ describe('consumables', () => {
   it('firing a lost weapon decrements burden', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 7 });
-    alice.ws.receive({ type: 'PICKUP', x: 7, y: 7, hand: 'left' }); // grenade weight=5
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 7 }); // grenade weight=5
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
     expect(inv!.currentWeight).toBe(0);
   });
 
   it('auto-reloads matching grenade from inventory after firing', () => {
-    // Pick up one grenade into left hand, sword into right (different type — no reload),
+    // Pick up grenade into hand, sword goes to inventory (different type — no reload),
     // and verify that after firing the grenade, no reload happens (nothing matching in inv).
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 7 });
-    alice.ws.receive({ type: 'PICKUP', x: 7, y: 7, hand: 'left' }); // grenade → left hand
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 7 }); // grenade → hand
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'right' }); // sword → right hand
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 }); // sword → inventory (hand occupied)
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
-    // No second grenade in inventory → left hand stays null after firing
+    // No second grenade in inventory → hand stays null after firing
     expect(inv!.leftHand).toBeNull();
-    // Right hand (sword) is untouched
-    expect(inv!.rightHand?.type).toBe(2);
+    // Sword is in inventory
+    expect(inv!.inventory.some((s) => s?.type === 2)).toBe(true);
   });
 
   // ── Pickup blocked when tile occupied ────────────────────────────────────
@@ -297,7 +297,7 @@ describe('consumables', () => {
 
     // Alice tries to pick up the sword from (5,5) where Bob is standing
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
 
     expect(alice.ws.messagesOfType('YOUR_INVENTORY').length).toBe(0);
     expect(alice.ws.messagesOfType('ITEM_REMOVED').length).toBe(0);
@@ -311,7 +311,7 @@ describe('consumables', () => {
     alice.ws.flush();
 
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
     expect(inv!.leftHand?.type).toBe(2); // sword

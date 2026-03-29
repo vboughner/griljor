@@ -18,7 +18,7 @@ describe('fire rate limiting', () => {
   function armPlayer(player: TestPlayer, x = 1, y = 1) {
     // Stand at the sword to pick it up (proximity enforcement requires being within range)
     player.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    player.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    player.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
     player.ws.receive({ type: 'MY_LOCATION', room: 0, x, y });
   }
 
@@ -30,8 +30,8 @@ describe('fire rate limiting', () => {
     alice.ws.flush();
 
     // Fire twice with no time elapsed — second shot should be dropped
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     expect(alice.ws.messagesOfType('MISSILE_START').length).toBe(1);
   });
@@ -43,10 +43,10 @@ describe('fire rate limiting', () => {
     armPlayer(alice, 1, 1);
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
     // Advance past the 850ms default cooldown
     vi.advanceTimersByTime(900);
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     expect(alice.ws.messagesOfType('MISSILE_START').length).toBe(2);
   });
@@ -58,9 +58,9 @@ describe('fire rate limiting', () => {
     armPlayer(alice, 1, 1);
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     expect(alice.ws.messagesOfType('MISSILE_START').length).toBe(1);
   });
@@ -114,13 +114,13 @@ describe('fire rate limiting', () => {
     const bob = joinPlayer(grenadeSession, 'Bob');
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 10 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.flush();
 
     // Two rapid shots — second must be blocked by the ~1020ms cooldown
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     expect(alice.ws.messagesOfType('MISSILE_START').length).toBe(1);
   });

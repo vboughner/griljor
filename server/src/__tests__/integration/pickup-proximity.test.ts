@@ -22,7 +22,7 @@ describe('pickup proximity enforcement', () => {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 0, y: 0 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
 
     expect(alice.ws.messagesOfType('ITEM_REMOVED').length).toBe(0);
     expect(alice.ws.messagesOfType('YOUR_INVENTORY').length).toBe(0);
@@ -34,7 +34,7 @@ describe('pickup proximity enforcement', () => {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 5 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
     expect(inv).toBeDefined();
@@ -47,7 +47,7 @@ describe('pickup proximity enforcement', () => {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
     expect(inv).toBeDefined();
@@ -67,7 +67,7 @@ describe('pickup proximity enforcement', () => {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 5 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
 
     // LOS is clear (window is transparent), destination tile is walkable —
     // only path walkability catches the window between player and item.
@@ -87,7 +87,7 @@ describe('pickup proximity enforcement', () => {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 5 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
 
     expect(alice.ws.messagesOfType('ITEM_REMOVED').length).toBe(0);
     expect(alice.ws.messagesOfType('YOUR_INVENTORY').length).toBe(0);
@@ -108,7 +108,7 @@ describe('pickup proximity enforcement', () => {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 5 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
 
     expect(alice.ws.messagesOfType('ITEM_REMOVED').length).toBe(0);
     expect(alice.ws.messagesOfType('YOUR_INVENTORY').length).toBe(0);

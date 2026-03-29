@@ -13,7 +13,7 @@ describe('voluntary respawn', () => {
     const alice = joinPlayer(session, 'Alice');
     // Pick up the sword at (5,5) into left hand
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
     // Move away so item drop lands near old position
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 10 });
     alice.ws.flush();
@@ -74,7 +74,7 @@ describe('voluntary respawn', () => {
 
       // Arm Bob with the sword at (5,5)
       bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-      bob.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+      bob.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
 
       // Position both players
       alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 10 });
@@ -82,7 +82,7 @@ describe('voluntary respawn', () => {
 
       // Fire 4 shots (sword damage=30, Alice hp=100, need 4 hits to kill)
       for (let i = 0; i < 4; i++) {
-        bob.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 5, targetY: 10 });
+        bob.ws.receive({ type: 'FIRE_WEAPON', targetX: 5, targetY: 10 });
         vi.advanceTimersByTime(500); // advance enough for missile to land
         vi.advanceTimersByTime(900); // advance past fire-rate cooldown (850ms)
       }

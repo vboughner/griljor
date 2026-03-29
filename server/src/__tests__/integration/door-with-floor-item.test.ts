@@ -45,7 +45,7 @@ describe('USE_ITEM on tile with both a door and a floor item', () => {
 
     // Pick up the key
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5 });
     alice.ws.flush();
 
     // Move adjacent to the door
@@ -53,7 +53,7 @@ describe('USE_ITEM on tile with both a door and a floor item', () => {
     alice.ws.flush();
 
     // Use key on the door tile (which also has a sword on it)
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 4, targetY: 5 });
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 4, targetY: 5 });
 
     // Door should have toggled
     const changed = alice.ws.lastOfType('ROOM_OBJECT_CHANGED');
@@ -79,14 +79,14 @@ describe('USE_ITEM on tile with both a door and a floor item', () => {
     // a neighbouring floor tile, not back on the door tile.
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
     alice.ws.flush();
 
     // Move onto the door tile
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 4, y: 5 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'DROP', source: 'left' });
+    alice.ws.receive({ type: 'DROP', source: 'active' });
 
     const added = alice.ws.lastOfType('ITEM_ADDED');
     expect(added).toBeDefined();
@@ -103,14 +103,14 @@ describe('USE_ITEM on tile with both a door and a floor item', () => {
   it('can toggle the door back closed again after opening it', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 5 });
     alice.ws.flush();
 
     // Open the door
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 4, targetY: 5 });
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 4, targetY: 5 });
     // Close it again
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 4, targetY: 5 });
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 4, targetY: 5 });
 
     const changes = alice.ws.messagesOfType('ROOM_OBJECT_CHANGED');
     expect(changes.length).toBe(2);
@@ -162,14 +162,14 @@ describe('drop reachability: items cannot cross a closed door', () => {
 
     // Pick up the potion from the left side
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 1, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 1, y: 5 });
     alice.ws.flush();
 
     // Stand adjacent to the closed door and drop the potion
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 5 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'DROP', source: 'left' });
+    alice.ws.receive({ type: 'DROP', source: 'active' });
 
     const added = alice.ws.lastOfType('ITEM_ADDED');
     expect(added).toBeDefined();
@@ -185,9 +185,9 @@ describe('late-joining player sees current door state', () => {
     // Alice joins and opens the door
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5, hand: 'left' }); // pick up key
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5 }); // pick up key
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 5 });
-    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 4, targetY: 5 }); // open door
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 4, targetY: 5 }); // open door
 
     // Bob joins after the door has already been opened
     const bob = joinPlayer(session, 'Bob');

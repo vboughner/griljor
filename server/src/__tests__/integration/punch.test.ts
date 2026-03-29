@@ -26,7 +26,7 @@ describe('punching', () => {
     place(bob, 6, 5);
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
 
     const health = bob.ws.lastOfType('PLAYER_HEALTH');
     expect(health).toBeDefined();
@@ -40,7 +40,7 @@ describe('punching', () => {
     place(bob, 6, 5);
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
 
     const punch = alice.ws.lastOfType('PUNCH');
     expect(punch).toBeDefined();
@@ -55,7 +55,7 @@ describe('punching', () => {
     alice.ws.flush();
 
     // Punch east
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
     const east = alice.ws.lastOfType('PUNCH');
     expect(east!.dx).toBe(1);
     expect(east!.dy).toBe(0);
@@ -63,7 +63,7 @@ describe('punching', () => {
     vi.advanceTimersByTime(PUNCH_COOLDOWN_MS);
 
     // Punch southeast
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 7, targetY: 7 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 7, targetY: 7 });
     const se = alice.ws.lastOfType('PUNCH');
     expect(se!.dx).toBe(1);
     expect(se!.dy).toBe(1);
@@ -74,7 +74,7 @@ describe('punching', () => {
     place(alice, 5, 5);
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
 
     const punch = alice.ws.lastOfType('PUNCH');
     expect(punch).toBeDefined();
@@ -87,7 +87,7 @@ describe('punching', () => {
     place(bob, 7, 5); // 2 tiles east — punch snaps to (6,5), not (7,5)
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 7, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 7, targetY: 5 });
 
     const health = bob.ws.messagesOfType('PLAYER_HEALTH');
     expect(health).toHaveLength(0);
@@ -100,8 +100,8 @@ describe('punching', () => {
     place(bob, 6, 5);
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
 
     const healths = bob.ws.messagesOfType('PLAYER_HEALTH');
     expect(healths).toHaveLength(1);
@@ -114,9 +114,9 @@ describe('punching', () => {
     place(bob, 6, 5);
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
     vi.advanceTimersByTime(PUNCH_COOLDOWN_MS);
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
 
     const healths = bob.ws.messagesOfType('PLAYER_HEALTH');
     expect(healths).toHaveLength(2);
@@ -131,9 +131,9 @@ describe('punching', () => {
     bob.ws.flush();
 
     // Punch empty space first (west)
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 4, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 4, targetY: 5 });
     // Now punch Bob — should be blocked by cooldown
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
 
     const healths = bob.ws.messagesOfType('PLAYER_HEALTH');
     expect(healths).toHaveLength(0);
@@ -158,7 +158,7 @@ describe('punching', () => {
     bob.ws.flush();
 
     // Alice punches south into room 1 (targetY > GRID-1)
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 25 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 25 });
 
     const health = bob.ws.lastOfType('PLAYER_HEALTH');
     expect(health).toBeDefined();
@@ -176,7 +176,7 @@ describe('punching', () => {
     bob.ws.receive({ type: 'MY_LOCATION', room: 1, x: 10, y: 0 });
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 25 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 25 });
 
     const punch = bob.ws.lastOfType('PUNCH');
     expect(punch).toBeDefined();
@@ -196,7 +196,7 @@ describe('punching', () => {
     // Use 500ms increments (above 400ms cooldown, below 1000ms regen boundary per step).
     // 15 punches × 10 damage = 150 gross damage; regen heals ~7 HP over 7.5s → net ~143 > 100.
     for (let i = 0; i < 15; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 6, targetY: 5 });
       vi.advanceTimersByTime(500);
     }
 
