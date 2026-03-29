@@ -73,7 +73,7 @@ type S2CMessage =
   | { type: 'MISSILE_END'; id: number }
   | { type: 'REPORT'; text: string }
   | { type: 'PLAYER_HIT'; victimId: number; room: number; x: number; y: number; damage: number }
-  | { type: 'PUNCH'; room: number; x: number; y: number }
+  | { type: 'PUNCH'; room: number; x: number; y: number; dx: number; dy: number }
   | { type: 'PLAYER_HEAL'; playerId: number; room: number; x: number; y: number; amount: number }
   | { type: 'YOU_DIED'; killedBy: number; killerName: string; deadForMs: number }
   | { type: 'YOU_RESPAWNED'; room: number; x: number; y: number }

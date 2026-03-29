@@ -82,7 +82,7 @@ export class Game {
   // floating damage number markers
   private hitMarkers: HitMarker[] = [];
   // punch hit bitmap overlays
-  private punchMarkers: Array<{ x: number; y: number; until: number }> = [];
+  private punchMarkers: Array<{ x: number; y: number; dx: number; dy: number; until: number }> = [];
   // screen flash end time (ms) when local player takes damage
   private screenFlashUntil = 0;
 
@@ -474,7 +474,13 @@ export class Game {
 
     net.onPunch = (msg) => {
       if (msg.room !== this.currentRoom) return;
-      this.punchMarkers.push({ x: msg.x, y: msg.y, until: Date.now() + 350 });
+      this.punchMarkers.push({
+        x: msg.x,
+        y: msg.y,
+        dx: msg.dx,
+        dy: msg.dy,
+        until: Date.now() + 350,
+      });
       void this.render();
       setTimeout(() => void this.render(), 360);
     };
@@ -1018,7 +1024,14 @@ export class Game {
     const bm = await getBitmap(sprite);
     const ctx = this.canvas.getContext('2d')!;
     for (const m of this.punchMarkers) {
-      ctx.drawImage(bm, BORDER + m.x * TILE, BORDER + m.y * TILE);
+      const cx = BORDER + m.x * TILE + TILE / 2;
+      const cy = BORDER + m.y * TILE + TILE / 2;
+      const angle = Math.atan2(m.dy, m.dx) + Math.PI / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      ctx.drawImage(bm, -TILE / 2, -TILE / 2);
+      ctx.restore();
     }
   }
 

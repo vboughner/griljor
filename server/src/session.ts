@@ -1147,6 +1147,8 @@ export class GameSession {
       room: player.room,
       x: targetX,
       y: targetY,
+      dx,
+      dy,
     });
 
     const hit = this.findPlayerHitOnPath([{ x: targetX, y: targetY }], player.room, player.id);

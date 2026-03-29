@@ -49,6 +49,26 @@ describe('punching', () => {
     expect(punch!.room).toBe(0);
   });
 
+  it('PUNCH message includes dx/dy direction', () => {
+    const alice = joinPlayer(session, 'Alice');
+    place(alice, 5, 5);
+    alice.ws.flush();
+
+    // Punch east
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
+    const east = alice.ws.lastOfType('PUNCH');
+    expect(east!.dx).toBe(1);
+    expect(east!.dy).toBe(0);
+
+    vi.advanceTimersByTime(PUNCH_COOLDOWN_MS);
+
+    // Punch southeast
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 7, targetY: 7 });
+    const se = alice.ws.lastOfType('PUNCH');
+    expect(se!.dx).toBe(1);
+    expect(se!.dy).toBe(1);
+  });
+
   it('broadcasts PUNCH even when punching empty space', () => {
     const alice = joinPlayer(session, 'Alice');
     place(alice, 5, 5);
