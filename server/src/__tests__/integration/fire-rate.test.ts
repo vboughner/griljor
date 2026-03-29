@@ -93,6 +93,10 @@ describe('fire rate limiting', () => {
       team: 0,
       recorded_objects: [{ x: 5, y: 5, type: 2, detail: 0 }],
       spot,
+      exitNorth: -1,
+      exitEast: -1,
+      exitSouth: -1,
+      exitWest: -1,
     };
     const world: World = {
       mapName: 'test',

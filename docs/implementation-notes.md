@@ -15,7 +15,7 @@ npm run test:server    # server only
 npm run test:client    # client only
 ```
 
-**247 tests total** (161 server, 86 client) as of the pickup-proximity branch.
+**268 tests total** (182 server, 86 client) as of Phase 18 + pickup-only-nearby.
 
 ### Server test layout (`server/src/__tests__/`)
 
@@ -2253,3 +2253,164 @@ A pre-existing issue in `isTileBlocked` (`game-utils.ts`) caused `recorded_objec
    - **Pass 2** (fallback): same constraints but door tiles are allowed — used when every reachable tile within radius 5 already has a door on it.
 
 3. If no tile is found within radius 5, the item is **lost** (logged server-side; this is only possible in a fully packed or walled-off area).
+
+### Door interaction priority fix (client)
+
+When holding a key and clicking an adjacent tile that has a swinging door, the client now sends `USE_ITEM` (door toggle) even if a floor item is also present on that tile. Previously the floor item check took priority, making doors unopenable when an item was dropped in the doorway.
+
+---
+
+## Phase 18 — Combat Bug Fixes (Missile Speed, Ammo Display, Punching, Cross-Room Grenades)
+
+### Test suite update
+
+**255 tests total** (169 server, 86 client) as of this phase.
+
+New server integration test files:
+
+| File | Coverage |
+|------|----------|
+| `punch.test.ts` | Adjacent punch damage, PUNCH broadcast on hit and miss, range limit, cooldown enforcement, cooldown after miss, kill attribution |
+| `cross-room-grenade.test.ts` | MISSILE_START sent to next room, explosion damage across boundary, in-room grenade stays in-room, no-exit fallback, diagonal throw stays in-room, player-on-border does not trigger cross-room |
+
+`helpers.ts` additions:
+- `buildTwoRoomWorld()` — two-room world where room 0 has `exitSouth: 1` and room 1 has `exitNorth: 0`; used by cross-room grenade tests
+- All `RoomData` literals updated with `exitNorth/East/South/West: -1` fields
+
+New exported function `calcMsPerStep(speed)` — extracted from the two inline occurrences; covered by existing `fireRate.test.ts`-style assertions via missile timing.
+
+---
+
+### Fix 1 — Missile speed
+
+**Problem:** Missiles were too slow; a player could outrun a thrown potted plant. The missile formula used `2500 / (speed * 2.2)` ms/step while the player movement formula was already tuned to a faster baseline.
+
+**Fix:** Changed the numerator from `2500` to `1500` in both locations — `onFireWeapon` and `triggerExplosion` (explosion rays). Same formula, both callers; extracted into `calcMsPerStep(speed: number): number`.
+
+```typescript
+export function calcMsPerStep(speed: number): number {
+  return Math.max(50, Math.round(1500 / (speed * 2.2)));
+}
+```
+
+Floor of 50 ms/step is unchanged. At speed 5 (default): 136 ms/step down from 227 ms/step.
+
+---
+
+### Fix 2 — Ammo count display
+
+**Problem:** The ammo count badge on hand-slot items was rendered in `#ff0` (bright yellow) with no background contrast treatment, making it hard to read on light-coloured sprite backgrounds. On some items (flamethrower) the badge was obscured by the ammo sprite rendering above it.
+
+**Fix:** Updated `.hand-count` CSS in `client/index.html`:
+
+| Property | Before | After |
+|----------|--------|-------|
+| `color` | `#ff0` | `#ffb300` (amber) |
+| `font-size` | `9px` | `10px` |
+| `font-weight` | absent | `bold` |
+| `text-shadow` | absent | `0 0 3px #000, 1px 1px 0 #000` |
+| `z-index` | absent | `10` |
+
+The black text-shadow creates a contrast halo that makes the number readable on any background colour. The `z-index` ensures the count renders above overlapping sprite elements.
+
+---
+
+### Fix 3 — Punching
+
+**Problem:** Firing with an empty hand did nothing. The server's `onFireWeapon` handler returned immediately if no hand item was present, with no fallback.
+
+**Design:** Empty-hand `FIRE_WEAPON` triggers a punch. The target direction is derived from the click position using `Math.sign`, clamped to one adjacent tile. A visual indicator (`/sprites/bit/hit.png` — the legacy hit XBM, already in `pipeline/out/sprites/bit/`) is shown at the target tile for 350 ms regardless of whether a player is standing there, so the player gets feedback that their fists are a weapon.
+
+#### Server changes (`session.ts`)
+
+New constants near the top of the file:
+```typescript
+export const PUNCH_DAMAGE = 5;
+export const PUNCH_COOLDOWN_MS = 600;
+```
+
+New field on `Player` interface:
+```typescript
+lastPunchedAt: number;  // initialised to 0
+```
+
+`onFireWeapon` change — the empty-hand early return is replaced:
+```typescript
+if (!handItem) {
+  this.onPunch(player, msg);
+  return;
+}
+```
+
+New private method `onPunch(player, msg)`:
+1. Enforces `PUNCH_COOLDOWN_MS` — returns immediately if still cooling down.
+2. Derives `(dx, dy)` via `Math.sign`; returns if both are 0 (click on own tile).
+3. Sets `player.lastPunchedAt = Date.now()` (even if no target — prevents bypass by clicking empty space).
+4. Broadcasts `{ type: 'PUNCH', room, x: targetX, y: targetY }` to all players in the room.
+5. Calls `findPlayerHitOnPath([{ x: targetX, y: targetY }], player.room, player.id)` to find a target; if found, calls `dealDamage(target, PUNCH_DAMAGE, player)`.
+
+#### Protocol change (`protocol.ts`)
+
+New S→C message added to `S2CMessage`:
+```typescript
+| { type: 'PUNCH'; room: number; x: number; y: number }
+```
+
+#### Client changes
+
+`network.ts` — added `PUNCH` to the local `S2CMessage` union and an `onPunch` callback (same pattern as `onMissileStart`, etc.).
+
+`game.ts`:
+- `punchMarkers: Array<{ x: number; y: number; until: number }>` — stores active punch overlays.
+- `net.onPunch` handler: pushes `{ x, y, until: Date.now() + 350 }`, calls `render()`, schedules a cleanup render via `setTimeout(render, 360)`.
+- `drawPunchMarkers()`: filters expired entries, loads `/sprites/bit/hit.png` via `loadSprite`, converts to `ImageBitmap` via `getBitmap`, draws at `BORDER + x * TILE, BORDER + y * TILE`. Called from `doRender()` after `drawHitMarkers()`.
+
+---
+
+### Fix 4 — Cross-Room Grenades
+
+**Problem:** Throwing a grenade toward a room border caused the server to move the player toward the wall (room transition) instead of the grenade crossing into the adjacent room and exploding there.
+
+**Root cause:** `calcMissilePath` is bounded to a single room (0–19 on each axis). Thrown grenades would stop at the border tile and explode in the current room. Room exit data already existed in the original map format (`exit_north`, `exit_east`, `exit_south`, `exit_west`) but was not parsed by `loadWorld`.
+
+#### `world.ts` changes
+
+New fields on `RoomData`:
+```typescript
+exitNorth: number;  // room index, or -1 if no exit
+exitEast: number;
+exitSouth: number;
+exitWest: number;
+```
+
+`loadWorld` maps these from `exit_north/east/south/west` in the raw JSON, defaulting to `-1`.
+
+#### `session.ts` changes
+
+New private helper `getRoomExit(roomIdx, dx, dy)`:
+- Maps cardinal unit vectors to the appropriate exit field.
+- Returns `-1` for diagonals, zero vectors, or out-of-bounds rooms.
+
+Cross-room continuation logic added inside the `obj.explodes` branch of the `onFireWeapon` timer callback. The gate conditions are:
+
+```
+obj.lost && !hitPlayer && finalPath.length < range && tile is on the border edge
+```
+
+- `obj.lost` — only consumed/thrown weapons cross rooms (not sword swings)
+- `!hitPlayer` — grenade that hit a player on the border tile explodes there, not in the next room
+- `finalPath.length < range` — distinguishes a wall-stopped grenade from a border-crossing one; a grenade that wall-stopped will also be on an edge tile but `finalPath.length === range` (it travelled its full range and the last step happened to be the wall)
+
+If all conditions pass and `getRoomExit` returns a valid room index:
+1. Compute entry tile in the next room (mirror of the exit edge).
+2. Compute remaining range (`range - finalPath.length`).
+3. Call `calcMissilePath` in the next room.
+4. Broadcast `MISSILE_START` to players in the next room.
+5. Schedule a `setTimeout` for the continuation travel; on expiry, call `triggerExplosion` in the next room.
+6. `return` — skip the in-room explosion.
+
+If conditions do not pass, the original in-room `triggerExplosion` call runs unchanged.
+
+#### Diagonal throws
+
+`getRoomExit` returns `-1` for any non-cardinal direction, so diagonal throws never cross rooms — they explode at the in-room landing tile. This matches the original game's behaviour (room exits are axis-aligned corridors).
