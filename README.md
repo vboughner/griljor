@@ -8,7 +8,7 @@ Try out the live demo by pointing your browser at https://griljor.com
 
 ## Active Development: Modern Web Rewrite
 
-The game is being rewritten as a browser-playable web application. The goal is to preserve the original gameplay faithfully while making it accessible to anyone with a modern browser — no installation required.
+The game is being rewritten as a browser-playable web application. The goal is to restore some of the original gameplay feel, while also making it accessible to anyone with a modern browser — no installation required. In addition, there are going to be a number of experimental updates to improve playability and make it more fun, while preserving the original look.
 
 **Why**: The original runs only on 1989-era Sun/X11 systems. The binary format, hardcoded paths, and X11 dependency make it effectively unplayable today. The rewrite extracts all original assets (bitmaps, maps, object definitions) through an automated pipeline and reimplements the game logic in TypeScript.
 
@@ -49,6 +49,8 @@ cd client && npm run dev
 ```
 
 Then open your browser to **http://localhost:5073**. The title screen will appear and connect to the lobby at `localhost:3000`. Click a game to join.
+
+Or you can install tmux and run the `dev.sh` script, and it will do all three things at once for you.
 
 ---
 

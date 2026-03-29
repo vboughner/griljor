@@ -1,5 +1,28 @@
 # Griljor Web Rewrite — ToDo list
 
+## Playability (2 button mouse)
+- [ ] change the s hotkey to be move down 1 square, in addition to the x button
+- [ ] make a new hotkey for picking up things, probably t if not taken already, and it takes what's on your current square if there is something there, or it uses you current mouse position to take something further away (maybe hovering over items highlights their color)
+- [ ] make shift T take everything around you that you can reach, started with the lightest items first (so you can take many items fast)
+- [ ] add a button near the inventory for dropping everything
+- [ ] reduce the size of the inventory to fewer ros (maybe reduce by 40%)
+- [ ] eliminate the middle mouse button slot, so things you pick up always go into the left spot, we want to make this playable with a laptop track pad when only one kind of click is available (left click) and you will need to use the keys for movement, but otherwise most people only have 2 mouse buttons anyway
+- [ ] stop using the mouse graphic and create something for a UI that is more obvious about the 2 slots in the mouse buttons (most mouses only have 2 buttons)
+- [ ] set a hotkey that lets you swap what left and right mouse buttons do, in case you like moving with the other mouse button
+- [ ] change the way ammo works, and make guns always reload automatically from whatever matching ammo is in your inventory, the one that is used first is the one closest to top left, and use top row ammo before other rows, this wil simplify reloading, since you won't have to pick the ammo to put in the other hand
+- [ ] make a new hotkey that let's you swap what's in your hand with what is in your first inventory slot
+
+## Feedback from play
+- [ ] some stuff is too heavy, increase the burden player can carry to 200
+- [ ] no sound yet, add some rudimentary sounds?
+- [ ] don't let player in lobby reuse an existing name in game they are joining (case insensitive check)
+- [ ] sometimes seeing people in rooms when they are not really there anymore
+- [ ] when player clicks on a square they cannot travel to, they should at least travel as close as they can get to there (i.e. next to a wall if that is what you clicked on)
+- [ ] consider something new to help you understand when you are invisible to others
+- [ ] check this bug: are you still visible to others when standing on a potted plant?
+- [ ] consider in team games, making all teammates visible everywhere (this might be at the same time we save them from friendly fire)
+- [ ] player list doesn't immediately include other people that have joined the game until you see them for the first time, they should be announced when they join
+
 ## Maps
 - [ ] fix initial spawn in locked room without a key in castle map
 - [ ] in the Playtester Paradise map, in room 9, Range's End, the block gun drops a block gun and not a block
@@ -10,38 +33,26 @@
 - [ ] the block gun in battle map, the blocks don't drop at end of flight
 
 ## Bugs in Play
-- [ ] player should only be able to take things that are near it and not across the room
 - [ ] there's still a display glitch in the client sometimes when you have joined a 2nd or 3rd map sometimes, is everything getting cleared?
 - [ ] when you leave the browser open too long and there are hot reloads, chrome has to be restarted (probably only a dev experience problem)
 - [ ] there might be a bug when player reappears after death, they spawn in another room, appear then jump to another location in the same room quickly
 
 ## Combat Bugs
-- [ ] get punching to work
-- [ ] bug: you cannot throw a grenade into the next room — instead your player moves toward the border; the grenade should blow up on the first square in the next room
-- [ ] test: exit squares — a grenade thrown at a room border should explode on the first square in the next room
+- [ ] test: exit squares — a grenade thrown at stairs or other exit square should explode on the first square in the next room
 - [ ] test: explosion rays from the blast should be able to travel one square into an adjacent room as well
-- [ ] bug: missiles should go faster — a player can outrun a potted plant; consider giving missiles the same 40% speedup players received, or consider reverting the player speed increase
-- [ ] ammo count is a little hard to see as yellow, and is covered by the flame thrower ammo, it should be drawn on top and be a more contrasting color, like amber, and the number needs a mask behind it (a circle badge in black maybe?)
 
 ## Change / Add / Reorg
-- [x] move a bunch of files to the docs folder instead and update all the references from CLAUDE.md and README.md
-- [x] move nginx-example.conf to server folder and update references to it
-- [ ] add something to the title screen that mentions it is an old school game from 1989 and has been modernized, include a link to the repository
-- [ ] time people out of AFK games so that they don't stay on the server forever if they leave their browser tab open
 - [ ] wait a little longer to reset the map after no one is left in it, and consider a timer in the lobby that tells you how long until the map resets (30 seconds?)
 - [ ] help users in the lobby know when server is going to get reset (when no one is left in it)
 - [ ] when someone leaves the game after 5 seconds there should be a message that they left the game, but when someone disconnects suddenly, they should be said to have disconnected
 - [ ] it might be nice for the dmg and health? numbers to move upwards a little more than they do
 - [ ] let the chat history be taller, contain more text, perhaps use up space that is not needed by the player list
 - [ ] make the mouse graphic not so tall, figure out a better way to display what the mouse buttons are for, it kind of needs a redesign for the modern era
-- [ ] need the border boxes around other player (or to make them a different color than everything else? team colors?)
 - [ ] need a tutorial to help teach how to pickup and manipulate inventory and learn shortcut keys (or at least a help page)
 - [ ] we need to provide some hotkey discovery help in the UI
 - [ ] add hot key setting and mouse changes settings (but how will they save these, do we need profiles, or maybe just 3 good hotkey setting choices)
 
 ## Make teams work:
-- [x] players start in their team room
-- [x] add join team buttons (2 of them, and double the height of that map row for the avatars?)
 - [ ] display which team people are in the player list, make your team more obvious on the map (in colors?)
 - [ ] consider friendly fire options for teammates (i.e. cannot hurt members of your own team)
 
@@ -58,7 +69,12 @@ or spawn placement
 - [ ] **ammo reload from quiver** — bows should reload from arrows carried in inventory; currently they just run out
 - [ ] **object look/examine messages** — each item in the original had flavor text shown when looking at or examining it; currently only a name tooltip is shown
 
+## Production
+- [ ] I had to shift reload the client after updating the server, and I hadn't loaded them in a long time, they are cached too long?
+- [ ] make it possible for other collaborators to deploy a production release (give them access to the VPS, or make updates automatic when the games are empty and there are pushes to the main branch)
+- [ ] consider time of day scheduled resets for production
+
 ## Later / Polish / Maintainability
-- [x] add unit and integration testing
-- [ ] make it possible for other collaborators to deploy a production release (give them access to the VPS)
 - [ ] add Burt back into the plan somehow, maybe to respond to chats if you address him directly?
+- [ ] add monsters that can roam the map for your to fight with
+- [ ] where is the robot avatar we used to have?
