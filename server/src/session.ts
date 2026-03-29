@@ -333,7 +333,9 @@ export class GameSession {
       console.log(`[reset] cancelled (${this.world.mapName} has a new player)`);
     }
 
-    const nameTaken = [...this.players.values()].some((p) => p.name === msg.name);
+    const nameTaken = [...this.players.values()].some(
+      (p) => p.name.toLowerCase() === msg.name.toLowerCase(),
+    );
     if (nameTaken) {
       this.send(ws, { type: 'REJECTED', msg: `Name "${msg.name}" is already taken.` });
       return;

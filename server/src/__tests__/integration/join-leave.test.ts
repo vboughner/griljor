@@ -31,6 +31,14 @@ describe('join / leave', () => {
     expect(ws2.lastOfType('REJECTED')).toBeDefined();
   });
 
+  it('REJECTED when name matches existing player name case-insensitively', () => {
+    joinPlayer(session, 'Alice');
+    const ws2 = new MockWebSocket();
+    session.handleConnection(ws2 as unknown as WebSocket);
+    ws2.receive({ type: 'JOIN', name: 'ALICE', avatar: 'b', team: 1 });
+    expect(ws2.lastOfType('REJECTED')).toBeDefined();
+  });
+
   it('second player receives PLAYER_INFO about first', () => {
     joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');
