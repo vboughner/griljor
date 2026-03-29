@@ -118,3 +118,62 @@ describe('USE_ITEM on tile with both a door and a floor item', () => {
     expect(changes[1].newType).toBe(9); // closed again
   });
 });
+
+// ── Drop reachability tests ────────────────────────────────────────────────
+//
+// World layout: column x=3 is a solid wall for all y except y=5, where a
+// closed door sits in recorded_objects (spot is floor-only there).  This
+// partitions the room into a left side (x≤2) and a right side (x≥4).
+// A potion is placed on the left side at (1,5) for the player to pick up.
+//
+// Any drop from the left side must land at x≤2 — it must not teleport
+// through the wall/door to the right side.
+
+function buildWorldWithWallAndDoor() {
+  const world = buildTestWorld();
+  world.objects[8] = { _index: 8, name: 'key', takeable: true, weight: 1, opens: 1 };
+  world.objects[9] = {
+    _index: 9,
+    name: 'closed-door',
+    swings: true,
+    movement: 0,
+    type: 1,
+    alternate: 10,
+  };
+  world.objects[10] = { _index: 10, name: 'open-door', swings: true, movement: 5, alternate: 9 };
+
+  // Solid wall at column x=3 for every row except y=5 (where the door goes)
+  for (let y = 0; y < 20; y++) {
+    if (y !== 5) world.rooms[0].spot![3][y] = [1, 4]; // wall obj 4 = movement:0
+  }
+  // y=5 has a closed door in recorded_objects; spot stays as plain floor [1,0]
+  world.rooms[0].recorded_objects.push({ x: 3, y: 5, type: 9, detail: 0 });
+
+  // Potion on the left side of the wall for pickup
+  world.rooms[0].recorded_objects.push({ x: 1, y: 5, type: 3, detail: 0 });
+
+  return world;
+}
+
+describe('drop reachability: items cannot cross a closed door', () => {
+  it('drops land on the player side of a closed door, not the other side', () => {
+    const session = new GameSession(buildWorldWithWallAndDoor());
+    const alice = joinPlayer(session, 'Alice');
+
+    // Pick up the potion from the left side
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 1, y: 5, hand: 'left' });
+    alice.ws.flush();
+
+    // Stand adjacent to the closed door and drop the potion
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 5 });
+    alice.ws.flush();
+
+    alice.ws.receive({ type: 'DROP', source: 'left' });
+
+    const added = alice.ws.lastOfType('ITEM_ADDED');
+    expect(added).toBeDefined();
+    // Must land at x≤2 — the closed door at (3,5) and walls at column 3 block the right side
+    expect(added!.x).toBeLessThanOrEqual(2);
+  });
+});

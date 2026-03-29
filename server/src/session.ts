@@ -1666,25 +1666,77 @@ export class GameSession {
         (ro) => ro.x === tx && ro.y === ty && (this.world.objects[ro.type]?.swings ?? false),
       );
 
-    // Spiral search: prefer tiles without doors
+    // BFS flood-fill to find all tiles structurally reachable from the player.
+    // Uses only spot+recorded_objects walkability (not items or player positions),
+    // so doors and walls correctly partition the reachable area.
+    const isPassable = (tx: number, ty: number): boolean => {
+      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) return false;
+      const cell = room.spot?.[tx]?.[ty];
+      if (cell) {
+        const [flId, wlId] = cell;
+        if (!flId && !wlId) {
+          if (room.floor) return false;
+        } else {
+          if (wlId > 0 && !this.world.objects[wlId]?.movement) return false;
+          if (flId > 0 && !this.world.objects[flId]?.movement) return false;
+        }
+      }
+      for (const ro of room.recorded_objects) {
+        if (ro.x === tx && ro.y === ty && ro.type > 0) {
+          const obj = this.world.objects[ro.type];
+          if (obj?.takeable) continue;
+          if (!obj?.movement) return false;
+        }
+      }
+      return true;
+    };
+
+    const reachable = new Set<string>();
+    const bfsQueue: Array<{ x: number; y: number }> = [{ x: px, y: py }];
+    reachable.add(`${px},${py}`);
+    const DIRS: [number, number][] = [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+      [1, -1],
+      [1, 1],
+      [-1, 1],
+      [-1, -1],
+    ];
+    while (bfsQueue.length > 0) {
+      const { x, y } = bfsQueue.shift()!;
+      for (const [ddx, ddy] of DIRS) {
+        const nx = x + ddx;
+        const ny = y + ddy;
+        const nk = `${nx},${ny}`;
+        if (reachable.has(nk)) continue;
+        if (!isPassable(nx, ny)) continue;
+        reachable.add(nk);
+        bfsQueue.push({ x: nx, y: ny });
+      }
+    }
+
+    // Spiral search: prefer tiles without doors, must be reachable from player
     for (let radius = 0; radius <= 5; radius++) {
       for (let dx = -radius; dx <= radius; dx++) {
         for (let dy = -radius; dy <= radius; dy++) {
           if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
           const tx = px + dx;
           const ty = py + dy;
-          if (isValidTile(tx, ty) && !hasDoor(tx, ty)) return { x: tx, y: ty };
+          if (isValidTile(tx, ty) && reachable.has(`${tx},${ty}`) && !hasDoor(tx, ty))
+            return { x: tx, y: ty };
         }
       }
     }
-    // Fallback: accept door tiles if no door-free tile is available within range
+    // Fallback: accept door tiles if no door-free reachable tile is available
     for (let radius = 0; radius <= 5; radius++) {
       for (let dx = -radius; dx <= radius; dx++) {
         for (let dy = -radius; dy <= radius; dy++) {
           if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
           const tx = px + dx;
           const ty = py + dy;
-          if (isValidTile(tx, ty)) return { x: tx, y: ty };
+          if (isValidTile(tx, ty) && reachable.has(`${tx},${ty}`)) return { x: tx, y: ty };
         }
       }
     }
