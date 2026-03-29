@@ -3,14 +3,16 @@
 ## Playability (2 button mouse)
 - [ ] change the s hotkey to be move down 1 square, in addition to the x button
 - [ ] make a new hotkey for picking up things, probably t if not taken already, and it takes what's on your current square if there is something there, or it uses you current mouse position to take something further away (maybe hovering over items highlights their color)
-- [ ] make shift T take everything around you that you can reach, started with the lightest items first (so you can take many items fast)
-- [ ] add a button near the inventory for dropping everything
-- [ ] reduce the size of the inventory to fewer ros (maybe reduce by 40%)
 - [ ] eliminate the middle mouse button slot, so things you pick up always go into the left spot, we want to make this playable with a laptop track pad when only one kind of click is available (left click) and you will need to use the keys for movement, but otherwise most people only have 2 mouse buttons anyway
 - [ ] stop using the mouse graphic and create something for a UI that is more obvious about the 2 slots in the mouse buttons (most mouses only have 2 buttons)
-- [ ] set a hotkey that lets you swap what left and right mouse buttons do, in case you like moving with the other mouse button
 - [ ] change the way ammo works, and make guns always reload automatically from whatever matching ammo is in your inventory, the one that is used first is the one closest to top left, and use top row ammo before other rows, this wil simplify reloading, since you won't have to pick the ammo to put in the other hand
-- [ ] make a new hotkey that let's you swap what's in your hand with what is in your first inventory slot
+
+Later Playability:
+- [ ] set a hotkey that lets you swap what left and right mouse buttons do, in case you like moving with the other mouse button
+- [ ] make shift T take everything around you that you can reach, started with the lightest items first (so you can take many items fast)
+- [ ] make a new hotkey that let's you swap what's in your hand with what is in your first inventory slot (or maybe a set of funciton keys you can set things in your inventory to let you quickly swap with (advanced feature)
+- [ ] reduce the size of the inventory to fewer rows (maybe reduce by 40%)
+- [ ] add a button near the inventory for dropping everything
 
 ## Feedback from play
 - [ ] some stuff is too heavy, increase the burden player can carry to 200
