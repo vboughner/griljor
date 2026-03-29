@@ -1641,30 +1641,50 @@ export class GameSession {
       }
     }
 
-    // Spiral search outward from player position
+    const isValidTile = (tx: number, ty: number): boolean => {
+      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) return false;
+      if (roomMap.has(`${tx},${ty}`)) return false;
+      if (playerOccupied!.has(`${tx},${ty}`)) return false;
+      const cell = room.spot?.[tx]?.[ty];
+      if (cell) {
+        const [flId, wlId] = cell;
+        // Void tile: not walkable when room has a floor (ring-style map)
+        if (!flId && !wlId) {
+          if (room.floor) return false;
+        } else {
+          const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
+          const floorObj = flId > 0 ? this.world.objects[flId] : null;
+          if (wallObj && !wallObj.movement) return false;
+          if (floorObj && !floorObj.movement) return false;
+        }
+      }
+      return true;
+    };
+
+    const hasDoor = (tx: number, ty: number): boolean =>
+      room.recorded_objects.some(
+        (ro) => ro.x === tx && ro.y === ty && (this.world.objects[ro.type]?.swings ?? false),
+      );
+
+    // Spiral search: prefer tiles without doors
     for (let radius = 0; radius <= 5; radius++) {
       for (let dx = -radius; dx <= radius; dx++) {
         for (let dy = -radius; dy <= radius; dy++) {
           if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
           const tx = px + dx;
           const ty = py + dy;
-          if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) continue;
-          if (roomMap.has(`${tx},${ty}`)) continue;
-          if (playerOccupied.has(`${tx},${ty}`)) continue;
-          const cell = room.spot?.[tx]?.[ty];
-          if (cell) {
-            const [flId, wlId] = cell;
-            // Void tile: not walkable when room has a floor (ring-style map)
-            if (!flId && !wlId) {
-              if (room.floor) continue;
-            } else {
-              const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
-              const floorObj = flId > 0 ? this.world.objects[flId] : null;
-              if (wallObj && !wallObj.movement) continue;
-              if (floorObj && !floorObj.movement) continue;
-            }
-          }
-          return { x: tx, y: ty };
+          if (isValidTile(tx, ty) && !hasDoor(tx, ty)) return { x: tx, y: ty };
+        }
+      }
+    }
+    // Fallback: accept door tiles if no door-free tile is available within range
+    for (let radius = 0; radius <= 5; radius++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+          const tx = px + dx;
+          const ty = py + dy;
+          if (isValidTile(tx, ty)) return { x: tx, y: ty };
         }
       }
     }

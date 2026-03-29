@@ -72,6 +72,34 @@ describe('USE_ITEM on tile with both a door and a floor item', () => {
     expect(swordStillThere).toBe(true);
   });
 
+  it('dropped item lands on a non-door tile even when player is standing on a door tile', () => {
+    // World: closed door at (4,5), all other tiles are plain floor.
+    // Player stands at (3,5) (adjacent to the door). Pick up the sword from (5,5),
+    // then move onto the door tile at (4,5) and drop it — the drop should land on
+    // a neighbouring floor tile, not back on the door tile.
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.flush();
+
+    // Move onto the door tile
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 4, y: 5 });
+    alice.ws.flush();
+
+    alice.ws.receive({ type: 'DROP', source: 'left' });
+
+    const added = alice.ws.lastOfType('ITEM_ADDED');
+    expect(added).toBeDefined();
+    // The drop location must NOT be the door tile
+    const world = (
+      session as unknown as { world: ReturnType<typeof buildWorldWithDoorAndFloorItem> }
+    ).world;
+    const isOnDoor = world.rooms[0].recorded_objects.some(
+      (ro) => ro.x === added!.x && ro.y === added!.y && world.objects[ro.type]?.swings,
+    );
+    expect(isOnDoor).toBe(false);
+  });
+
   it('can toggle the door back closed again after opening it', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 5 });
