@@ -458,6 +458,24 @@ export class GameSession {
     }
     this.send(ws, { type: 'ITEMS_SYNC', items: syncItems });
 
+    // Sync any recorded_objects that have been toggled from their original state
+    // (e.g. doors opened by another player before this player joined)
+    for (let roomIdx = 0; roomIdx < this.world.rooms.length; roomIdx++) {
+      const current = this.world.rooms[roomIdx].recorded_objects;
+      const original = this.originalRecordedObjects[roomIdx];
+      for (let i = 0; i < current.length && i < original.length; i++) {
+        if (current[i].type !== original[i].type) {
+          this.send(ws, {
+            type: 'ROOM_OBJECT_CHANGED',
+            room: roomIdx,
+            x: current[i].x,
+            y: current[i].y,
+            newType: current[i].type,
+          });
+        }
+      }
+    }
+
     // Send empty inventory and starting stats to new player
     this.sendInventory(player);
     this.sendStats(player);

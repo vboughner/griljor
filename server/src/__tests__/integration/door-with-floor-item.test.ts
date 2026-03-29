@@ -177,3 +177,35 @@ describe('drop reachability: items cannot cross a closed door', () => {
     expect(added!.x).toBeLessThanOrEqual(2);
   });
 });
+
+describe('late-joining player sees current door state', () => {
+  it('receives ROOM_OBJECT_CHANGED for doors opened before they joined', () => {
+    const session = new GameSession(buildWorldWithDoorAndFloorItem());
+
+    // Alice joins and opens the door
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5, hand: 'left' }); // pick up key
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 5 });
+    alice.ws.receive({ type: 'USE_ITEM', hand: 'left', targetX: 4, targetY: 5 }); // open door
+
+    // Bob joins after the door has already been opened
+    const bob = joinPlayer(session, 'Bob');
+
+    // Bob must receive a ROOM_OBJECT_CHANGED telling him the door is now open
+    const changed = bob.ws.messagesOfType('ROOM_OBJECT_CHANGED');
+    expect(changed.length).toBeGreaterThan(0);
+    expect(changed[0].x).toBe(4);
+    expect(changed[0].y).toBe(5);
+    expect(changed[0].newType).toBe(10); // open-door
+  });
+
+  it('does not send ROOM_OBJECT_CHANGED when no doors have been toggled', () => {
+    const session = new GameSession(buildWorldWithDoorAndFloorItem());
+
+    // Bob joins with no prior door activity
+    const bob = joinPlayer(session, 'Bob');
+
+    expect(bob.ws.messagesOfType('ROOM_OBJECT_CHANGED')).toHaveLength(0);
+  });
+});
