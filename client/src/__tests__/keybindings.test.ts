@@ -9,13 +9,13 @@ describe('key bindings', () => {
     expect(src).toMatch(/keyDirs[\s\S]*?s.*\[0,\s*1\]/);
   });
 
-  it('uses g for pickup', () => {
-    expect(src).toMatch(/e\.key === 'g'/);
+  it('uses f for pickup', () => {
+    expect(src).toMatch(/e\.key === 'f'/);
     expect(src).toMatch(/sendPickup/);
   });
 
-  it('uses b for drop', () => {
-    expect(src).toMatch(/e\.key === 'b'/);
+  it('uses g for drop', () => {
+    expect(src).toMatch(/e\.key === 'g'/);
     expect(src).toMatch(/sendDrop/);
   });
 

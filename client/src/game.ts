@@ -234,12 +234,12 @@ export class Game {
       }
 
       // Item actions
-      if (e.key === 'g') {
+      if (e.key === 'f') {
         e.preventDefault();
         if (!this.isDead) this.network?.sendPickup(this.px, this.py);
         return;
       }
-      if (e.key === 'b') {
+      if (e.key === 'g') {
         e.preventDefault();
         if (!this.isDead) this.network?.sendDrop('active');
         return;
