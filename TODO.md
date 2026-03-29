@@ -1,8 +1,8 @@
 # Griljor Web Rewrite — ToDo list
 
 ## Playability (2 button mouse)
-- [ ] change the s hotkey to be move down 1 square, in addition to the x button
-- [ ] make a new hotkey for picking up things, probably t if not taken already, and it takes what's on your current square if there is something there, or it uses you current mouse position to take something further away (maybe hovering over items highlights their color)
+- [x] change the s hotkey to be move down 1 square, in addition to the x button
+- [x] make a new hotkey for picking up things (F key picks up items at your feet)
 
 Later Playability:
 - [ ] set a hotkey that lets you swap what left and right mouse buttons do, in case you like moving with the other mouse button
@@ -40,10 +40,10 @@ Later Playability:
 - [ ] help users in the lobby know when server is going to get reset (when no one is left in it)
 - [ ] when someone leaves the game after 5 seconds there should be a message that they left the game, but when someone disconnects suddenly, they should be said to have disconnected
 - [ ] it might be nice for the dmg and health? numbers to move upwards a little more than they do
-- [ ] let the chat history be taller, contain more text, perhaps use up space that is not needed by the player list
-- [ ] make the mouse graphic not so tall, figure out a better way to display what the mouse buttons are for, it kind of needs a redesign for the modern era
-- [ ] need a tutorial to help teach how to pickup and manipulate inventory and learn shortcut keys (or at least a help page)
-- [ ] we need to provide some hotkey discovery help in the UI
+- [x] let the chat history be taller, contain more text, perhaps use up space that is not needed by the player list
+- [x] make the mouse graphic not so tall, figure out a better way to display what the mouse buttons are for, it kind of needs a redesign for the modern era
+- [x] need a tutorial to help teach how to pickup and manipulate inventory and learn shortcut keys (or at least a help page)
+- [x] we need to provide some hotkey discovery help in the UI
 - [ ] add hot key setting and mouse changes settings (but how will they save these, do we need profiles, or maybe just 3 good hotkey setting choices)
 
 ## Make teams work:
