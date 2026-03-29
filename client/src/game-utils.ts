@@ -111,6 +111,84 @@ export function computeBfsPath(
 }
 
 /**
+ * Like computeBfsPath, but if the exact target is unreachable (blocked or
+ * disconnected), returns a path to the closest reachable tile by Chebyshev
+ * distance instead of returning [].
+ */
+export function computeBfsPathToNearest(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  room: RoomData,
+  objects: ObjDef[],
+  exitKeys?: Set<string>,
+): Array<{ x: number; y: number }> {
+  if (x0 === x1 && y0 === y1) return [];
+  const NONE = -1;
+  const visited = new Uint8Array(GRID * GRID);
+  const prev = new Int16Array(GRID * GRID).fill(NONE);
+  const queue: Array<{ x: number; y: number }> = [];
+  visited[y0 * GRID + x0] = 1;
+  queue.push({ x: x0, y: y0 });
+  let foundExact = false;
+
+  while (queue.length > 0) {
+    const { x, y } = queue.shift()!;
+    for (const [dx, dy] of STEP_DIRS) {
+      const nx = x + dx,
+        ny = y + dy;
+      if (nx < 0 || nx >= GRID || ny < 0 || ny >= GRID) continue;
+      if (isTileBlocked(nx, ny, room, objects, exitKeys)) continue;
+      const k = ny * GRID + nx;
+      if (visited[k]) continue;
+      visited[k] = 1;
+      prev[k] = y * GRID + x;
+      if (nx === x1 && ny === y1) {
+        foundExact = true;
+      }
+      queue.push({ x: nx, y: ny });
+    }
+  }
+
+  // Reconstruct path helper
+  const buildPath = (tx: number, ty: number) => {
+    const path: Array<{ x: number; y: number }> = [];
+    let cx = tx,
+      cy = ty;
+    while (cx !== x0 || cy !== y0) {
+      path.unshift({ x: cx, y: cy });
+      const p = prev[cy * GRID + cx];
+      if (p === NONE) return [];
+      cx = p % GRID;
+      cy = Math.floor(p / GRID);
+    }
+    return path;
+  };
+
+  if (foundExact) return buildPath(x1, y1);
+
+  // Target unreachable — find closest visited tile to (x1, y1)
+  let bestDist = Infinity;
+  let bestX = -1,
+    bestY = -1;
+  for (let y = 0; y < GRID; y++) {
+    for (let x = 0; x < GRID; x++) {
+      if (!visited[y * GRID + x]) continue;
+      if (x === x0 && y === y0) continue; // skip start
+      const dist = Math.max(Math.abs(x - x1), Math.abs(y - y1));
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestX = x;
+        bestY = y;
+      }
+    }
+  }
+  if (bestX === -1) return []; // no reachable tile found (shouldn't happen)
+  return buildPath(bestX, bestY);
+}
+
+/**
  * Returns true if every tile along the Chebyshev path from (x1,y1) to (x2,y2)
  * is walkable. Catches transparent-but-unwalkable tiles (windows, closed doors)
  * that LOS checks alone would miss.
