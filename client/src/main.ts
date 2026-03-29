@@ -80,9 +80,8 @@ let invObjects: ObjDef[] = [];
 let invObjset = '';
 let invNetwork: GameNetwork | null = null;
 
-// Track current hand items for tooltips
+// Track current hand item for tooltip
 let currentLeftHand: InventoryItem | null = null;
-let currentRightHand: InventoryItem | null = null;
 // Per-slot item for tooltips (indexed 0..INV_SIZE-1)
 const slotItems: Array<InventoryItem | null> = [];
 
@@ -109,11 +108,8 @@ function buildInvGrid(): void {
       e.preventDefault();
       if (!invNetwork) return;
       if (e.button === 0) {
-        // Left click: swap slot with left hand
-        invNetwork.sendInvSwap(i, 'left');
-      } else if (e.button === 1) {
-        // Middle click: swap slot with right hand
-        invNetwork.sendInvSwap(i, 'right');
+        // Left click: swap slot with active hand
+        invNetwork.sendInvSwap(i);
       }
     });
     cell.addEventListener('contextmenu', (e) => {
@@ -139,7 +135,6 @@ function buildInvGrid(): void {
 function initHandTooltips(): void {
   const hands: Array<{ id: string; getItem: () => InventoryItem | null }> = [
     { id: 'hand-left-canvas', getItem: () => currentLeftHand },
-    { id: 'hand-middle-canvas', getItem: () => currentRightHand },
   ];
   for (const { id, getItem } of hands) {
     const canvas = document.getElementById(id)!;
@@ -170,14 +165,12 @@ async function drawItemOnCanvas(canvas: HTMLCanvasElement, item: InventoryItem):
 
 async function updateInventoryPanel(msg: {
   leftHand: InventoryItem | null;
-  rightHand: InventoryItem | null;
   inventory: Array<InventoryItem | null>;
   currentWeight: number;
   maxWeight: number;
 }): Promise<void> {
-  // Track hand items for tooltips
+  // Track hand item for tooltip
   currentLeftHand = msg.leftHand;
-  currentRightHand = msg.rightHand;
 
   // Update weight display and burden bar
   const weightEl = document.getElementById('inv-weight');
@@ -186,44 +179,26 @@ async function updateInventoryPanel(msg: {
   if (burdenFill)
     burdenFill.style.width = `${Math.min(100, (msg.currentWeight / msg.maxWeight) * 100)}%`;
 
-  // Update hand slot icons (fetched in parallel)
-  const [leftImg, rightImg] = await Promise.all([
-    msg.leftHand ? getItemImgData(msg.leftHand) : Promise.resolve(null),
-    msg.rightHand ? getItemImgData(msg.rightHand) : Promise.resolve(null),
-  ]);
-  setHandItems(leftImg, rightImg);
+  // Update active hand slot icon
+  const leftImg = msg.leftHand ? await getItemImgData(msg.leftHand) : null;
+  setHandItems(leftImg, null);
 
-  // Update hand slot charge counts for numbered weapons
+  // Update hand slot charge count for numbered weapons
   const handLeftCount = document.getElementById('hand-left-count');
-  const handMidCount = document.getElementById('hand-middle-count');
   if (handLeftCount) {
     const obj = msg.leftHand ? invObjects[msg.leftHand.type] : null;
     handLeftCount.textContent = obj?.numbered && msg.leftHand ? String(msg.leftHand.quantity) : '';
   }
-  if (handMidCount) {
-    const obj = msg.rightHand ? invObjects[msg.rightHand.type] : null;
-    handMidCount.textContent = obj?.numbered && msg.rightHand ? String(msg.rightHand.quantity) : '';
-  }
 
-  // Update hand slot click handlers (set once via data attr trick, easier to redo here)
+  // Update active hand slot click handler
   const handLeftCanvas = document.getElementById('hand-left-canvas') as HTMLCanvasElement;
-  const handMiddleCanvas = document.getElementById('hand-middle-canvas') as HTMLCanvasElement;
   if (handLeftCanvas) {
     handLeftCanvas.onclick = () => {
-      if (msg.leftHand && invNetwork) invNetwork.sendDrop('left');
+      if (msg.leftHand && invNetwork) invNetwork.sendDrop('active');
     };
     handLeftCanvas.oncontextmenu = (e) => {
       e.preventDefault();
-      if (msg.leftHand && invNetwork) invNetwork.sendDrop('left');
-    };
-  }
-  if (handMiddleCanvas) {
-    handMiddleCanvas.onclick = () => {
-      if (msg.rightHand && invNetwork) invNetwork.sendDrop('right');
-    };
-    handMiddleCanvas.oncontextmenu = (e) => {
-      e.preventDefault();
-      if (msg.rightHand && invNetwork) invNetwork.sendDrop('right');
+      if (msg.leftHand && invNetwork) invNetwork.sendDrop('active');
     };
   }
 
@@ -890,7 +865,7 @@ async function main(): Promise<void> {
 
       network.onInventory = (msg) => {
         void updateInventoryPanel(msg);
-        game.setHands(msg.leftHand, msg.rightHand);
+        game.setHands(msg.leftHand);
         game.setWeight(msg.currentWeight, msg.maxWeight);
       };
 
@@ -1056,9 +1031,8 @@ async function main(): Promise<void> {
   showLobby();
 }
 
-export function setHandItems(left: ImageData | null, right: ImageData | null): void {
+export function setHandItems(left: ImageData | null, _right: ImageData | null): void {
   setHandItem('left', left);
-  setHandItem('right', right);
 }
 
 main().catch((err) => {
