@@ -504,6 +504,51 @@
     #respawn-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
     #respawn-btn:disabled { opacity: 0.4; cursor: default; }
 
+    #help-btn {
+      background: #1e1910; border: 1px solid #52380e; color: #b8842a;
+      padding: 5px 10px; cursor: pointer; font-family: monospace; font-size: 13px;
+      transition: background 0.1s, border-color 0.1s; width: 100%;
+    }
+    #help-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+
+    /* Help modal */
+    #help-modal {
+      display: none; position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.7); justify-content: center; align-items: center;
+    }
+    #help-modal.open { display: flex; }
+    #help-modal-inner {
+      background: #1a1a1a; border: 2px solid #52380e; border-radius: 8px;
+      padding: 24px 32px; max-width: 520px; width: 90%; color: #ccc;
+      font-family: monospace; position: relative; max-height: 80vh; overflow-y: auto;
+    }
+    #help-modal h2 { color: #d4a040; margin-bottom: 12px; font-size: 1.2em; }
+    #help-modal h3 { color: #b8842a; margin: 12px 0 6px; font-size: 1em; }
+    #help-modal p, #help-modal li { font-size: 0.9em; line-height: 1.5; }
+    #help-modal ul { list-style: none; padding: 0; }
+    #help-modal li { padding: 2px 0; }
+    #help-modal kbd {
+      background: #2a2a2a; border: 1px solid #555; border-radius: 3px;
+      padding: 1px 6px; font-family: monospace; font-size: 0.9em; color: #e0c080;
+    }
+    #help-modal-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 16px; padding-top: 12px; border-top: 1px solid #333;
+    }
+    #help-modal-nav button {
+      background: #1e1910; border: 1px solid #52380e; color: #b8842a;
+      padding: 4px 14px; cursor: pointer; font-family: monospace; font-size: 0.85em;
+      border-radius: 3px;
+    }
+    #help-modal-nav button:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+    #help-modal-nav button:disabled { opacity: 0.3; cursor: default; }
+    #help-close {
+      position: absolute; top: 8px; right: 12px; background: none; border: none;
+      color: #888; font-size: 1.4em; cursor: pointer; font-family: monospace;
+    }
+    #help-close:hover { color: #d4a040; }
+    #help-page-num { color: #888; font-size: 0.85em; }
+
   </style>
 </head>
 <body>
@@ -588,6 +633,7 @@
           <div id="game-btns">
             <button id="respawn-btn">Respawn</button>
             <button id="leave-btn">Leave Game</button>
+            <button id="help-btn">Help</button>
           </div>
         </div>
         <div id="stats-panel">
@@ -612,6 +658,55 @@
             <input id="chat-input" type="text" maxlength="200" placeholder="Say something…" />
             <button id="chat-send">Send</button>
           </div>
+        </div>
+      </div>
+    </div>
+    <div id="help-modal">
+      <div id="help-modal-inner">
+        <button id="help-close">&times;</button>
+        <div id="help-page-1" class="help-page">
+          <h2>How to Play</h2>
+          <h3>Movement</h3>
+          <p>Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys to move. Diagonal keys: <kbd>Q</kbd><kbd>E</kbd><kbd>Z</kbd><kbd>C</kbd>. Right-click a tile to walk toward it.</p>
+          <h3>Combat</h3>
+          <p>Left-click on the map to fire your weapon or use a held item. Pick up weapons from the ground to arm yourself.</p>
+          <h3>Items</h3>
+          <p>Press <kbd>G</kbd> to pick up an item at your feet (or left-click it). Press <kbd>B</kbd> to drop what you're holding. Click inventory slots to equip items.</p>
+          <h3>Chat</h3>
+          <p>Press <kbd>T</kbd> to type a message, <kbd>Enter</kbd> to send, <kbd>Escape</kbd> to cancel.</p>
+        </div>
+        <div id="help-page-2" class="help-page" style="display:none">
+          <h2>Keyboard Shortcuts</h2>
+          <h3>Movement (8 directions)</h3>
+          <ul>
+            <li><kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> &mdash; NW, North, NE</li>
+            <li><kbd>A</kbd> &ensp;&bull;&ensp; <kbd>D</kbd> &mdash; West, East</li>
+            <li><kbd>Z</kbd> <kbd>S</kbd>/<kbd>X</kbd> <kbd>C</kbd> &mdash; SW, South, SE</li>
+          </ul>
+          <p>Arrow keys and numpad also work.</p>
+          <h3>Items</h3>
+          <ul>
+            <li><kbd>G</kbd> &mdash; Pick up item at your feet</li>
+            <li><kbd>B</kbd> &mdash; Drop held item</li>
+          </ul>
+          <h3>Toggles</h3>
+          <ul>
+            <li><kbd>V</kbd> &mdash; Fog of war overlay</li>
+            <li><kbd>P</kbd> &mdash; Highlight nearby pickups</li>
+            <li><kbd>O</kbd> &mdash; Player indicator boxes</li>
+            <li><kbd>L</kbd> &mdash; Light / dark mode</li>
+            <li><kbd>?</kbd> &mdash; Tile debug hover</li>
+          </ul>
+          <h3>Mouse</h3>
+          <ul>
+            <li><strong>Left-click</strong> &mdash; Fire weapon / pick up / use item</li>
+            <li><strong>Right-click</strong> &mdash; Walk toward tile</li>
+          </ul>
+        </div>
+        <div id="help-modal-nav">
+          <button id="help-prev" disabled>&larr; Prev</button>
+          <span id="help-page-num">1 / 2</span>
+          <button id="help-next">Next &rarr;</button>
         </div>
       </div>
     </div>
