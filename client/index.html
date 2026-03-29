@@ -273,6 +273,7 @@
       transition: background 0.1s, border-color 0.1s;
     }
     #chat-send:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+    #chat-send:focus, #chat-send:active { outline: none; border-color: #b8842a; }
 
     /* ── Action Cards ── */
     #action-cards {
@@ -299,7 +300,9 @@
     .card-badge {
       position: absolute;
       top: 3px;
-      left: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: nowrap;
       font-size: 8px;
       font-weight: bold;
       letter-spacing: 0.5px;
@@ -308,7 +311,7 @@
       line-height: 1.4;
     }
     .lmb, .rmb { background: #7a5a10; color: #ffc; }
-    .action-card canvas { margin-top: 14px; display: block; }
+    .action-card canvas { margin-top: 22px; display: block; }
     #active-item-name, .card-label {
       font-size: 9px;
       color: #888;
@@ -339,7 +342,7 @@
       position: relative;
       width: 32px;
       height: 32px;
-      margin-top: 14px;
+      margin-top: 22px;
     }
     .active-item-wrap canvas { margin-top: 0; display: block; }
     .active-count {
@@ -495,6 +498,7 @@
       transition: background 0.1s, border-color 0.1s;
     }
     #leave-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+    #leave-btn:focus, #leave-btn:active { outline: none; border-color: #b8842a; }
 
     #respawn-btn {
       background: #1e1910; border: 1px solid #52380e; color: #b8842a;
@@ -502,6 +506,7 @@
       transition: background 0.1s, border-color 0.1s; width: 100%;
     }
     #respawn-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+    #respawn-btn:focus, #respawn-btn:active { outline: none; border-color: #b8842a; }
     #respawn-btn:disabled { opacity: 0.4; cursor: default; }
 
     #help-btn {
@@ -510,6 +515,7 @@
       transition: background 0.1s, border-color 0.1s; width: 100%;
     }
     #help-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+    #help-btn:focus, #help-btn:active { outline: none; border-color: #b8842a; }
 
     /* Help modal */
     #help-modal {
@@ -618,7 +624,7 @@
       <div id="player-list-panel">
         <div id="action-cards">
           <div class="action-card" id="card-use">
-            <span class="card-badge lmb">LMB</span>
+            <span class="card-badge lmb">LEFT CLICK</span>
             <div class="active-item-wrap">
               <canvas id="active-item-icon" width="32" height="32"></canvas>
               <span id="active-item-count" class="active-count"></span>
@@ -626,7 +632,7 @@
             <div class="card-text-wrap"><span id="active-item-name">holding nothing</span></div>
           </div>
           <div class="action-card" id="card-move">
-            <span class="card-badge rmb">RMB</span>
+            <span class="card-badge rmb">RIGHT CLICK</span>
             <canvas id="move-icon" width="32" height="32"></canvas>
             <span class="card-label">MOVE</span>
           </div>

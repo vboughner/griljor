@@ -1,34 +1,47 @@
-import movexbm from '../../pipeline/bit/movemark?raw';
-
 const SLOT_W = 32;
 const SLOT_H = 32;
 
-function parseXbmBytes(raw: string): number[] {
-  const match = raw.match(/\{([\s\S]*)\}/);
-  if (!match) throw new Error('Invalid XBM');
-  return match[1]
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => /^0x/i.test(s))
-    .map((s) => parseInt(s, 16));
-}
-
 function drawMoveIcon(canvas: HTMLCanvasElement): void {
-  const bytes = parseXbmBytes(movexbm);
   const ctx = canvas.getContext('2d')!;
-  const img = ctx.createImageData(SLOT_W, SLOT_H);
-  for (let y = 0; y < SLOT_H; y++) {
-    for (let x = 0; x < SLOT_W; x++) {
-      const idx = y * SLOT_W + x;
-      const isSet = (bytes[idx >> 3] >> (idx & 7)) & 1;
-      const p = idx * 4;
-      img.data[p] = 210;
-      img.data[p + 1] = 170;
-      img.data[p + 2] = 60;
-      img.data[p + 3] = isSet ? 0 : 200;
-    }
+  const cx = SLOT_W / 2;
+  const cy = SLOT_H / 2;
+  const color = '#d2aa3c';
+  const dimColor = '#8a7028';
+
+  ctx.clearRect(0, 0, SLOT_W, SLOT_H);
+
+  // Draw an arrow from center outward
+  function drawArrow(angle: number, len: number, dim: boolean): void {
+    const rad = (angle * Math.PI) / 180;
+    const ex = cx + Math.cos(rad) * len;
+    const ey = cy + Math.sin(rad) * len;
+    const headLen = 4;
+    ctx.strokeStyle = dim ? dimColor : color;
+    ctx.lineWidth = dim ? 1 : 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(ex, ey);
+    // Arrowhead
+    ctx.lineTo(ex - headLen * Math.cos(rad - 0.4), ey - headLen * Math.sin(rad - 0.4));
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - headLen * Math.cos(rad + 0.4), ey - headLen * Math.sin(rad + 0.4));
+    ctx.stroke();
   }
-  ctx.putImageData(img, 0, 0);
+
+  // Cardinal directions (N, E, S, W) — brighter, longer
+  for (const angle of [270, 0, 90, 180]) {
+    drawArrow(angle, 13, false);
+  }
+  // Diagonal directions (NE, SE, SW, NW) — dimmer, shorter
+  for (const angle of [315, 45, 135, 225]) {
+    drawArrow(angle, 10, true);
+  }
+
+  // Center dot
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 1.5, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 export function initActionCards(): void {
