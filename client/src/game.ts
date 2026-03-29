@@ -497,9 +497,9 @@ export class Game {
     };
   }
 
-  /** Keep hand-item state in sync so click routing can check opens field. */
-  setHands(left: InventoryItem | null): void {
-    this.leftHand = left;
+  /** Sync active hand for click routing (opens, health, weapon checks). */
+  setActiveHand(item: InventoryItem | null): void {
+    this.leftHand = item;
   }
 
   /** Update local player HP for movement speed penalty calculation. */

@@ -143,6 +143,13 @@ function initHandTooltips(): void {
     showTooltip(buildItemHtml(obj, item), (e as MouseEvent).clientX, (e as MouseEvent).clientY);
   });
   card.addEventListener('mouseleave', () => hideTooltip());
+  card.addEventListener('click', () => {
+    if (currentLeftHand && invNetwork) invNetwork.sendDrop('active');
+  });
+  card.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (currentLeftHand && invNetwork) invNetwork.sendDrop('active');
+  });
 }
 
 async function getItemImgData(item: InventoryItem): Promise<ImageData | null> {
@@ -181,18 +188,6 @@ async function updateInventoryPanel(msg: {
   const leftHandName = leftHandObj?.name ?? null;
   const leftHandCount = leftHandObj?.numbered && msg.leftHand ? msg.leftHand.quantity : null;
   setActiveItem(leftImg, leftHandName, leftHandCount);
-
-  // Update active item card click handler (drop on left/right click)
-  const cardUse = document.getElementById('card-use');
-  if (cardUse) {
-    (cardUse as HTMLElement).onclick = () => {
-      if (msg.leftHand && invNetwork) invNetwork.sendDrop('active');
-    };
-    (cardUse as HTMLElement).oncontextmenu = (e) => {
-      e.preventDefault();
-      if (msg.leftHand && invNetwork) invNetwork.sendDrop('active');
-    };
-  }
 
   // Update each inventory slot
   const grid = document.getElementById('inv-grid');
@@ -857,7 +852,7 @@ async function main(): Promise<void> {
 
       network.onInventory = (msg) => {
         void updateInventoryPanel(msg);
-        game.setHands(msg.leftHand);
+        game.setActiveHand(msg.leftHand);
         game.setWeight(msg.currentWeight, msg.maxWeight);
       };
 

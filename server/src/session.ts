@@ -767,11 +767,7 @@ export class GameSession {
 
   // ── Combat ────────────────────────────────────────────────────────────────
 
-  /**
-   * When the active weapon has 0 charges, scan inventory[0..N] left-to-right
-   * for compatible ammo (ammoObj.charges & weaponObj.type !== 0) and transfer
-   * charges into the weapon. Consumes ammo items when depleted.
-   */
+  /** Auto-reload weapon from compatible ammo in inventory. */
   private tryReloadFromInventory(player: Player): void {
     const weaponItem = player.leftHand;
     if (!weaponItem) return;
