@@ -487,7 +487,7 @@
     #player-name { width: 160px; padding-top: 6px; padding-bottom: 6px; font-size: 15px; height: 32px; background: #1e1e1e; border-color: #52380e; }
     #player-name:hover { border-color: #7a5220; }
     #player-name:focus, #player-name:active { outline: none; border-color: #b8842a; }
-    #game-btns { display: flex; flex-direction: column; gap: 8px; flex: 1; justify-content: center; }
+    #game-btns { display: flex; flex-direction: column; gap: 8px; flex: 0 0 80px; justify-content: center; }
     #game-btns #leave-btn { width: 100%; }
     #leave-btn {
       background: #1e1910; border: 1px solid #52380e; color: #b8842a;
@@ -631,9 +631,9 @@
             <span class="card-label">MOVE</span>
           </div>
           <div id="game-btns">
-            <button id="respawn-btn">Respawn</button>
-            <button id="leave-btn">Leave Game</button>
             <button id="help-btn">Help</button>
+            <button id="respawn-btn">Respawn</button>
+            <button id="leave-btn">Leave</button>
           </div>
         </div>
         <div id="stats-panel">
@@ -667,13 +667,15 @@
         <div id="help-page-1" class="help-page">
           <h2>How to Play</h2>
           <h3>Movement</h3>
-          <p>Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys to move. Diagonal keys: <kbd>Q</kbd><kbd>E</kbd><kbd>Z</kbd><kbd>C</kbd>. Right-click a tile to walk toward it.</p>
+          <p>Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or arrow keys to move. Right-click a tile to walk toward it.</p>
           <h3>Combat</h3>
-          <p>Left-click on the map to fire your weapon or use a held item. Pick up weapons from the ground to arm yourself.</p>
+          <p>Left-click on a weapon to pick it up and arm yourself. Left-click on the map to fire your weapon or use a held item.</p>
           <h3>Items</h3>
           <p>Press <kbd>G</kbd> to pick up an item at your feet (or left-click it). Press <kbd>B</kbd> to drop what you're holding. Click inventory slots to equip items.</p>
           <h3>Chat</h3>
           <p>Press <kbd>T</kbd> to type a message, <kbd>Enter</kbd> to send, <kbd>Escape</kbd> to cancel.</p>
+          <h3>Respawn &amp; Leave</h3>
+          <p>If you get trapped, click <strong>Respawn</strong> to return to a starting room. Click <strong>Leave</strong> to exit. Both will drop all your carried items.</p>
         </div>
         <div id="help-page-2" class="help-page" style="display:none">
           <h2>Keyboard Shortcuts</h2>
@@ -681,7 +683,7 @@
           <ul>
             <li><kbd>Q</kbd> <kbd>W</kbd> <kbd>E</kbd> &mdash; NW, North, NE</li>
             <li><kbd>A</kbd> &ensp;&bull;&ensp; <kbd>D</kbd> &mdash; West, East</li>
-            <li><kbd>Z</kbd> <kbd>S</kbd>/<kbd>X</kbd> <kbd>C</kbd> &mdash; SW, South, SE</li>
+            <li><kbd>Z</kbd> <kbd>S</kbd> <kbd>C</kbd> &mdash; SW, South, SE</li>
           </ul>
           <p>Arrow keys and numpad also work.</p>
           <h3>Items</h3>
@@ -694,7 +696,6 @@
             <li><kbd>V</kbd> &mdash; Fog of war overlay</li>
             <li><kbd>P</kbd> &mdash; Highlight nearby pickups</li>
             <li><kbd>O</kbd> &mdash; Player indicator boxes</li>
-            <li><kbd>L</kbd> &mdash; Light / dark mode</li>
             <li><kbd>?</kbd> &mdash; Tile debug hover</li>
           </ul>
           <h3>Mouse</h3>

@@ -1002,7 +1002,7 @@ async function main(): Promise<void> {
       }
       beforeStart?.();
       let secs = 5;
-      btn.textContent = `${activePrefix} ${secs}…`;
+      btn.textContent = `${activePrefix} ${secs}`;
       timer = setInterval(() => {
         secs--;
         if (secs <= 0) {
@@ -1010,7 +1010,7 @@ async function main(): Promise<void> {
           onConfirm();
           return;
         }
-        btn.textContent = `${activePrefix} ${secs}…`;
+        btn.textContent = `${activePrefix} ${secs}`;
       }, 1000);
     });
     return cancel;
@@ -1022,7 +1022,7 @@ async function main(): Promise<void> {
   const cancelRespawn = makeCountdownButton(
     respawnBtn,
     'Respawn',
-    'Respawn',
+    'Res',
     () => currentNetwork?.sendVoluntaryRespawn(),
     () => {
       cancelLeave();
@@ -1050,7 +1050,7 @@ async function main(): Promise<void> {
     refreshServerList();
   }
 
-  const cancelLeave = makeCountdownButton(leaveBtn, 'Leave Game', 'Leaving', doLeave, () =>
+  const cancelLeave = makeCountdownButton(leaveBtn, 'Leave', 'Leave', doLeave, () =>
     cancelRespawn(),
   );
 
