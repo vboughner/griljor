@@ -27,7 +27,7 @@ describe('cross-room grenades', () => {
   function giveGrenade(p: { ws: MockWebSocket }) {
     // Move to the grenade tile first so proximity enforcement allows the pickup
     p.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    p.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    p.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
   }
 
   it('sends MISSILE_START in next room when grenade crosses south border', () => {
@@ -42,7 +42,7 @@ describe('cross-room grenades', () => {
     bob.ws.flush();
 
     // Grenade range=4, from y=17: path y=18,19 (2 steps) → hits south border with 2 remaining
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 25 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 25 });
     vi.advanceTimersByTime(2 * GRENADE_MPS + 10);
 
     const starts = bob.ws.messagesOfType('MISSILE_START');
@@ -59,7 +59,7 @@ describe('cross-room grenades', () => {
     place(bob, 1, 10, 1);
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 25 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 25 });
     // Grenade travel (2 tiles to border) + continuation (2 remaining) + explosion ray travel
     vi.advanceTimersByTime(2 * GRENADE_MPS + 2 * GRENADE_MPS + 4 * EXPLOSION_MPS + 50);
 
@@ -77,7 +77,7 @@ describe('cross-room grenades', () => {
     bob.ws.flush();
 
     // range=4 from y=5 → path stops at y=9, nowhere near y=19
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 9 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 9 });
     vi.advanceTimersByTime(4 * GRENADE_MPS + 8 * EXPLOSION_MPS + 50);
 
     expect(bob.ws.messagesOfType('MISSILE_START')).toHaveLength(0);
@@ -92,13 +92,13 @@ describe('cross-room grenades', () => {
     const bob = joinPlayer(s2, 'Bob', 'b', 1);
     // Alice at y=17: grenade hits south border after 2 steps but won't cross (no exit)
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
     place(alice, 0, 10, 17);
     place(bob, 1, 10, 1);
     bob.ws.flush();
 
     // Just verify no cross-room by checking bob gets no MISSILE_START
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 25 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 25 });
     vi.advanceTimersByTime(2 * GRENADE_MPS + 8 * EXPLOSION_MPS + 50);
 
     expect(bob.ws.messagesOfType('MISSILE_START')).toHaveLength(0);
@@ -117,7 +117,7 @@ describe('cross-room grenades', () => {
     bob.ws.flush();
 
     // Grenade flies from y=15 → y=16,17,18,19 (hits Charlie at border)
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 25 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 25 });
     vi.advanceTimersByTime(4 * GRENADE_MPS + 8 * EXPLOSION_MPS + 50);
 
     // Charlie takes direct hit damage
@@ -135,7 +135,7 @@ describe('cross-room grenades', () => {
     bob.ws.flush();
 
     // Diagonal SE: dx=1,dy=1 → getRoomExit returns -1
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 19, targetY: 19 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 19, targetY: 19 });
     vi.advanceTimersByTime(4 * GRENADE_MPS + 8 * EXPLOSION_MPS + 50);
 
     expect(bob.ws.messagesOfType('MISSILE_START')).toHaveLength(0);

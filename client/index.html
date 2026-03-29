@@ -274,34 +274,83 @@
     }
     #chat-send:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
 
-    /* ── Mouse widget ── */
-    #mouse-widget { margin-bottom: 10px; display: flex; flex-direction: row; align-items: flex-end; gap: 10px; }
-    #mouse-bitmap-wrap {
+    /* ── Action Cards ── */
+    #action-cards {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      align-items: stretch;
+    }
+    .action-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 6px 4px 5px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 3px;
       position: relative;
-      display: inline-block;
-      background: #111;
+      min-width: 0;
+      min-height: 87px;
     }
-    #mouse-bitmap { display: block; border: none; }
-    #hand-left-canvas, #hand-middle-canvas, #hand-right-canvas {
+    #card-use  { border-color: #7a5a10; box-shadow: inset 0 0 8px #3a2a0040; }
+    #card-move { border-color: #7a5a10; box-shadow: inset 0 0 8px #3a2a0040; }
+    .card-badge {
       position: absolute;
-      top: 18px;
-    }
-    #hand-left-canvas   { left:  8px; }
-    #hand-middle-canvas { left: 48px; }
-    #hand-right-canvas  { left: 88px; }
-    .hand-count {
-      position: absolute;
-      top: 40px;
-      font-size: 10px;
+      top: 3px;
+      left: 4px;
+      font-size: 8px;
       font-weight: bold;
-      color: #ffb300;
-      text-shadow: 0 0 3px #000, 1px 1px 0 #000;
-      z-index: 10;
+      letter-spacing: 0.5px;
+      padding: 1px 3px;
+      border-radius: 2px;
+      line-height: 1.4;
+    }
+    .lmb, .rmb { background: #7a5a10; color: #ffc; }
+    .action-card canvas { margin-top: 14px; display: block; }
+    #active-item-name, .card-label {
+      font-size: 9px;
+      color: #888;
+      text-align: center;
+      margin-top: 5px;
+      max-width: 80px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.3;
+    }
+    .card-label, .card-text-wrap {
+      color: #bba060;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #active-item-name {
+      color: #bba060;
+      word-break: break-word;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+    #hand-left-count { display: none; }
+    .active-item-wrap {
+      position: relative;
+      width: 32px;
+      height: 32px;
+      margin-top: 14px;
+    }
+    .active-item-wrap canvas { margin-top: 0; display: block; }
+    .active-count {
+      position: absolute;
+      bottom: 1px;
+      right: 2px;
+      font-size: 9px;
+      color: #ff0;
       pointer-events: none;
       line-height: 1;
     }
-    #hand-left-count   { right: 90px; }
-    #hand-middle-count { right: 50px; }
 
     /* ── Player list ── */
     #player-list-panel {
@@ -310,7 +359,7 @@
       display: flex;
       flex-direction: column;
       gap: 6px;
-      padding-top: 115px;
+      padding-top: 112px;
     }
     #player-list {
       flex: 1;
@@ -438,7 +487,7 @@
     #player-name { width: 160px; padding-top: 6px; padding-bottom: 6px; font-size: 15px; height: 32px; background: #1e1e1e; border-color: #52380e; }
     #player-name:hover { border-color: #7a5220; }
     #player-name:focus, #player-name:active { outline: none; border-color: #b8842a; }
-    #game-btns { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+    #game-btns { display: flex; flex-direction: column; gap: 8px; flex: 1; justify-content: center; }
     #game-btns #leave-btn { width: 100%; }
     #leave-btn {
       background: #1e1910; border: 1px solid #52380e; color: #b8842a;
@@ -522,14 +571,19 @@
         <div id="status"></div>
       </div>
       <div id="player-list-panel">
-        <div id="mouse-widget">
-          <div id="mouse-bitmap-wrap">
-            <canvas id="mouse-bitmap" width="128" height="128"></canvas>
-            <canvas id="hand-left-canvas"   width="32" height="32"></canvas>
-            <canvas id="hand-middle-canvas" width="32" height="32"></canvas>
-            <canvas id="hand-right-canvas"  width="32" height="32"></canvas>
-            <span id="hand-left-count"   class="hand-count"></span>
-            <span id="hand-middle-count" class="hand-count"></span>
+        <div id="action-cards">
+          <div class="action-card" id="card-use">
+            <span class="card-badge lmb">LMB</span>
+            <div class="active-item-wrap">
+              <canvas id="active-item-icon" width="32" height="32"></canvas>
+              <span id="active-item-count" class="active-count"></span>
+            </div>
+            <div class="card-text-wrap"><span id="active-item-name">holding nothing</span></div>
+          </div>
+          <div class="action-card" id="card-move">
+            <span class="card-badge rmb">RMB</span>
+            <canvas id="move-icon" width="32" height="32"></canvas>
+            <span class="card-label">MOVE</span>
           </div>
           <div id="game-btns">
             <button id="respawn-btn">Respawn</button>

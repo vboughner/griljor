@@ -15,7 +15,7 @@ npm run test:server    # server only
 npm run test:client    # client only
 ```
 
-**268 tests total** (182 server, 86 client) as of Phase 18 + pickup-only-nearby.
+**270 tests total** (184 server, 86 client) as of single-hand refactor.
 
 ### Server test layout (`server/src/__tests__/`)
 
@@ -34,8 +34,8 @@ npm run test:client    # client only
 |------|----------|
 | `join-leave.test.ts` | ACCEPTED, player count, duplicate name rejection, PLAYER_INFO broadcast |
 | `chat.test.ts` | Broadcast messages, chat history for new joiners, profanity → GM scold, direct messages |
-| `inventory.test.ts` | Pickup (hand/inventory overflow), ITEM_REMOVED, drop, INV_SWAP, ITEMS_SYNC |
-| `combat.test.ts` | MISSILE_START/END, delayed damage, YOU_DIED, kill/death counts, respawn |
+| `inventory.test.ts` | Pickup (active hand/inventory overflow), ITEM_REMOVED, drop, INV_SWAP (single hand), ITEMS_SYNC |
+| `combat.test.ts` | MISSILE_START/END, delayed damage, YOU_DIED, kill/death counts, respawn, ammo auto-reload from inventory, slot priority |
 | `fire-rate.test.ts` | Cooldown enforcement: second shot within window ignored; allowed after cooldown elapses |
 | `regen.test.ts` | 1 HP/tick regen, PLAYER_HEALTH broadcast, no over-heal, dead players not healed |
 | `consumables.test.ts` | Heal on USE_ITEM, PLAYER_HEAL broadcast, lost item removal, full-HP guard, burden decrement, auto-reload from inventory, PLAYER_HIT broadcast, dead-player damage guard, lost weapon consumed on fire, pickup blocked by occupying player |
@@ -341,7 +341,7 @@ No bird's-eye map feature existed.
 
 ## Phase 3 — Inventory System
 
-**Goal**: Server-authoritative inventory — 35 slots + 2 hand slots,
+**Goal**: Server-authoritative inventory — 21 slots + 1 active hand slot,
 weight limits, floor items, pickup/drop, multiplayer sync.
 
 ### Data Model
@@ -352,8 +352,8 @@ is 1 for non-numbered items and the charge count for `numbered` items
 (e.g. a hand gun with 13 rounds).
 
 Each player on the server holds:
-- `leftHand / rightHand: InventoryItem | null`
-- `inventory: Array<InventoryItem | null>` — 35 slots (`INV_SIZE = 35`)
+- `leftHand: InventoryItem | null` — the single active hand
+- `inventory: Array<InventoryItem | null>` — 21 slots (`INV_SIZE = 21`)
 - `currentWeight: number` — sum of `weight * quantity` for all held items
 - `MAX_WEIGHT = 150` (flat limit, no leveling system)
 
@@ -362,10 +362,10 @@ initialized from each room's `recorded_objects` filtered by `obj.takeable`.
 
 ### New Protocol Messages
 
-**C→S**: `PICKUP { x, y, hand }`, `DROP { source }`, `INV_SWAP { slot, hand }`
+**C→S**: `PICKUP { x, y }`, `DROP { source: 'active' | number }`, `INV_SWAP { slot }`
 
 **S→C**: `ITEM_REMOVED { room, x, y }`, `ITEM_ADDED { room, x, y, item }`,
-`YOUR_INVENTORY { leftHand, rightHand, inventory, currentWeight, maxWeight }`,
+`YOUR_INVENTORY { leftHand, inventory, currentWeight, maxWeight }`,
 `ITEMS_SYNC { items[] }` (sent once to new joiners to replace local defaults)
 
 `YOUR_INVENTORY` is only sent to the acting player. `ITEM_REMOVED` /
@@ -374,20 +374,21 @@ initialized from each room's `recorded_objects` filtered by `obj.takeable`.
 ### Server Handler Details (`session.ts`)
 
 **PICKUP**: checks item exists at `(x,y)` in player's current room, that
-weight won't exceed limit, and that the target hand or inventory has a free
+weight won't exceed limit, and that the active hand or inventory has a free
 slot. Places item in hand if empty, else first free inventory slot. Rejects
 with a GM chat message if overweight or all slots full.
 
-**DROP**: removes item from hand/slot, finds the nearest free tile via
-`nearbyFreeTile`, and places the item there. See `nearbyFreeTile` below for
-the full algorithm. Items with nowhere to go are lost (logged server-side).
+**DROP**: removes item from active hand (`source: 'active'`) or inventory
+slot (`source: number`), finds the nearest free tile via `nearbyFreeTile`,
+and places the item there. Items with nowhere to go are lost (logged server-side).
 
-**INV_SWAP**: swaps a named hand slot with an inventory slot in-place.
+**INV_SWAP**: swaps the active hand with an inventory slot in-place.
 No weight check needed — total weight doesn't change.
 
-**onLeave**: iterates all non-null hand + inventory slots and drops each
-item to the floor near the player's last position, broadcasting `ITEM_ADDED`
-for each. This restores items to the world when a player disconnects.
+**onLeave**: iterates the active hand and all non-null inventory slots,
+dropping each item to the floor near the player's last position,
+broadcasting `ITEM_ADDED` for each. This restores items to the world
+when a player disconnects.
 
 ### Client Side
 
@@ -399,16 +400,21 @@ a layer between the background and players.
 **`game.ts`**: `floorItems: Map<roomIdx, Map<"x,y", InventoryItem>>` is
 initialized from the map file on startup and then kept in sync by the
 network callbacks. `onItemsSync` replaces the local state entirely (server
-is authoritative). Canvas left-click on a floor item tile → `sendPickup`
-(right hand); middle-click → left hand. Right-click retains its original
-"move toward" behavior.
+is authoritative). Canvas left-click on a floor item tile → `sendPickup`.
+Right-click → move toward clicked tile.
 
-**`main.ts`** / **`index.html`**: 35-slot CSS grid (`7 col × 5 row`,
+**`main.ts`** / **`index.html`**: 21-slot CSS grid (`7 col × 3 row`,
 34×34 px cells with 32×32 canvas children). Weight displayed as
-`{current} / {max}`. Click on occupied slot → `sendDrop(slotIndex)`.
-Right-click → `sendInvSwap(slot, 'right')`. Click on hand-slot canvases
-→ `sendDrop('left'|'right')`. Item bitmaps drawn via `loadMaskedSprite`
-/ `loadSprite`; charge count overlaid in yellow for `numbered` items.
+`{current} / {max}`. Left-click on inventory cell → `sendInvSwap(slot)`
+(swap with active hand). Right-click on inventory cell → `sendDrop(slot)`.
+Item bitmaps drawn via `loadMaskedSprite` / `loadSprite`; charge count
+overlaid in yellow for `numbered` items.
+
+**Action cards** (`mouse-widget.ts`): Two styled cards replace the old
+XBM mouse widget. The LMB card shows the active hand item icon, name
+(2-line wrap), and ammo count for `numbered` items. The RMB card shows a
+move icon rendered from the original `movemark` XBM. Clicking/right-clicking
+the LMB card drops the active hand item.
 
 ### Key Edge Cases
 
@@ -440,22 +446,21 @@ transform) and processes both layers in one pass:
 - Inside mask + dark bitmap pixel → foreground color (255 dark mode, 0 light mode)
 - Inside mask + light bitmap pixel → background color (0 dark mode, 255 light mode)
 
-### Mouse Slot Mapping and Hand Icons
+### Mouse Controls (Single Active Hand)
 
-The original code had left/middle mouse buttons swapped relative to the
-on-screen mouse graphic (left button activated the middle box). Fixed in
-`game.ts`: `e.button === 0` = left hand, `e.button === 1` = right hand.
+With the single active hand system, mouse controls are simplified:
+- Left click on canvas → fire weapon / pick up item / use item
+- Right click on canvas → move toward tile
+- Middle click is unused
 
-Hand slot canvases previously showed text labels. Fixed in
-`mouse-widget.ts`: `setHandItem` now accepts `ImageData | null` and
-renders the item sprite via `OffscreenCanvas → drawImage`.
+`mouse-widget.ts` was rewritten as action card logic:
+`initActionCards()` draws the move icon, `setActiveItem(imgData, name, count)`
+updates the LMB card's icon, name label, and ammo count overlay.
 
 ### Inventory Cell Interactions
 
-Changed from `click` to `mousedown` event (required for middle button
-detection). Mapping:
-- Left click on inv cell → swap with left hand
-- Middle click on inv cell → swap with right hand
+Changed from `click` to `mousedown` event. Mapping:
+- Left click on inv cell → swap with active hand
 - Right click on inv cell → drop item (via `contextmenu`)
 
 ### Item Tooltips (`tooltip.ts`)
@@ -582,7 +587,7 @@ death/respawn, and XP/level progression.
 
 ### Protocol Messages
 
-**C→S**: `FIRE_WEAPON { hand, targetX, targetY }`
+**C→S**: `FIRE_WEAPON { targetX, targetY }`
 
 **S→C**: `YOUR_STATS { hp, maxHp, power, maxPower, xp, level }`,
 `PLAYER_HEALTH { id, hp, maxHp }`,
@@ -593,9 +598,8 @@ death/respawn, and XP/level progression.
 
 ### Weapon Firing (`session.ts :: onFireWeapon`)
 
-Left/middle canvas click sends `FIRE_WEAPON` with the target tile. The
-server:
-1. Checks the hand item exists and has `weapon: true`.
+Left canvas click sends `FIRE_WEAPON` with the target tile. The server:
+1. Checks the active hand item exists and has `weapon: true`.
 2. For `numbered` items (guns, staves), requires `quantity > 0` and
    decrements it; clears the hand slot if it hits 0.
 3. Looks up damage: `obj.damage ?? bulletObj?.damage ?? 10` where
@@ -686,7 +690,7 @@ simplification is safe for the current map set.
 
 ### Protocol
 
-**C→S**: `USE_ITEM { hand, targetX, targetY }`
+**C→S**: `USE_ITEM { targetX, targetY }`
 
 **S→C**: `ROOM_OBJECT_CHANGED { room, x, y, newType }`
 
@@ -1067,24 +1071,22 @@ fallback is 1. Maps with pre-placed guns carry the correct detail value
 4. Sync: `sendInventory(player)` is called after every decrement so the
    client immediately sees the updated count.
 
-### Client — Hand Slot Charge Badges
+### Client — Active Hand Charge Badge
 
-**Previously missing**: inventory grid cells already showed a yellow
-charge count badge (`inv-count` span) for numbered items, but the hand
-slot canvases in the mouse widget had no equivalent display.
+The active hand's charge count is displayed in the LMB action card via
+`setActiveItem(imgData, name, count)`. The count is shown in a
+`#active-item-count` span positioned at bottom-right of the icon
+(same style as inventory cell `.inv-count`). `updateInventoryPanel`
+passes `quantity` for `numbered` items, `null` otherwise.
 
-**Added** (`index.html` + `main.ts`):
-- Two `<span>` elements (`#hand-left-count`, `#hand-middle-count`) added
-  inside `#mouse-bitmap-wrap`, positioned absolutely at the bottom of each
-  hand slot canvas (same position logic as `inv-count`).
-- `.hand-count` CSS class: `position: absolute; top: 40px; font-size: 9px;
-  color: #ff0; pointer-events: none; line-height: 1`. Specific slots are
-  right-aligned within their canvas via `right: 90px` (left slot) and
-  `right: 50px` (middle slot) — these values place the text flush with the
-  right edge of each 32×32 canvas inside the 128-wide wrapper.
-- `updateInventoryPanel` sets `textContent` to the quantity string when
-  `obj.numbered` is true for the hand item, or `''` when the slot is empty
-  or holds a non-numbered item. Clears automatically on item removal.
+### Ammo Auto-Reload from Inventory
+
+When a weapon empties (quantity hits 0), `tryReloadFromInventory(player)`
+scans `inventory[0..N]` left-to-right for compatible ammo
+(`ammoObj.charges & weaponObj.type !== 0`) and transfers charges up to
+the weapon's `capacity`. Partially-consumed ammo items remain in their
+slot; fully-depleted ones are removed. This replaced the old two-hand
+`tryReloadFromOtherHand` / `tryReloadWeaponFromAmmo` methods.
 
 ---
 
@@ -1797,9 +1799,9 @@ broadcasts, hit marker animations, and spurious double-kill events.
 all players in the session. If any player other than the requester occupies
 `(msg.x, msg.y)` in the same room, the pickup is silently rejected.
 
-**Client** (`game.ts`): the left/middle click handler now checks whether the
-target tile is occupied by a remote player (`otherPlayers` map). If occupied,
-the pickup branch is skipped and the click falls through to the fire-weapon
+**Client** (`game.ts`): the left-click handler checks whether the target
+tile is occupied by a remote player (`otherPlayers` map). If occupied, the
+pickup branch is skipped and the click falls through to the fire-weapon
 branch instead. This means clicking on a player standing on an item correctly
 fires a weapon at them rather than attempting a pickup.
 
@@ -1828,11 +1830,11 @@ not `numbered`, so they were healed but never removed. Added an
 Previously consuming a held healing item required clicking on the player's
 own tile. The click handler now uses this priority order:
 
-1. Floor item at target tile AND tile not occupied by another player → `sendPickup`
-2. Hand item has `health < 0` → `sendUseItem(hand, player.x, player.y)`
-   (always targets self regardless of where the player clicked)
-3. Hand item has `opens > 0` AND target is Chebyshev-adjacent → `sendUseItem` (door)
-4. Target differs from player tile → `sendFireWeapon`
+1. Active hand item has `opens` AND adjacent door tile → `sendUseItem(tx, ty)` (door)
+2. Floor item at target tile AND tile not occupied by another player → `sendPickup(tx, ty)`
+3. Active hand item has `health < 0` → `sendUseItem(px, py)` (consume on self)
+4. Active hand item has `opens` AND Chebyshev-adjacent → `sendUseItem(tx, ty)` (door)
+5. Target differs from player tile → `sendFireWeapon(tx, ty)`
 
 The consumable branch was intentionally placed below pickup so that clicking
 on an item on the floor picks it up rather than consuming the held item.

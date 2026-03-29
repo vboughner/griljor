@@ -20,9 +20,9 @@ describe('health regeneration', () => {
   // for the 1-second regen interval to fire.  Bob must be at (2,1) before calling.
   function hitBobOnce(alice: ReturnType<typeof joinPlayer>) {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
     vi.advanceTimersByTime(500); // missile lands; no regen tick yet
   }
 
@@ -87,10 +87,10 @@ describe('health regeneration', () => {
     // Kill Bob: sword does 30 dmg; each shot advances 900ms (> 850ms cooldown, < 1000ms regen).
     // After 4 shots × 30 = 120 damage, Bob is dead.
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(900); // missile lands; no regen tick (< 1000ms between ticks)
     }
 

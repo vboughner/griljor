@@ -18,7 +18,7 @@ describe('grenade explosion', () => {
   // Move player to grenade tile (3,3) and pick it up into left hand
   function armWithGrenade(player: TestPlayer) {
     player.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    player.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    player.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
   }
 
   // Alice at (10,1), fires east at (19,1).
@@ -36,7 +36,7 @@ describe('grenade explosion', () => {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 19, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 19, targetY: 1 });
 
     // Before travel resolves: only the primary missile has started
     expect(alice.ws.messagesOfType('MISSILE_START').length).toBe(1);
@@ -55,7 +55,7 @@ describe('grenade explosion', () => {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 19, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 19, targetY: 1 });
     vi.advanceTimersByTime(1000);
 
     const explosionMissiles = alice.ws
@@ -71,7 +71,7 @@ describe('grenade explosion', () => {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 19, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 19, targetY: 1 });
 
     // Advance past grenade travel (756ms) + explosion travel (284ms) = 1040ms
     vi.advanceTimersByTime(2000);
@@ -92,7 +92,7 @@ describe('grenade explosion', () => {
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 15, y: 1 });
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 19, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 19, targetY: 1 });
 
     // Advance past grenade + explosion travel
     vi.advanceTimersByTime(2000);
@@ -113,11 +113,11 @@ describe('grenade explosion', () => {
     const bob = joinPlayer(s, 'Bob');
 
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 1 });
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 15, y: 1 });
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 19, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 19, targetY: 1 });
     vi.advanceTimersByTime(2000);
 
     const youDied = bob.ws.lastOfType('YOU_DIED');
@@ -135,11 +135,11 @@ describe('grenade explosion', () => {
 
     const alice = joinPlayer(s, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 19, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 19, targetY: 1 });
     // Flush the primary MISSILE_START so only explosion rays are counted below
     alice.ws.flush();
 

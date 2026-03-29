@@ -95,7 +95,6 @@ export class Game {
 
   // hand items (kept in sync via setHands, used for click routing)
   private leftHand: InventoryItem | null = null;
-  private rightHand: InventoryItem | null = null;
 
   // local player HP for speed penalty
   private myHp = 100;
@@ -235,22 +234,12 @@ export class Game {
       // Item actions
       if (e.key === 's') {
         e.preventDefault();
-        if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'left');
-        return;
-      }
-      if (e.key === 'S') {
-        e.preventDefault();
-        if (!this.isDead) this.network?.sendPickup(this.px, this.py, 'right');
+        if (!this.isDead) this.network?.sendPickup(this.px, this.py);
         return;
       }
       if (e.key === 'Z') {
         e.preventDefault();
-        if (!this.isDead) this.network?.sendDrop('left');
-        return;
-      }
-      if (e.key === 'X') {
-        e.preventDefault();
-        if (!this.isDead) this.network?.sendDrop('right');
+        if (!this.isDead) this.network?.sendDrop('active');
         return;
       }
     };
@@ -264,24 +253,21 @@ export class Game {
       const tx = Math.floor((e.clientX - rect.left) / TILE) - 1;
       const ty = Math.floor((e.clientY - rect.top) / TILE) - 1;
 
-      // Border click: right-click walks toward exit; left/middle fires into next room
+      // Border click: right-click walks toward exit; left fires into next room
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
         if (this.isDead) return;
         if (e.button === 2) {
           this.startMovingTo(tx, ty);
-        } else if (e.button === 0 || e.button === 1) {
-          const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
-          this.network?.sendFireWeapon(hand, tx, ty);
+        } else if (e.button === 0) {
+          this.network?.sendFireWeapon(tx, ty);
         }
         return;
       }
 
-      if (e.button === 0 || e.button === 1) {
-        // Left/middle: pick up, use opener, or fire weapon
+      if (e.button === 0) {
+        // Left-click: pick up, use opener, or fire weapon
         if (this.isDead) return;
-        const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
-        const handItem = hand === 'left' ? this.leftHand : this.rightHand;
-        const handObj = handItem ? this.objects[handItem.type] : null;
+        const handObj = this.leftHand ? this.objects[this.leftHand.type] : null;
         const key = `${tx},${ty}`;
         const tileOccupied = [...this.otherPlayers.values()].some(
           (p) => p.room === this.currentRoom && p.x === tx && p.y === ty,
@@ -295,17 +281,17 @@ export class Game {
           );
         if (handObj?.opens && hasDoorAtTile) {
           // Key in hand, adjacent door — use key even if a floor item is also on this tile
-          this.network?.sendUseItem(hand, tx, ty);
+          this.network?.sendUseItem(tx, ty);
         } else if (!tileOccupied && this.floorItems.get(this.currentRoom)?.has(key)) {
-          this.network?.sendPickup(tx, ty, hand);
+          this.network?.sendPickup(tx, ty);
         } else if ((handObj?.health ?? 0) < 0) {
           // Consumable: use on self regardless of where the player clicked
-          this.network?.sendUseItem(hand, this.px, this.py);
+          this.network?.sendUseItem(this.px, this.py);
         } else if (handObj?.opens && dist === 1) {
           // Holding an opener adjacent to target tile — use it (open/close door)
-          this.network?.sendUseItem(hand, tx, ty);
+          this.network?.sendUseItem(tx, ty);
         } else if (tx !== this.px || ty !== this.py) {
-          this.network?.sendFireWeapon(hand, tx, ty);
+          this.network?.sendFireWeapon(tx, ty);
         }
         return;
       }
@@ -511,10 +497,9 @@ export class Game {
     };
   }
 
-  /** Keep hand-item state in sync so click routing can check opens field. */
-  setHands(left: InventoryItem | null, right: InventoryItem | null): void {
-    this.leftHand = left;
-    this.rightHand = right;
+  /** Sync active hand for click routing (opens, health, weapon checks). */
+  setActiveHand(item: InventoryItem | null): void {
+    this.leftHand = item;
   }
 
   /** Update local player HP for movement speed penalty calculation. */

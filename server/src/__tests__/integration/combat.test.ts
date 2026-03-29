@@ -78,7 +78,7 @@ describe('combat', () => {
   // Pick up the sword at (5,5) into Alice's left hand
   function armAlice(alice: TestPlayer) {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 });
   }
 
   it('firing a weapon sends MISSILE_START to all players in the room', () => {
@@ -91,7 +91,7 @@ describe('combat', () => {
     alice.ws.flush();
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     expect(alice.ws.messagesOfType('MISSILE_START').length).toBeGreaterThan(0);
     expect(bob.ws.messagesOfType('MISSILE_START').length).toBeGreaterThan(0);
@@ -106,7 +106,7 @@ describe('combat', () => {
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 3, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 3, targetY: 1 });
 
     const missile = alice.ws.lastOfType('MISSILE_START');
     expect(missile).toBeDefined();
@@ -123,7 +123,7 @@ describe('combat', () => {
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 1 });
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 3, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 3, targetY: 1 });
 
     // No health update before travel completes
     expect(bob.ws.messagesOfType('PLAYER_HEALTH').length).toBe(0);
@@ -144,7 +144,7 @@ describe('combat', () => {
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 3, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 3, targetY: 1 });
     vi.advanceTimersByTime(2000);
 
     expect(alice.ws.messagesOfType('MISSILE_END').length).toBeGreaterThan(0);
@@ -160,7 +160,7 @@ describe('combat', () => {
     alice.ws.flush();
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 3, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 3, targetY: 1 });
     vi.advanceTimersByTime(2000);
 
     expect(bob.ws.messagesOfType('MISSILE_START').length).toBe(0);
@@ -178,7 +178,7 @@ describe('combat', () => {
 
     // 4 × 30 damage = 120 > 100 HP
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(2000);
     }
 
@@ -195,7 +195,7 @@ describe('combat', () => {
     alice.ws.flush();
 
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(2000);
     }
 
@@ -212,7 +212,7 @@ describe('combat', () => {
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 1 });
 
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(2000);
     }
 
@@ -230,7 +230,7 @@ describe('combat', () => {
     bob.ws.flush();
 
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(2000);
     }
 
@@ -244,7 +244,7 @@ describe('combat', () => {
 
     // Give Bob the potion
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 6, y: 6 });
-    bob.ws.receive({ type: 'PICKUP', x: 6, y: 6, hand: 'left' });
+    bob.ws.receive({ type: 'PICKUP', x: 6, y: 6 });
 
     armAlice(alice);
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
@@ -252,7 +252,7 @@ describe('combat', () => {
     alice.ws.flush();
 
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(2000);
     }
 
@@ -267,7 +267,7 @@ describe('combat', () => {
 
     // Give Bob the potion (picked up into left hand)
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 6, y: 6 });
-    bob.ws.receive({ type: 'PICKUP', x: 6, y: 6, hand: 'left' });
+    bob.ws.receive({ type: 'PICKUP', x: 6, y: 6 });
 
     armAlice(alice);
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
@@ -275,7 +275,7 @@ describe('combat', () => {
     bob.ws.flush();
 
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(2000);
     }
 
@@ -284,7 +284,6 @@ describe('combat', () => {
     const lastInv = invMsgs.at(-1);
     expect(lastInv).toBeDefined();
     expect(lastInv!.leftHand).toBeNull();
-    expect(lastInv!.rightHand).toBeNull();
     expect(lastInv!.inventory.every((slot) => slot === null)).toBe(true);
   });
 
@@ -298,7 +297,7 @@ describe('combat', () => {
     bob.ws.flush();
 
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(2000);
     }
 
@@ -318,7 +317,7 @@ describe('combat', () => {
     bob.ws.flush();
 
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(2000);
     }
 
@@ -337,7 +336,7 @@ describe('combat', () => {
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 1 });
 
     for (let i = 0; i < 4; i++) {
-      alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 2, targetY: 1 });
+      alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 2, targetY: 1 });
       vi.advanceTimersByTime(2000);
     }
 
@@ -355,12 +354,12 @@ describe('combat', () => {
     const alice = joinPlayer(session, 'Alice');
     // Pick up potted plant from (2,2)
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 2 });
-    alice.ws.receive({ type: 'PICKUP', x: 2, y: 2, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 2, y: 2 });
     // Move to (1,1) and fire right — range:3 → path (2,1),(3,1),(4,1), lands at (4,1)
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 1 });
 
     // Missile not yet resolved
     expect(alice.ws.messagesOfType('ITEM_ADDED').length).toBe(0);
@@ -376,11 +375,11 @@ describe('combat', () => {
     const alice = joinPlayer(session, 'Alice');
     // Pick up grenade from (3,3)
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3 });
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 1 });
     vi.advanceTimersByTime(2000);
 
     const drops = alice.ws.messagesOfType('ITEM_ADDED');
@@ -392,14 +391,14 @@ describe('combat', () => {
     const bob = joinPlayer(session, 'Bob');
     // Alice picks up potted plant
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 2, y: 2 });
-    alice.ws.receive({ type: 'PICKUP', x: 2, y: 2, hand: 'left' });
+    alice.ws.receive({ type: 'PICKUP', x: 2, y: 2 });
     // Alice at (1,1), Bob at (4,1) — plant flies into Bob at step 3 of range 3
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     bob.ws.receive({ type: 'MY_LOCATION', room: 0, x: 4, y: 1 });
     alice.ws.flush();
     bob.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 1 });
     vi.advanceTimersByTime(2000);
 
     // Plant should land somewhere near (4,1) even though Bob is standing there
@@ -421,58 +420,56 @@ describe('ammo reload', () => {
     vi.useRealTimers();
   });
 
-  // Alice picks up bow (quantity=1) into left hand, arrows (quantity=10) into right hand
+  // Alice picks up bow (quantity=1) into left hand, arrows (quantity=10) into inventory[0]
   function armAliceWithBowAndArrows(alice: TestPlayer) {
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' }); // bow → left
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 }); // bow → leftHand
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 6, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 6, y: 5, hand: 'right' }); // arrows (qty=10) → right
+    alice.ws.receive({ type: 'PICKUP', x: 6, y: 5 }); // arrows (qty=10) → inventory[0]
   }
 
-  it('auto-reloads weapon from other hand when weapon empties mid-fire', () => {
+  it('auto-reloads weapon from inventory when weapon empties mid-fire', () => {
     const alice = joinPlayer(session, 'Alice');
     armAliceWithBowAndArrows(alice);
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.flush();
 
-    // Fire once — bow had 1 charge, now 0, triggers reload from 10 arrows → weapon=5, arrows=5
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
     expect(inv).toBeDefined();
     expect(inv!.leftHand?.type).toBe(2); // bow still in hand
     expect(inv!.leftHand?.quantity).toBe(5); // reloaded to capacity
-    expect(inv!.rightHand?.quantity).toBe(5); // arrows consumed 5
+    expect(inv!.inventory[0]?.quantity).toBe(5); // arrows partially consumed
   });
 
-  it('weapon stays in hand when empty with no ammo available', () => {
+  it('weapon stays in hand when empty with no ammo in inventory', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' }); // bow (qty=1) → left, no ammo
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 }); // bow (qty=1), no arrows picked up
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.flush();
 
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
-    expect(inv).toBeDefined();
-    expect(inv!.leftHand?.type).toBe(2); // bow still in hand
-    expect(inv!.leftHand?.quantity).toBe(0); // quantity hit 0, no reload possible
+    expect(inv!.leftHand?.type).toBe(2);
+    expect(inv!.leftHand?.quantity).toBe(0); // empty, no reload possible
   });
 
-  it('firing empty weapon with ammo in other hand reloads and fires', () => {
+  it('firing empty weapon with ammo in inventory reloads and fires', () => {
     const alice = joinPlayer(session, 'Alice');
     armAliceWithBowAndArrows(alice);
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
 
-    // Drain the bow first (bow qty=1 → 0 → reloads from arrows)
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    // Drain the bow first (bow qty=1 → 0 → reloads from inventory arrows)
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
     vi.advanceTimersByTime(900); // wait past fire-rate cooldown
 
     alice.ws.flush();
 
     // Now fire again with a reloaded bow (should fire a missile)
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     expect(alice.ws.messagesOfType('MISSILE_START').length).toBeGreaterThan(0);
   });
@@ -480,87 +477,36 @@ describe('ammo reload', () => {
   it('firing empty weapon with no ammo does not fire a missile', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' }); // bow (qty=1)
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 }); // bow (qty=1)
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
 
     // Drain the bow
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
     alice.ws.flush();
 
     // Try to fire again with empty weapon and no ammo
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     expect(alice.ws.messagesOfType('MISSILE_START').length).toBe(0);
   });
 
-  it('active ammo use (FIRE_WEAPON with ammo hand) reloads weapon in other hand', () => {
-    const alice = joinPlayer(session, 'Alice');
-    // Bow (qty=1) in left, arrows (qty=10) in right
-    armAliceWithBowAndArrows(alice);
-    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
-    alice.ws.flush();
-
-    // Fire bow once: bow 1→0, auto-reloads from arrows(10) → bow=5, arrows=5
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
-    vi.advanceTimersByTime(900);
-    alice.ws.flush();
-
-    // Now fire arrows (right hand) — bow is at capacity=5, so no transfer; just verify
-    // the inventory message is sent (non-weapon ammo use path is exercised)
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'right', targetX: 10, targetY: 10 });
-
-    const inv = alice.ws.lastOfType('YOUR_INVENTORY');
-    expect(inv).toBeDefined();
-    // bow stays at 5 (already full), arrows stays at 5 (no transfer needed)
-    expect(inv!.leftHand?.quantity).toBe(5);
-    expect(inv!.rightHand?.quantity).toBe(5);
-  });
-
-  it('active ammo use reloads partially empty weapon', () => {
-    const alice = joinPlayer(session, 'Alice');
-    // Pick up bow with 1 charge, arrows with 10
-    armAliceWithBowAndArrows(alice);
-    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
-    alice.ws.flush();
-
-    // First fire: bow 1→0, auto-reloads from arrows(10) → bow=5, arrows=5
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
-    vi.advanceTimersByTime(900); // wait past fire-rate cooldown
-
-    // Second fire: bow 5→4, arrows unchanged
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
-    vi.advanceTimersByTime(900); // wait past fire-rate cooldown
-    alice.ws.flush();
-
-    // Active ammo use: fire arrows → bow 4→5, arrows 5→4
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'right', targetX: 10, targetY: 10 });
-
-    const inv = alice.ws.lastOfType('YOUR_INVENTORY');
-    expect(inv).toBeDefined();
-    expect(inv!.leftHand?.quantity).toBe(5); // bow refilled to capacity
-    expect(inv!.rightHand?.quantity).toBe(4); // arrows decreased by 1
-  });
-
-  it('ammo depleted during reload pulls next ammo stack from inventory', () => {
+  it('reloads from slot 0 before slot 1', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 5, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5, hand: 'left' }); // bow (qty=1)
+    alice.ws.receive({ type: 'PICKUP', x: 5, y: 5 }); // bow → leftHand
+    // Pick up arrows at (6,5) into inventory[0], and extra arrows at (7,5) into inventory[1]
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 6, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 6, y: 5, hand: 'right' }); // arrows qty=10 → right
+    alice.ws.receive({ type: 'PICKUP', x: 6, y: 5 }); // 10 arrows → inventory[0]
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 5 });
-    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5, hand: 'right' }); // extra arrows qty=5 → inventory
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5 }); // 5 arrows → inventory[1]
     alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
     alice.ws.flush();
 
-    // Fire: bow=1 → empties → reloads from arrows(qty=10) → bow=5, arrows=5
-    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 });
 
     const inv = alice.ws.lastOfType('YOUR_INVENTORY');
-    expect(inv).toBeDefined();
-    // arrows in right hand should still be there (only 5 consumed from 10)
-    expect(inv!.rightHand?.type).toBe(3);
-    expect(inv!.rightHand?.quantity).toBe(5);
-    // extra arrows (qty=5) should still be in inventory (not consumed yet)
-    expect(inv!.inventory.some((s) => s?.type === 3 && s.quantity === 5)).toBe(true);
+    // Slot 0 arrows (qty=10) used to reload, not slot 1 (qty=5)
+    expect(inv!.inventory[0]?.quantity).toBe(5); // slot 0 consumed 5 to fill bow
+    expect(inv!.inventory[1]?.quantity).toBe(5); // slot 1 untouched
   });
 });

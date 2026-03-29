@@ -9,11 +9,11 @@ export type C2SMessage =
   | { type: 'MY_LOCATION'; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME' }
   | { type: 'MESSAGE'; to: number | 'all'; text: string }
-  | { type: 'PICKUP'; x: number; y: number; hand: 'left' | 'right' }
-  | { type: 'DROP'; source: 'left' | 'right' | number }
-  | { type: 'INV_SWAP'; slot: number; hand: 'left' | 'right' }
-  | { type: 'FIRE_WEAPON'; hand: 'left' | 'right'; targetX: number; targetY: number }
-  | { type: 'USE_ITEM'; hand: 'left' | 'right'; targetX: number; targetY: number }
+  | { type: 'PICKUP'; x: number; y: number }
+  | { type: 'DROP'; source: 'active' | number }
+  | { type: 'INV_SWAP'; slot: number }
+  | { type: 'FIRE_WEAPON'; targetX: number; targetY: number }
+  | { type: 'USE_ITEM'; targetX: number; targetY: number }
   | { type: 'PING' }
   | { type: 'VOLUNTARY_RESPAWN' };
 
@@ -54,7 +54,6 @@ export type S2CMessage =
   | {
       type: 'YOUR_INVENTORY';
       leftHand: InventoryItem | null;
-      rightHand: InventoryItem | null;
       inventory: Array<InventoryItem | null>;
       currentWeight: number;
       maxWeight: number;
