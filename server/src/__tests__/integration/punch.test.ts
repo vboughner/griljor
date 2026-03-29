@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GameSession, PUNCH_DAMAGE, PUNCH_COOLDOWN_MS } from '../../session';
-import { buildTestWorld, joinPlayer, TestPlayer } from './helpers';
+import { buildTestWorld, buildTwoRoomWorld, joinPlayer, TestPlayer } from './helpers';
 
 describe('punching', () => {
   let session: GameSession;
@@ -145,6 +145,46 @@ describe('punching', () => {
 
   it('PUNCH_COOLDOWN_MS equals 400', () => {
     expect(PUNCH_COOLDOWN_MS).toBe(400);
+  });
+
+  it('cross-room punch hits player on the adjacent border tile', () => {
+    const s2 = new GameSession(buildTwoRoomWorld());
+    const alice = joinPlayer(s2, 'Alice');
+    const bob = joinPlayer(s2, 'Bob', 'b', 1);
+
+    // Alice on the south border tile of room 0, Bob on the north border tile of room 1
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 19 });
+    bob.ws.receive({ type: 'MY_LOCATION', room: 1, x: 10, y: 0 });
+    bob.ws.flush();
+
+    // Alice punches south into room 1 (targetY > GRID-1)
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 25 });
+
+    const health = bob.ws.lastOfType('PLAYER_HEALTH');
+    expect(health).toBeDefined();
+    expect(health!.hp).toBe(100 - PUNCH_DAMAGE);
+
+    s2.destroy();
+  });
+
+  it('cross-room punch sends PUNCH to the next room', () => {
+    const s2 = new GameSession(buildTwoRoomWorld());
+    const alice = joinPlayer(s2, 'Alice');
+    const bob = joinPlayer(s2, 'Bob', 'b', 1);
+
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 19 });
+    bob.ws.receive({ type: 'MY_LOCATION', room: 1, x: 10, y: 0 });
+    bob.ws.flush();
+
+    alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 25 });
+
+    const punch = bob.ws.lastOfType('PUNCH');
+    expect(punch).toBeDefined();
+    expect(punch!.room).toBe(1);
+    expect(punch!.x).toBe(10);
+    expect(punch!.y).toBe(0);
+
+    s2.destroy();
   });
 
   it('punch kill is attributed to puncher', () => {

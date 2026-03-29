@@ -7,6 +7,7 @@ const INV_SIZE = 35;
 const MAX_WEIGHT = 150;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
+export const PICKUP_RANGE = 4; // max Chebyshev distance to pick up an item
 
 // AFK idle detection
 const AFK_IDLE_MS = 5 * 60 * 1000; // idle time before first warning (5 min)
@@ -457,6 +458,24 @@ export class GameSession {
     }
     this.send(ws, { type: 'ITEMS_SYNC', items: syncItems });
 
+    // Sync any recorded_objects that have been toggled from their original state
+    // (e.g. doors opened by another player before this player joined)
+    for (let roomIdx = 0; roomIdx < this.world.rooms.length; roomIdx++) {
+      const current = this.world.rooms[roomIdx].recorded_objects;
+      const original = this.originalRecordedObjects[roomIdx];
+      for (let i = 0; i < current.length && i < original.length; i++) {
+        if (current[i].type !== original[i].type) {
+          this.send(ws, {
+            type: 'ROOM_OBJECT_CHANGED',
+            room: roomIdx,
+            x: current[i].x,
+            y: current[i].y,
+            newType: current[i].type,
+          });
+        }
+      }
+    }
+
     // Send empty inventory and starting stats to new player
     this.sendInventory(player);
     this.sendStats(player);
@@ -628,6 +647,36 @@ export class GameSession {
         other.y === msg.y
       )
         return;
+    }
+
+    const room = this.world.rooms[player.room];
+
+    // Proximity: Chebyshev distance must be within PICKUP_RANGE
+    if (Math.max(Math.abs(msg.x - player.x), Math.abs(msg.y - player.y)) > PICKUP_RANGE) return;
+
+    // Visibility: LOS must not be blocked
+    if (!spotIsVisible(room, this.world.objects, player.x, player.y, msg.x, msg.y)) return;
+
+    // Walkability: every tile along the Chebyshev path (including destination)
+    // must be walkable — catches transparent-but-unwalkable tiles like windows.
+    for (const { x, y } of chebyshevPath(player.x, player.y, msg.x, msg.y)) {
+      const cell = room.spot?.[x]?.[y];
+      if (cell) {
+        const [flId, wlId] = cell;
+        if (flId || wlId) {
+          const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
+          const floorObj = flId > 0 ? this.world.objects[flId] : null;
+          if (wallObj && !wallObj.movement) return;
+          if (floorObj && !floorObj.movement) return;
+        }
+      }
+      for (const ro of room.recorded_objects) {
+        if (ro.x === x && ro.y === y && ro.type > 0) {
+          const roObj = this.world.objects[ro.type];
+          if (roObj?.takeable) continue; // floor items don't block movement
+          if (roObj && !roObj.movement) return;
+        }
+      }
     }
 
     const obj = this.world.objects[item.type];
@@ -880,6 +929,10 @@ export class GameSession {
     const roomData = this.world.rooms[roomIdx];
     if (!roomData) return;
 
+    // Direct hit: damage any player standing exactly on the landing tile
+    const centerHit = this.findPlayerHitOnPath([{ x: landX, y: landY }], roomIdx);
+    if (centerHit) this.dealDamage(centerHit.player, damage, attacker);
+
     for (const { dx, dy } of EXPLOSION_DIRS) {
       const targetX = Math.max(0, Math.min(GRID - 1, landX + dx * radius));
       const targetY = Math.max(0, Math.min(GRID - 1, landY + dy * radius));
@@ -1055,18 +1108,23 @@ export class GameSession {
             const entryY = dx !== 0 ? landTile.y : dy === 1 ? 0 : GRID - 1;
             const remainingRange = range - finalPath.length;
 
-            const contPath = this.calcMissilePath(
-              nextRoom,
-              entryX,
-              entryY,
-              entryX + dx * remainingRange,
-              entryY + dy * remainingRange,
-              remainingRange,
-              piercingFlag,
-            );
+            // calcMissilePath never includes the start tile, so prepend the entry tile
+            // so the grenade visually appears on the first square in the next room.
+            const contPath =
+              remainingRange > 1
+                ? this.calcMissilePath(
+                    nextRoom,
+                    entryX,
+                    entryY,
+                    entryX + dx * (remainingRange - 1),
+                    entryY + dy * (remainingRange - 1),
+                    remainingRange - 1,
+                    piercingFlag,
+                  )
+                : [];
 
             const contId = this.nextMissileId++;
-            const contTilePath = contPath.length > 0 ? contPath : [{ x: entryX, y: entryY }];
+            const contTilePath = [{ x: entryX, y: entryY }, ...contPath];
 
             this.broadcastToRoom(nextRoomIdx, {
               type: 'MISSILE_START',
@@ -1141,6 +1199,25 @@ export class GameSession {
     const targetY = player.y + dy;
 
     player.lastPunchedAt = Date.now();
+
+    if (targetX < 0 || targetX >= GRID || targetY < 0 || targetY >= GRID) {
+      // Punch crosses into an adjacent room
+      const nextRoomIdx = this.getRoomExit(player.room, dx, dy);
+      if (nextRoomIdx < 0) return;
+      const entryX = targetX < 0 ? GRID - 1 : targetX >= GRID ? 0 : targetX;
+      const entryY = targetY < 0 ? GRID - 1 : targetY >= GRID ? 0 : targetY;
+      this.broadcastToRoom(nextRoomIdx, {
+        type: 'PUNCH',
+        room: nextRoomIdx,
+        x: entryX,
+        y: entryY,
+        dx,
+        dy,
+      });
+      const hit = this.findPlayerHitOnPath([{ x: entryX, y: entryY }], nextRoomIdx, player.id);
+      if (hit) this.dealDamage(hit.player, PUNCH_DAMAGE, player);
+      return;
+    }
 
     this.broadcastToRoom(player.room, {
       type: 'PUNCH',
@@ -1717,30 +1794,102 @@ export class GameSession {
       }
     }
 
-    // Spiral search outward from player position
+    const isValidTile = (tx: number, ty: number): boolean => {
+      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) return false;
+      if (roomMap.has(`${tx},${ty}`)) return false;
+      if (playerOccupied!.has(`${tx},${ty}`)) return false;
+      const cell = room.spot?.[tx]?.[ty];
+      if (cell) {
+        const [flId, wlId] = cell;
+        // Void tile: not walkable when room has a floor (ring-style map)
+        if (!flId && !wlId) {
+          if (room.floor) return false;
+        } else {
+          const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
+          const floorObj = flId > 0 ? this.world.objects[flId] : null;
+          if (wallObj && !wallObj.movement) return false;
+          if (floorObj && !floorObj.movement) return false;
+        }
+      }
+      return true;
+    };
+
+    const hasDoor = (tx: number, ty: number): boolean =>
+      room.recorded_objects.some(
+        (ro) => ro.x === tx && ro.y === ty && (this.world.objects[ro.type]?.swings ?? false),
+      );
+
+    // BFS flood-fill to find all tiles structurally reachable from the player.
+    // Uses only spot+recorded_objects walkability (not items or player positions),
+    // so doors and walls correctly partition the reachable area.
+    const isPassable = (tx: number, ty: number): boolean => {
+      if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) return false;
+      const cell = room.spot?.[tx]?.[ty];
+      if (cell) {
+        const [flId, wlId] = cell;
+        if (!flId && !wlId) {
+          if (room.floor) return false;
+        } else {
+          if (wlId > 0 && !this.world.objects[wlId]?.movement) return false;
+          if (flId > 0 && !this.world.objects[flId]?.movement) return false;
+        }
+      }
+      for (const ro of room.recorded_objects) {
+        if (ro.x === tx && ro.y === ty && ro.type > 0) {
+          const obj = this.world.objects[ro.type];
+          if (obj?.takeable) continue;
+          if (!obj?.movement) return false;
+        }
+      }
+      return true;
+    };
+
+    const reachable = new Set<string>();
+    const bfsQueue: Array<{ x: number; y: number }> = [{ x: px, y: py }];
+    reachable.add(`${px},${py}`);
+    const DIRS: [number, number][] = [
+      [0, -1],
+      [1, 0],
+      [0, 1],
+      [-1, 0],
+      [1, -1],
+      [1, 1],
+      [-1, 1],
+      [-1, -1],
+    ];
+    while (bfsQueue.length > 0) {
+      const { x, y } = bfsQueue.shift()!;
+      for (const [ddx, ddy] of DIRS) {
+        const nx = x + ddx;
+        const ny = y + ddy;
+        const nk = `${nx},${ny}`;
+        if (reachable.has(nk)) continue;
+        if (!isPassable(nx, ny)) continue;
+        reachable.add(nk);
+        bfsQueue.push({ x: nx, y: ny });
+      }
+    }
+
+    // Spiral search: prefer tiles without doors, must be reachable from player
     for (let radius = 0; radius <= 5; radius++) {
       for (let dx = -radius; dx <= radius; dx++) {
         for (let dy = -radius; dy <= radius; dy++) {
           if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
           const tx = px + dx;
           const ty = py + dy;
-          if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) continue;
-          if (roomMap.has(`${tx},${ty}`)) continue;
-          if (playerOccupied.has(`${tx},${ty}`)) continue;
-          const cell = room.spot?.[tx]?.[ty];
-          if (cell) {
-            const [flId, wlId] = cell;
-            // Void tile: not walkable when room has a floor (ring-style map)
-            if (!flId && !wlId) {
-              if (room.floor) continue;
-            } else {
-              const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
-              const floorObj = flId > 0 ? this.world.objects[flId] : null;
-              if (wallObj && !wallObj.movement) continue;
-              if (floorObj && !floorObj.movement) continue;
-            }
-          }
-          return { x: tx, y: ty };
+          if (isValidTile(tx, ty) && reachable.has(`${tx},${ty}`) && !hasDoor(tx, ty))
+            return { x: tx, y: ty };
+        }
+      }
+    }
+    // Fallback: accept door tiles if no door-free reachable tile is available
+    for (let radius = 0; radius <= 5; radius++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+          const tx = px + dx;
+          const ty = py + dy;
+          if (isValidTile(tx, ty) && reachable.has(`${tx},${ty}`)) return { x: tx, y: ty };
         }
       }
     }

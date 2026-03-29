@@ -107,6 +107,11 @@ export class Game {
   // tile hover debug mode (toggled by ?)
   private hoverMode = false;
 
+  // pickup highlight overlay (toggled by p, on by default)
+  private showPickupHighlights = true;
+  private currentWeight = 0;
+  private maxWeight = 150;
+
   // fog-of-war visibility overlay (toggled by v, on by default)
   private fogEnabled = true;
   // per-tile current fog alpha (0 = fully lit, 0.2 = fully dimmed); starts fully fogged
@@ -201,6 +206,14 @@ export class Game {
         return;
       }
 
+      // Toggle pickup highlight overlay
+      if (e.key === 'p') {
+        e.preventDefault();
+        this.showPickupHighlights = !this.showPickupHighlights;
+        void this.render();
+        return;
+      }
+
       // Toggle player indicator boxes
       if (e.key === 'o') {
         e.preventDefault();
@@ -251,10 +264,15 @@ export class Game {
       const tx = Math.floor((e.clientX - rect.left) / TILE) - 1;
       const ty = Math.floor((e.clientY - rect.top) / TILE) - 1;
 
-      // Border click → walk toward that exit (any button)
+      // Border click: right-click walks toward exit; left/middle fires into next room
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
         if (this.isDead) return;
-        this.startMovingTo(tx, ty);
+        if (e.button === 2) {
+          this.startMovingTo(tx, ty);
+        } else if (e.button === 0 || e.button === 1) {
+          const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
+          this.network?.sendFireWeapon(hand, tx, ty);
+        }
         return;
       }
 
@@ -268,15 +286,22 @@ export class Game {
         const tileOccupied = [...this.otherPlayers.values()].some(
           (p) => p.room === this.currentRoom && p.x === tx && p.y === ty,
         );
-        if (!tileOccupied && this.floorItems.get(this.currentRoom)?.has(key)) {
+        const room = this.mapData.rooms[this.currentRoom];
+        const dist = Math.max(Math.abs(tx - this.px), Math.abs(ty - this.py));
+        const hasDoorAtTile =
+          dist === 1 &&
+          room?.recorded_objects?.some(
+            (ro) => ro.x === tx && ro.y === ty && (this.objects[ro.type]?.swings ?? false),
+          );
+        if (handObj?.opens && hasDoorAtTile) {
+          // Key in hand, adjacent door — use key even if a floor item is also on this tile
+          this.network?.sendUseItem(hand, tx, ty);
+        } else if (!tileOccupied && this.floorItems.get(this.currentRoom)?.has(key)) {
           this.network?.sendPickup(tx, ty, hand);
         } else if ((handObj?.health ?? 0) < 0) {
           // Consumable: use on self regardless of where the player clicked
           this.network?.sendUseItem(hand, this.px, this.py);
-        } else if (
-          handObj?.opens &&
-          Math.max(Math.abs(tx - this.px), Math.abs(ty - this.py)) === 1
-        ) {
+        } else if (handObj?.opens && dist === 1) {
           // Holding an opener adjacent to target tile — use it (open/close door)
           this.network?.sendUseItem(hand, tx, ty);
         } else if (tx !== this.px || ty !== this.py) {
@@ -496,6 +521,13 @@ export class Game {
   setMyHp(hp: number, maxHp: number): void {
     this.myHp = hp;
     this.myMaxHp = maxHp;
+  }
+
+  /** Update carry weight so the renderer can tint too-heavy items red. */
+  setWeight(current: number, max: number): void {
+    this.currentWeight = current;
+    this.maxWeight = max;
+    void this.render();
   }
 
   private addHitMarker(x: number, y: number, damage: number, isHeal: boolean): void {
@@ -950,6 +982,10 @@ export class Game {
       this.boxOtherPlayers,
       this.mapData.map.teams_supported > 1,
       this.isDead,
+      room,
+      this.showPickupHighlights,
+      this.currentWeight,
+      this.maxWeight,
     );
     if (this.fogEnabled) this.drawFogOverlay();
     this.drawBorderIndicators(room);

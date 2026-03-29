@@ -1,5 +1,7 @@
 import { RoomData, ObjDef, InventoryItem } from './types';
 import { loadMaskedSprite, loadSprite, loadOpaqueTile, getColorMode } from './assets';
+import { spotIsVisible } from './los';
+import { PICKUP_RANGE, pathIsWalkable } from './game-utils';
 
 export const TILE = 32;
 const GRID = 20;
@@ -206,19 +208,51 @@ export async function renderFrame(
   boxOtherPlayers: boolean = false,
   teamsEnabled: boolean = false,
   isDead: boolean = false,
+  room: RoomData | null = null,
+  showPickupHighlights: boolean = false,
+  currentWeight: number = 0,
+  maxWeight: number = 150,
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bg, 0, 0);
 
   // Draw floor items (between background and players)
+  // Tint only the item's own pixels by compositing onto a temporary canvas.
+  // source-atop fills the tint color only where the sprite has opaque pixels,
+  // leaving the transparent (non-item) areas unchanged.
+  const tintCanvas =
+    showPickupHighlights && room && !isDead ? new OffscreenCanvas(TILE, TILE) : null;
+  const tintCtx = tintCanvas?.getContext('2d') ?? null;
+  if (tintCtx) {
+    tintCtx.globalCompositeOperation = 'source-atop';
+    tintCtx.globalAlpha = 0.55;
+  }
   for (const [key, item] of floorItems) {
     const [ix, iy] = key.split(',').map(Number);
     const obj = objects[item.type];
     if (!obj?.bitmap) continue;
     const imgData = await spriteForObj(obj, objset);
-    if (imgData) {
-      const bm = await getBitmap(imgData);
-      ctx.drawImage(bm, BORDER + ix * TILE, BORDER + iy * TILE, TILE, TILE);
+    if (!imgData) continue;
+    const bm = await getBitmap(imgData);
+    ctx.drawImage(bm, BORDER + ix * TILE, BORDER + iy * TILE, TILE, TILE);
+
+    if (tintCtx && tintCanvas && room) {
+      const dist = Math.max(Math.abs(ix - px), Math.abs(iy - py));
+      if (
+        dist <= PICKUP_RANGE &&
+        spotIsVisible(room, objects, px, py, ix, iy) &&
+        pathIsWalkable(px, py, ix, iy, room, objects)
+      ) {
+        const itemWeight = (obj.weight ?? 0) * (obj.numbered ? 1 : item.quantity);
+        const tooHeavy = currentWeight + itemWeight > maxWeight;
+        tintCtx.clearRect(0, 0, TILE, TILE);
+        tintCtx.globalCompositeOperation = 'source-over';
+        tintCtx.drawImage(bm, 0, 0, TILE, TILE);
+        tintCtx.globalCompositeOperation = 'source-atop';
+        tintCtx.fillStyle = tooHeavy ? '#6b4210' : '#5aad70';
+        tintCtx.fillRect(0, 0, TILE, TILE);
+        ctx.drawImage(tintCanvas, BORDER + ix * TILE, BORDER + iy * TILE);
+      }
     }
   }
 

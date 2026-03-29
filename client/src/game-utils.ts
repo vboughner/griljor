@@ -1,6 +1,8 @@
 import { RoomData, ObjDef } from './types';
+import { chebyshevPath } from './los';
 
 const GRID = 20;
+export const PICKUP_RANGE = 4; // max Chebyshev distance to pick up an item
 
 export interface ExitTile {
   destRoom: number;
@@ -43,10 +45,12 @@ export function isTileBlocked(
       if (flId > 0 && !((objects[flId]?.movement ?? 0) > 0)) return true;
     }
   }
-  // Recorded objects (doors, etc.): block if movement absent (=0) or explicitly 0
+  // Skip takeable items — they lie on the floor and don't block movement.
   for (const ro of room.recorded_objects ?? []) {
     if (ro.x === x && ro.y === y && ro.type > 0) {
-      if (!((objects[ro.type]?.movement ?? 0) > 0)) return true;
+      const obj = objects[ro.type];
+      if (obj?.takeable) continue;
+      if (!((obj?.movement ?? 0) > 0)) return true;
     }
   }
   return false;
@@ -104,6 +108,25 @@ export function computeBfsPath(
     cy = Math.floor(p / GRID);
   }
   return path;
+}
+
+/**
+ * Returns true if every tile along the Chebyshev path from (x1,y1) to (x2,y2)
+ * is walkable. Catches transparent-but-unwalkable tiles (windows, closed doors)
+ * that LOS checks alone would miss.
+ */
+export function pathIsWalkable(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  room: RoomData,
+  objects: ObjDef[],
+  exitKeys?: Set<string>,
+): boolean {
+  return chebyshevPath(x1, y1, x2, y2).every(
+    ({ x, y }) => !isTileBlocked(x, y, room, objects, exitKeys),
+  );
 }
 
 export function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, ExitTile> {

@@ -25,17 +25,20 @@ describe('cross-room grenades', () => {
   }
 
   function giveGrenade(p: { ws: MockWebSocket }) {
+    // Move to the grenade tile first so proximity enforcement allows the pickup
+    p.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
     p.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
   }
 
   it('sends MISSILE_START in next room when grenade crosses south border', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob', 'b', 1);
+    // Give grenade first, then position Alice for the throw
+    giveGrenade(alice);
     // Place Alice at y=17 so grenade range=4 hits y=19 (border) after only 2 steps,
     // leaving 2 remaining range to continue into the south room.
     place(alice, 0, 10, 17);
     place(bob, 1, 10, 1);
-    giveGrenade(alice);
     bob.ws.flush();
 
     // Grenade range=4, from y=17: path y=18,19 (2 steps) → hits south border with 2 remaining
@@ -50,10 +53,10 @@ describe('cross-room grenades', () => {
   it('Bob in room 1 takes explosion damage from cross-room grenade', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob', 'b', 1);
+    giveGrenade(alice);
     // Alice at y=17: grenade hits south border (y=19) after 2 steps, then continues into room 1
     place(alice, 0, 10, 17);
     place(bob, 1, 10, 1);
-    giveGrenade(alice);
     bob.ws.flush();
 
     alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 10, targetY: 25 });
@@ -68,9 +71,9 @@ describe('cross-room grenades', () => {
   it('in-room grenade (does not reach border) explodes in room 0', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob', 'b', 1);
+    giveGrenade(alice);
     place(alice, 0, 10, 5);
     place(bob, 1, 10, 1);
-    giveGrenade(alice);
     bob.ws.flush();
 
     // range=4 from y=5 → path stops at y=9, nowhere near y=19
@@ -88,9 +91,10 @@ describe('cross-room grenades', () => {
     const alice = joinPlayer(s2, 'Alice');
     const bob = joinPlayer(s2, 'Bob', 'b', 1);
     // Alice at y=17: grenade hits south border after 2 steps but won't cross (no exit)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 3 });
+    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
     place(alice, 0, 10, 17);
     place(bob, 1, 10, 1);
-    alice.ws.receive({ type: 'PICKUP', x: 3, y: 3, hand: 'left' });
     bob.ws.flush();
 
     // Just verify no cross-room by checking bob gets no MISSILE_START
@@ -105,10 +109,10 @@ describe('cross-room grenades', () => {
     const alice = joinPlayer(session, 'Alice');
     const charlie = joinPlayer(session, 'Charlie', 'c', 1);
     const bob = joinPlayer(session, 'Bob', 'b', 1);
+    giveGrenade(alice);
     place(alice, 0, 10, 15);
     place(charlie, 0, 10, 19); // standing on the south border tile
     place(bob, 1, 10, 1); // in room 1
-    giveGrenade(alice);
     charlie.ws.flush();
     bob.ws.flush();
 
@@ -125,9 +129,9 @@ describe('cross-room grenades', () => {
   it('diagonal throw does not cross rooms', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob', 'b', 1);
+    giveGrenade(alice);
     place(alice, 0, 15, 15);
     place(bob, 1, 0, 0);
-    giveGrenade(alice);
     bob.ws.flush();
 
     // Diagonal SE: dx=1,dy=1 → getRoomExit returns -1
