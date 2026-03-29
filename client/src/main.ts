@@ -4,7 +4,7 @@ import { ColorMode } from './assets';
 import { GameNetwork } from './network';
 import { fetchGames, watchGames, GameInfo } from './lobby';
 import { loadMaskedSprite, loadSprite } from './assets';
-import { initMouseWidget, setHandItem } from './mouse-widget';
+import { initActionCards, setActiveItem } from './mouse-widget';
 import { runTitleScreen, drawLogo } from './title';
 import { showTooltip, hideTooltip, moveTooltip, buildItemHtml } from './tooltip';
 import { formatAge } from './utils';
@@ -133,20 +133,16 @@ function buildInvGrid(): void {
 }
 
 function initHandTooltips(): void {
-  const hands: Array<{ id: string; getItem: () => InventoryItem | null }> = [
-    { id: 'hand-left-canvas', getItem: () => currentLeftHand },
-  ];
-  for (const { id, getItem } of hands) {
-    const canvas = document.getElementById(id)!;
-    canvas.addEventListener('mouseenter', (e) => {
-      const item = getItem();
-      if (!item) return;
-      const obj = invObjects[item.type];
-      if (!obj) return;
-      showTooltip(buildItemHtml(obj, item), (e as MouseEvent).clientX, (e as MouseEvent).clientY);
-    });
-    canvas.addEventListener('mouseleave', () => hideTooltip());
-  }
+  const card = document.getElementById('card-use');
+  if (!card) return;
+  card.addEventListener('mouseenter', (e) => {
+    const item = currentLeftHand;
+    if (!item) return;
+    const obj = invObjects[item.type];
+    if (!obj) return;
+    showTooltip(buildItemHtml(obj, item), (e as MouseEvent).clientX, (e as MouseEvent).clientY);
+  });
+  card.addEventListener('mouseleave', () => hideTooltip());
 }
 
 async function getItemImgData(item: InventoryItem): Promise<ImageData | null> {
@@ -179,24 +175,19 @@ async function updateInventoryPanel(msg: {
   if (burdenFill)
     burdenFill.style.width = `${Math.min(100, (msg.currentWeight / msg.maxWeight) * 100)}%`;
 
-  // Update active hand slot icon
+  // Update active item card icon and name
   const leftImg = msg.leftHand ? await getItemImgData(msg.leftHand) : null;
-  setHandItems(leftImg, null);
+  const leftHandObj = msg.leftHand ? invObjects[msg.leftHand.type] : null;
+  const leftHandName = leftHandObj?.name ?? null;
+  setActiveItem(leftImg, leftHandName);
 
-  // Update hand slot charge count for numbered weapons
-  const handLeftCount = document.getElementById('hand-left-count');
-  if (handLeftCount) {
-    const obj = msg.leftHand ? invObjects[msg.leftHand.type] : null;
-    handLeftCount.textContent = obj?.numbered && msg.leftHand ? String(msg.leftHand.quantity) : '';
-  }
-
-  // Update active hand slot click handler
-  const handLeftCanvas = document.getElementById('hand-left-canvas') as HTMLCanvasElement;
-  if (handLeftCanvas) {
-    handLeftCanvas.onclick = () => {
+  // Update active item card click handler (drop on left/right click)
+  const cardUse = document.getElementById('card-use');
+  if (cardUse) {
+    (cardUse as HTMLElement).onclick = () => {
       if (msg.leftHand && invNetwork) invNetwork.sendDrop('active');
     };
-    handLeftCanvas.oncontextmenu = (e) => {
+    (cardUse as HTMLElement).oncontextmenu = (e) => {
       e.preventDefault();
       if (msg.leftHand && invNetwork) invNetwork.sendDrop('active');
     };
@@ -227,7 +218,7 @@ async function updateInventoryPanel(msg: {
 }
 
 async function main(): Promise<void> {
-  initMouseWidget();
+  initActionCards();
   buildInvGrid();
   initHandTooltips();
 
@@ -1029,10 +1020,6 @@ async function main(): Promise<void> {
   await runTitleScreen(titleLetters, titleTerrain);
   hideTitle();
   showLobby();
-}
-
-export function setHandItems(left: ImageData | null, _right: ImageData | null): void {
-  setHandItem('left', left);
 }
 
 main().catch((err) => {
