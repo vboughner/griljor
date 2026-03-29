@@ -378,11 +378,9 @@ weight won't exceed limit, and that the target hand or inventory has a free
 slot. Places item in hand if empty, else first free inventory slot. Rejects
 with a GM chat message if overweight or all slots full.
 
-**DROP**: removes item from hand/slot, finds the nearest free tile via spiral
-search (`nearbyFreeTile`), and places the item there. "Free" means: inside
-the 20×20 grid, no existing floor item, and wall/floor objects both have
-`permeable: true` (same passability rule as player movement). Radius ≤ 5;
-items with nowhere to go are lost (logged server-side).
+**DROP**: removes item from hand/slot, finds the nearest free tile via
+`nearbyFreeTile`, and places the item there. See `nearbyFreeTile` below for
+the full algorithm. Items with nowhere to go are lost (logged server-side).
 
 **INV_SWAP**: swaps a named hand slot with an inventory slot in-place.
 No weight check needed — total weight doesn't change.
@@ -532,9 +530,8 @@ to absent/false). Floor objects have `movement > 0` and `permeable: true`.
 The server's missile tracing in `session.ts` correctly uses `permeable`
 for projectile passage — unchanged.
 
-The `nearbyFreeTile` drop helper in `session.ts` still uses `permeable`
-as its free-tile criterion (will be corrected to use `movement` in a
-future pass).
+`nearbyFreeTile` in `session.ts` uses `movement` (not `permeable`) as its
+walkability criterion — `permeable` controls missile passage only.
 
 ### BFS Pathfinding
 
@@ -2242,3 +2239,17 @@ The client runs the same three checks independently (using `spotIsVisible` from 
 ### `pathIsWalkable` and `isTileBlocked` fix
 
 A pre-existing issue in `isTileBlocked` (`game-utils.ts`) caused `recorded_objects` with no `movement` field (including all takeable floor items) to be treated as blocking. Fixed by skipping objects with `takeable: true` in the recorded-objects loop — floor items don't block player movement. The same skip was applied to the server's path walkability check.
+
+### `nearbyFreeTile` — drop tile selection
+
+`nearbyFreeTile` in `session.ts` is used whenever the server needs to place an item on the floor near a position: inventory drops, hand drops, death scatter, and throwable landings.
+
+**Algorithm:**
+
+1. **BFS flood-fill** from the player's position over the full 20×20 room grid, using structural walkability only (checks `room.spot` wall/floor objects and non-takeable `recorded_objects` for `movement > 0`; ignores current floor items and player positions). This produces a set of all tiles reachable from the player through connected walkable space — closed doors and walls partition the room and items cannot cross them.
+
+2. **Spiral search** outward from the player at radii 0–5, with two passes:
+   - **Pass 1**: accepts a tile only if it is reachable (in the BFS set), not already occupied by an item, not occupied by a player, structurally walkable, and has **no swinging door** (`swings: true` in any `recorded_object` at that tile).
+   - **Pass 2** (fallback): same constraints but door tiles are allowed — used when every reachable tile within radius 5 already has a door on it.
+
+3. If no tile is found within radius 5, the item is **lost** (logged server-side; this is only possible in a fully packed or walled-off area).
