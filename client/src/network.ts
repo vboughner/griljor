@@ -5,11 +5,11 @@ type C2SMessage =
   | { type: 'MY_LOCATION'; room: number; x: number; y: number }
   | { type: 'LEAVING_GAME' }
   | { type: 'MESSAGE'; to: number | 'all'; text: string }
-  | { type: 'PICKUP'; x: number; y: number; hand: 'left' | 'right' }
-  | { type: 'DROP'; source: 'left' | 'right' | number }
-  | { type: 'INV_SWAP'; slot: number; hand: 'left' | 'right' }
-  | { type: 'FIRE_WEAPON'; hand: 'left' | 'right'; targetX: number; targetY: number }
-  | { type: 'USE_ITEM'; hand: 'left' | 'right'; targetX: number; targetY: number }
+  | { type: 'PICKUP'; x: number; y: number }
+  | { type: 'DROP'; source: 'active' | number }
+  | { type: 'INV_SWAP'; slot: number }
+  | { type: 'FIRE_WEAPON'; targetX: number; targetY: number }
+  | { type: 'USE_ITEM'; targetX: number; targetY: number }
   | { type: 'PING' }
   | { type: 'VOLUNTARY_RESPAWN' };
 
@@ -49,7 +49,6 @@ type S2CMessage =
   | {
       type: 'YOUR_INVENTORY';
       leftHand: InventoryItem | null;
-      rightHand: InventoryItem | null;
       inventory: Array<InventoryItem | null>;
       currentWeight: number;
       maxWeight: number;
@@ -230,24 +229,24 @@ export class GameNetwork {
     this.send({ type: 'MESSAGE', to: 'all', text });
   }
 
-  sendPickup(x: number, y: number, hand: 'left' | 'right'): void {
-    this.send({ type: 'PICKUP', x, y, hand });
+  sendPickup(x: number, y: number): void {
+    this.send({ type: 'PICKUP', x, y });
   }
 
-  sendDrop(source: 'left' | 'right' | number): void {
+  sendDrop(source: 'active' | number): void {
     this.send({ type: 'DROP', source });
   }
 
-  sendInvSwap(slot: number, hand: 'left' | 'right'): void {
-    this.send({ type: 'INV_SWAP', slot, hand });
+  sendInvSwap(slot: number): void {
+    this.send({ type: 'INV_SWAP', slot });
   }
 
-  sendFireWeapon(hand: 'left' | 'right', targetX: number, targetY: number): void {
-    this.send({ type: 'FIRE_WEAPON', hand, targetX, targetY });
+  sendFireWeapon(targetX: number, targetY: number): void {
+    this.send({ type: 'FIRE_WEAPON', targetX, targetY });
   }
 
-  sendUseItem(hand: 'left' | 'right', targetX: number, targetY: number): void {
-    this.send({ type: 'USE_ITEM', hand, targetX, targetY });
+  sendUseItem(targetX: number, targetY: number): void {
+    this.send({ type: 'USE_ITEM', targetX, targetY });
   }
 
   private send(msg: C2SMessage): void {
