@@ -1347,10 +1347,7 @@ export class GameSession {
   }
 
   private dropPlayerItems(player: Player): void {
-    const items: Array<InventoryItem | null> = [
-      player.leftHand,
-      ...player.inventory,
-    ];
+    const items: Array<InventoryItem | null> = [player.leftHand, ...player.inventory];
     player.leftHand = null;
     player.inventory.fill(null);
     player.currentWeight = 0;
