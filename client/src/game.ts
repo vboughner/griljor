@@ -166,6 +166,7 @@ export class Game {
         w: [0, -1],
         e: [1, -1],
         a: [-1, 0],
+        s: [0, 1],
         d: [1, 0],
         z: [-1, 1],
         x: [0, 1],
@@ -232,12 +233,12 @@ export class Game {
       }
 
       // Item actions
-      if (e.key === 's') {
+      if (e.key === 'g') {
         e.preventDefault();
         if (!this.isDead) this.network?.sendPickup(this.px, this.py);
         return;
       }
-      if (e.key === 'Z') {
+      if (e.key === 'b') {
         e.preventDefault();
         if (!this.isDead) this.network?.sendDrop('active');
         return;
