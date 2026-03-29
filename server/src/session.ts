@@ -24,8 +24,8 @@ const EXPLOSION_DIRS = [
   { dx: -1, dy: -1 },
 ] as const;
 
-export const PUNCH_DAMAGE = 5;
-export const PUNCH_COOLDOWN_MS = 600;
+export const PUNCH_DAMAGE = 10;
+export const PUNCH_COOLDOWN_MS = 400;
 
 /**
  * For numbered items (guns, potions with charges), quantity represents the

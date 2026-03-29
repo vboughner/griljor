@@ -119,17 +119,25 @@ describe('punching', () => {
     expect(healths).toHaveLength(0);
   });
 
+  it('PUNCH_DAMAGE equals 10', () => {
+    expect(PUNCH_DAMAGE).toBe(10);
+  });
+
+  it('PUNCH_COOLDOWN_MS equals 400', () => {
+    expect(PUNCH_COOLDOWN_MS).toBe(400);
+  });
+
   it('punch kill is attributed to puncher', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');
     place(alice, 5, 5);
     place(bob, 6, 5);
 
-    // Use 900ms increments to stay under the 1000ms regen boundary per step.
-    // 30 punches × 5 damage = 150 gross damage; regen heals ~27 HP over 27s → net ~123 > 100.
-    for (let i = 0; i < 30; i++) {
+    // Use 500ms increments (above 400ms cooldown, below 1000ms regen boundary per step).
+    // 15 punches × 10 damage = 150 gross damage; regen heals ~7 HP over 7.5s → net ~143 > 100.
+    for (let i = 0; i < 15; i++) {
       alice.ws.receive({ type: 'FIRE_WEAPON', hand: 'left', targetX: 6, targetY: 5 });
-      vi.advanceTimersByTime(900);
+      vi.advanceTimersByTime(500);
     }
 
     const died = bob.ws.lastOfType('YOU_DIED');

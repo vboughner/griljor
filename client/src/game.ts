@@ -1009,7 +1009,10 @@ export class Game {
     this.punchMarkers = this.punchMarkers.filter((m) => now < m.until);
     if (this.punchMarkers.length === 0) return;
 
-    const sprite = await loadSprite('/sprites/bit/hit.png');
+    const sprite = await loadMaskedSprite(
+      '/data/objects/bitmaps/standard/001_bitmap.png',
+      '/data/objects/bitmaps/standard/001_mask.png',
+    );
     if (!sprite) return;
 
     const bm = await getBitmap(sprite);
