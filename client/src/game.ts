@@ -110,6 +110,7 @@ export class Game {
   private showPickupHighlights = true;
   private currentWeight = 0;
   private maxWeight = 150;
+  private invFull = false;
 
   // fog-of-war visibility overlay (toggled by v, on by default)
   private fogEnabled = true;
@@ -509,10 +510,11 @@ export class Game {
     this.myMaxHp = maxHp;
   }
 
-  /** Update carry weight so the renderer can tint too-heavy items red. */
-  setWeight(current: number, max: number): void {
+  /** Update carry weight and inventory fullness so the renderer can tint unpickable items. */
+  setWeight(current: number, max: number, inventoryFull: boolean): void {
     this.currentWeight = current;
     this.maxWeight = max;
+    this.invFull = inventoryFull;
     void this.render();
   }
 
@@ -980,6 +982,7 @@ export class Game {
       this.showPickupHighlights,
       this.currentWeight,
       this.maxWeight,
+      this.invFull,
     );
     if (this.fogEnabled) this.drawFogOverlay();
     this.drawBorderIndicators(room);

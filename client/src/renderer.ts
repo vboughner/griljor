@@ -212,6 +212,7 @@ export async function renderFrame(
   showPickupHighlights: boolean = false,
   currentWeight: number = 0,
   maxWeight: number = 150,
+  invFull: boolean = false,
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bg, 0, 0);
@@ -245,11 +246,12 @@ export async function renderFrame(
       ) {
         const itemWeight = (obj.weight ?? 0) * (obj.numbered ? 1 : item.quantity);
         const tooHeavy = currentWeight + itemWeight > maxWeight;
+        const cantPickUp = tooHeavy || invFull;
         tintCtx.clearRect(0, 0, TILE, TILE);
         tintCtx.globalCompositeOperation = 'source-over';
         tintCtx.drawImage(bm, 0, 0, TILE, TILE);
         tintCtx.globalCompositeOperation = 'source-atop';
-        tintCtx.fillStyle = tooHeavy ? '#6b4210' : '#5aad70';
+        tintCtx.fillStyle = cantPickUp ? '#6b4210' : '#5aad70';
         tintCtx.fillRect(0, 0, TILE, TILE);
         ctx.drawImage(tintCanvas, BORDER + ix * TILE, BORDER + iy * TILE);
       }
