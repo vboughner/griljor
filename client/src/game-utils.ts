@@ -146,6 +146,8 @@ export function computeBfsPathToNearest(
       prev[k] = y * GRID + x;
       if (nx === x1 && ny === y1) {
         foundExact = true;
+        // No early exit: BFS must run to exhaustion so the full visited set is
+        // available for the fallback scan when the exact target is unreachable.
       }
       queue.push({ x: nx, y: ny });
     }
