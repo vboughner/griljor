@@ -284,20 +284,27 @@ export async function renderFrame(
     }
   }
 
-  // Draw local player on top, dimmed if standing on an opaque tile (hidden from others)
+  // Draw local player on top, dimmed if standing on an opaque tile (hidden from others).
+  // Use an offscreen canvas + source-atop so only the sprite's own pixels are darkened,
+  // preserving the mask boundary (same technique as the pickup tint highlight).
   const selfHidden = room != null && tileViewBlocked(room, objects, px, py);
-  if (selfHidden) {
-    ctx.save();
-    ctx.globalAlpha = 0.4;
-  }
   if (playerSprite) {
     const bm = await getBitmap(playerSprite);
-    ctx.drawImage(bm, BORDER + px * TILE, BORDER + py * TILE, TILE, TILE);
+    if (selfHidden) {
+      const dimCanvas = new OffscreenCanvas(TILE, TILE);
+      const dimCtx = dimCanvas.getContext('2d')!;
+      dimCtx.drawImage(bm, 0, 0);
+      dimCtx.globalCompositeOperation = 'source-atop';
+      dimCtx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      dimCtx.fillRect(0, 0, TILE, TILE);
+      ctx.drawImage(dimCanvas, BORDER + px * TILE, BORDER + py * TILE);
+    } else {
+      ctx.drawImage(bm, BORDER + px * TILE, BORDER + py * TILE, TILE, TILE);
+    }
   } else {
     ctx.fillStyle = getColorMode() === 'dark' ? '#fff' : '#000';
     ctx.fillRect(BORDER + px * TILE + 8, BORDER + py * TILE + 8, 16, 16);
   }
-  if (selfHidden) ctx.restore();
 
   if (boxOtherPlayers && !isDead) {
     ctx.save();
