@@ -4,7 +4,7 @@ import { World, ObjDef, RecObj, RoomData } from './world';
 import { filterText, randomScold } from './filter';
 
 const INV_SIZE = 21;
-const MAX_WEIGHT = 150;
+const MAX_WEIGHT = 200;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
 export const PICKUP_RANGE = 4; // max Chebyshev distance to pick up an item
@@ -332,7 +332,9 @@ export class GameSession {
       console.log(`[reset] cancelled (${this.world.mapName} has a new player)`);
     }
 
-    const nameTaken = [...this.players.values()].some((p) => p.name === msg.name);
+    const nameTaken = [...this.players.values()].some(
+      (p) => p.name.toLowerCase() === msg.name.toLowerCase(),
+    );
     if (nameTaken) {
       this.send(ws, { type: 'REJECTED', msg: `Name "${msg.name}" is already taken.` });
       return;

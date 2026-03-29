@@ -12,7 +12,7 @@ import {
 import { GameNetwork } from './network';
 import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
 import { stepDelay, applyHpPenalty } from './utils';
-import { isTileBlocked, computeBfsPath, buildExitMap, ExitTile } from './game-utils';
+import { isTileBlocked, computeBfsPathToNearest, buildExitMap, ExitTile } from './game-utils';
 import { tileIsVisible, tileViewBlocked } from './los';
 
 const GRID = 20;
@@ -653,7 +653,15 @@ export class Game {
     this.moveTarget = { x, y };
     const room = this.mapData.rooms[this.currentRoom];
     if (x >= 0 && x < GRID && y >= 0 && y < GRID) {
-      this.movePath = computeBfsPath(this.px, this.py, x, y, room, this.objects, this.exitKeys);
+      this.movePath = computeBfsPathToNearest(
+        this.px,
+        this.py,
+        x,
+        y,
+        room,
+        this.objects,
+        this.exitKeys,
+      );
     } else {
       // Off-grid border exit: BFS to nearest edge tile, then step off
       const ex = Math.max(0, Math.min(GRID - 1, x));
@@ -661,7 +669,7 @@ export class Game {
       this.movePath =
         this.px === ex && this.py === ey
           ? []
-          : computeBfsPath(this.px, this.py, ex, ey, room, this.objects, this.exitKeys);
+          : computeBfsPathToNearest(this.px, this.py, ex, ey, room, this.objects, this.exitKeys);
     }
     this.scheduleMoveStep();
   }

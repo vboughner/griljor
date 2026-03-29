@@ -296,6 +296,7 @@ async function main(): Promise<void> {
     } else {
       nameManuallyEdited = true;
     }
+    updateJoinButtons();
   });
 
   setSelectedAvatar(selectedAvatar);
@@ -593,17 +594,22 @@ async function main(): Promise<void> {
   // ── Lobby ─────────────────────────────────────────────────────────
   function updateJoinButtons(): void {
     const selected = selectedAvatar;
+    const currentName = (playerNameInput.value.trim() || selectedAvatar).toLowerCase();
     for (const btn of serverList.querySelectorAll<HTMLButtonElement>('.join-btn')) {
       const taken = (btn.dataset.avatars ?? '').split(',');
+      const takenNames = (btn.dataset.names ?? '').split(',').filter(Boolean);
       const full = btn.dataset.full === 'true';
       const avatarTaken = taken.includes(selected);
-      btn.disabled = full || avatarTaken;
+      const nameTaken = takenNames.includes(currentName);
+      btn.disabled = full || avatarTaken || nameTaken;
       const isTeamBtn = btn.dataset.team !== undefined;
       let tipText: string | null = null;
       if (full) {
         tipText = isTeamBtn ? 'This team is full.' : 'This game is full.';
       } else if (avatarTaken) {
         tipText = 'Your avatar is already in use in this game. Pick a different one to join.';
+      } else if (nameTaken) {
+        tipText = 'Your player name is already in use in this game. Pick a different one to join.';
       }
       if (tipText) {
         btn.onmouseenter = (e) => showTooltip(tipText, e.clientX, e.clientY);
@@ -656,6 +662,7 @@ async function main(): Promise<void> {
       const row = document.createElement('div');
       row.className = 'server-row';
       const avatarKeys = (game.avatars ?? []).map((a) => a.avatar).join(',');
+      const nameKeys = (game.avatars ?? []).map((a) => a.name.toLowerCase()).join(',');
       const teamsVal = (game.teams ?? 0) === 0 ? 'FFA' : String(game.teams);
 
       const mapSpan = document.createElement('span');
@@ -697,6 +704,7 @@ async function main(): Promise<void> {
           btn.textContent = `Join Team ${t}`;
           btn.dataset.wsurl = game.wsUrl;
           btn.dataset.avatars = avatarKeys;
+          btn.dataset.names = nameKeys;
           btn.dataset.full = String(teamFull);
           btn.dataset.team = String(t);
           btn.addEventListener('click', () => joinServer(game, t));
@@ -746,6 +754,7 @@ async function main(): Promise<void> {
         btn.textContent = 'Join';
         btn.dataset.wsurl = game.wsUrl;
         btn.dataset.avatars = avatarKeys;
+        btn.dataset.names = nameKeys;
         btn.dataset.full = String(full);
         btn.addEventListener('click', () => joinServer(game));
 
