@@ -1,6 +1,6 @@
 import { RoomData, ObjDef, InventoryItem } from './types';
 import { loadMaskedSprite, loadSprite, loadOpaqueTile, getColorMode } from './assets';
-import { spotIsVisible } from './los';
+import { spotIsVisible, tileViewBlocked } from './los';
 import { PICKUP_RANGE, pathIsWalkable } from './game-utils';
 
 export const TILE = 32;
@@ -284,7 +284,12 @@ export async function renderFrame(
     }
   }
 
-  // Draw local player on top
+  // Draw local player on top, dimmed if standing on an opaque tile (hidden from others)
+  const selfHidden = room != null && tileViewBlocked(room, objects, px, py);
+  if (selfHidden) {
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+  }
   if (playerSprite) {
     const bm = await getBitmap(playerSprite);
     ctx.drawImage(bm, BORDER + px * TILE, BORDER + py * TILE, TILE, TILE);
@@ -292,6 +297,7 @@ export async function renderFrame(
     ctx.fillStyle = getColorMode() === 'dark' ? '#fff' : '#000';
     ctx.fillRect(BORDER + px * TILE + 8, BORDER + py * TILE + 8, 16, 16);
   }
+  if (selfHidden) ctx.restore();
 
   if (boxOtherPlayers && !isDead) {
     ctx.save();
