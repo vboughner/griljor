@@ -949,7 +949,7 @@ export class Game {
     this.drawBorderIndicators(room);
     await this.drawMissiles();
     this.drawHitMarkers();
-    await this.drawPunchMarkers(this.canvas.getContext('2d')!);
+    await this.drawPunchMarkers();
     this.drawScreenFlash();
     this.roomInfo.textContent = room.name && room.name !== 'no name' ? room.name : '';
   }
@@ -1004,7 +1004,7 @@ export class Game {
     ctx.restore();
   }
 
-  private async drawPunchMarkers(ctx: CanvasRenderingContext2D): Promise<void> {
+  private async drawPunchMarkers(): Promise<void> {
     const now = Date.now();
     this.punchMarkers = this.punchMarkers.filter((m) => now < m.until);
     if (this.punchMarkers.length === 0) return;
@@ -1012,12 +1012,10 @@ export class Game {
     const sprite = await loadSprite('/sprites/bit/hit.png');
     if (!sprite) return;
 
-    const oc = new OffscreenCanvas(sprite.width, sprite.height);
-    const oc2d = oc.getContext('2d')!;
-    oc2d.putImageData(sprite, 0, 0);
-
+    const bm = await getBitmap(sprite);
+    const ctx = this.canvas.getContext('2d')!;
     for (const m of this.punchMarkers) {
-      ctx.drawImage(oc, BORDER + m.x * TILE, BORDER + m.y * TILE);
+      ctx.drawImage(bm, BORDER + m.x * TILE, BORDER + m.y * TILE);
     }
   }
 
