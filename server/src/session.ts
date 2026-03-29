@@ -929,6 +929,10 @@ export class GameSession {
     const roomData = this.world.rooms[roomIdx];
     if (!roomData) return;
 
+    // Direct hit: damage any player standing exactly on the landing tile
+    const centerHit = this.findPlayerHitOnPath([{ x: landX, y: landY }], roomIdx);
+    if (centerHit) this.dealDamage(centerHit.player, damage, attacker);
+
     for (const { dx, dy } of EXPLOSION_DIRS) {
       const targetX = Math.max(0, Math.min(GRID - 1, landX + dx * radius));
       const targetY = Math.max(0, Math.min(GRID - 1, landY + dy * radius));
@@ -1104,18 +1108,23 @@ export class GameSession {
             const entryY = dx !== 0 ? landTile.y : dy === 1 ? 0 : GRID - 1;
             const remainingRange = range - finalPath.length;
 
-            const contPath = this.calcMissilePath(
-              nextRoom,
-              entryX,
-              entryY,
-              entryX + dx * remainingRange,
-              entryY + dy * remainingRange,
-              remainingRange,
-              piercingFlag,
-            );
+            // calcMissilePath never includes the start tile, so prepend the entry tile
+            // so the grenade visually appears on the first square in the next room.
+            const contPath =
+              remainingRange > 1
+                ? this.calcMissilePath(
+                    nextRoom,
+                    entryX,
+                    entryY,
+                    entryX + dx * (remainingRange - 1),
+                    entryY + dy * (remainingRange - 1),
+                    remainingRange - 1,
+                    piercingFlag,
+                  )
+                : [];
 
             const contId = this.nextMissileId++;
-            const contTilePath = contPath.length > 0 ? contPath : [{ x: entryX, y: entryY }];
+            const contTilePath = [{ x: entryX, y: entryY }, ...contPath];
 
             this.broadcastToRoom(nextRoomIdx, {
               type: 'MISSILE_START',
@@ -1190,6 +1199,25 @@ export class GameSession {
     const targetY = player.y + dy;
 
     player.lastPunchedAt = Date.now();
+
+    if (targetX < 0 || targetX >= GRID || targetY < 0 || targetY >= GRID) {
+      // Punch crosses into an adjacent room
+      const nextRoomIdx = this.getRoomExit(player.room, dx, dy);
+      if (nextRoomIdx < 0) return;
+      const entryX = targetX < 0 ? GRID - 1 : targetX >= GRID ? 0 : targetX;
+      const entryY = targetY < 0 ? GRID - 1 : targetY >= GRID ? 0 : targetY;
+      this.broadcastToRoom(nextRoomIdx, {
+        type: 'PUNCH',
+        room: nextRoomIdx,
+        x: entryX,
+        y: entryY,
+        dx,
+        dy,
+      });
+      const hit = this.findPlayerHitOnPath([{ x: entryX, y: entryY }], nextRoomIdx, player.id);
+      if (hit) this.dealDamage(hit.player, PUNCH_DAMAGE, player);
+      return;
+    }
 
     this.broadcastToRoom(player.room, {
       type: 'PUNCH',
