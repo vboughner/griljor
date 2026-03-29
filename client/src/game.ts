@@ -264,10 +264,15 @@ export class Game {
       const tx = Math.floor((e.clientX - rect.left) / TILE) - 1;
       const ty = Math.floor((e.clientY - rect.top) / TILE) - 1;
 
-      // Border click → walk toward that exit (any button)
+      // Border click: right-click walks toward exit; left/middle fires into next room
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
         if (this.isDead) return;
-        this.startMovingTo(tx, ty);
+        if (e.button === 2) {
+          this.startMovingTo(tx, ty);
+        } else if (e.button === 0 || e.button === 1) {
+          const hand: 'left' | 'right' = e.button === 0 ? 'left' : 'right';
+          this.network?.sendFireWeapon(hand, tx, ty);
+        }
         return;
       }
 
