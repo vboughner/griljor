@@ -239,6 +239,39 @@ async function main(): Promise<void> {
   const status = document.getElementById('status') as HTMLElement;
   const leaveBtn = document.getElementById('leave-btn') as HTMLButtonElement;
   const respawnBtn = document.getElementById('respawn-btn') as HTMLButtonElement;
+  const helpBtn = document.getElementById('help-btn') as HTMLButtonElement;
+  const helpModal = document.getElementById('help-modal') as HTMLDivElement;
+  const helpClose = document.getElementById('help-close') as HTMLButtonElement;
+  const helpPrev = document.getElementById('help-prev') as HTMLButtonElement;
+  const helpNext = document.getElementById('help-next') as HTMLButtonElement;
+  const helpPageNum = document.getElementById('help-page-num') as HTMLSpanElement;
+  const helpPages = document.querySelectorAll<HTMLDivElement>('.help-page');
+  let helpPage = 0;
+
+  function showHelpPage(i: number): void {
+    helpPage = i;
+    helpPages.forEach((p, idx) => (p.style.display = idx === i ? '' : 'none'));
+    helpPrev.disabled = i === 0;
+    helpNext.disabled = i === helpPages.length - 1;
+    helpPageNum.textContent = `${i + 1} / ${helpPages.length}`;
+  }
+
+  function openHelp(): void {
+    helpModal.classList.add('open');
+    showHelpPage(0);
+  }
+
+  function closeHelp(): void {
+    helpModal.classList.remove('open');
+  }
+
+  helpBtn.addEventListener('click', openHelp);
+  helpClose.addEventListener('click', closeHelp);
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) closeHelp();
+  });
+  helpPrev.addEventListener('click', () => showHelpPage(helpPage - 1));
+  helpNext.addEventListener('click', () => showHelpPage(helpPage + 1));
   const chatLog = document.getElementById('chat-log') as HTMLElement;
   const chatInput = document.getElementById('chat-input') as HTMLInputElement;
   const chatSend = document.getElementById('chat-send') as HTMLButtonElement;
@@ -515,8 +548,20 @@ async function main(): Promise<void> {
 
   window.addEventListener('keydown', (e) => {
     if (gameScreen.style.display === 'none') return;
+    // Escape closes help modal if open
+    if (e.key === 'Escape' && helpModal.classList.contains('open')) {
+      e.preventDefault();
+      closeHelp();
+      return;
+    }
     const tag = (document.activeElement as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === 'h' || e.key === '?') {
+      e.preventDefault();
+      if (helpModal.classList.contains('open')) closeHelp();
+      else openHelp();
+      return;
+    }
     if (e.key === 't') {
       e.preventDefault();
       chatInput.focus();
@@ -862,7 +907,9 @@ async function main(): Promise<void> {
       network.onInventory = (msg) => {
         void updateInventoryPanel(msg);
         game.setActiveHand(msg.leftHand);
-        game.setWeight(msg.currentWeight, msg.maxWeight);
+        const handFull = msg.leftHand !== null;
+        const noFreeSlot = msg.inventory.every((s) => s !== null);
+        game.setWeight(msg.currentWeight, msg.maxWeight, handFull && noFreeSlot);
       };
 
       network.onYourStats = (msg) => {
@@ -957,7 +1004,7 @@ async function main(): Promise<void> {
       }
       beforeStart?.();
       let secs = 5;
-      btn.textContent = `${activePrefix} ${secs}…`;
+      btn.textContent = `${activePrefix} ${secs}`;
       timer = setInterval(() => {
         secs--;
         if (secs <= 0) {
@@ -965,7 +1012,7 @@ async function main(): Promise<void> {
           onConfirm();
           return;
         }
-        btn.textContent = `${activePrefix} ${secs}…`;
+        btn.textContent = `${activePrefix} ${secs}`;
       }, 1000);
     });
     return cancel;
@@ -977,7 +1024,7 @@ async function main(): Promise<void> {
   const cancelRespawn = makeCountdownButton(
     respawnBtn,
     'Respawn',
-    'Respawn',
+    'Res',
     () => currentNetwork?.sendVoluntaryRespawn(),
     () => {
       cancelLeave();
@@ -1005,7 +1052,7 @@ async function main(): Promise<void> {
     refreshServerList();
   }
 
-  const cancelLeave = makeCountdownButton(leaveBtn, 'Leave Game', 'Leaving', doLeave, () =>
+  const cancelLeave = makeCountdownButton(leaveBtn, 'Leave', 'Leave', doLeave, () =>
     cancelRespawn(),
   );
 

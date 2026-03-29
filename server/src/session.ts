@@ -705,7 +705,7 @@ export class GameSession {
           from: 0,
           name: 'GM',
           to: player.id,
-          text: 'Your hands are full.',
+          text: 'Your inventory is full.',
         });
         return;
       }

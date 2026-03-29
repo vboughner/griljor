@@ -411,15 +411,15 @@ Item bitmaps drawn via `loadMaskedSprite` / `loadSprite`; charge count
 overlaid in yellow for `numbered` items.
 
 **Action cards** (`mouse-widget.ts`): Two styled cards replace the old
-XBM mouse widget. The LMB card shows the active hand item icon, name
-(2-line wrap), and ammo count for `numbered` items. The RMB card shows a
-move icon rendered from the original `movemark` XBM. Clicking/right-clicking
-the LMB card drops the active hand item.
+XBM mouse widget. The LEFT CLICK card shows the active hand item icon, name
+(2-line wrap), and ammo count for `numbered` items. The RIGHT CLICK card shows a
+compass-style 8-direction arrow icon. Clicking/right-clicking
+the LEFT CLICK card drops the active hand item.
 
 ### Key Edge Cases
 
 - **Overweight**: server rejects pickup with GM chat "That is too heavy to carry."
-- **All slots full**: server rejects with GM chat "Your hands are full."
+- **All slots full**: server rejects with GM chat "Your inventory is full."
 - **Drop on occupied tile**: spiral search finds nearest free tile.
 - **`detail = -1`** (e.g. keys without a set charge): quantity defaults to 1.
 - **`ITEMS_SYNC` on join**: replaces client's map-file-derived floor items
