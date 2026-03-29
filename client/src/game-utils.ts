@@ -45,7 +45,6 @@ export function isTileBlocked(
       if (flId > 0 && !((objects[flId]?.movement ?? 0) > 0)) return true;
     }
   }
-  // Recorded objects (doors, etc.): block if movement absent/0.
   // Skip takeable items — they lie on the floor and don't block movement.
   for (const ro of room.recorded_objects ?? []) {
     if (ro.x === x && ro.y === y && ro.type > 0) {

@@ -217,6 +217,15 @@ export async function renderFrame(
   ctx.drawImage(bg, 0, 0);
 
   // Draw floor items (between background and players)
+  // Tint only the item's own pixels by compositing onto a temporary canvas.
+  // source-atop fills the tint color only where the sprite has opaque pixels,
+  // leaving the transparent (non-item) areas unchanged.
+  const tintCanvas = showPickupHighlights && room ? new OffscreenCanvas(TILE, TILE) : null;
+  const tintCtx = tintCanvas?.getContext('2d') ?? null;
+  if (tintCtx) {
+    tintCtx.globalCompositeOperation = 'source-atop';
+    tintCtx.globalAlpha = 0.55;
+  }
   for (const [key, item] of floorItems) {
     const [ix, iy] = key.split(',').map(Number);
     const obj = objects[item.type];
@@ -226,28 +235,22 @@ export async function renderFrame(
     const bm = await getBitmap(imgData);
     ctx.drawImage(bm, BORDER + ix * TILE, BORDER + iy * TILE, TILE, TILE);
 
-    if (showPickupHighlights && room) {
+    if (tintCtx && tintCanvas && room) {
       const dist = Math.max(Math.abs(ix - px), Math.abs(iy - py));
       if (
         dist <= PICKUP_RANGE &&
         spotIsVisible(room, objects, px, py, ix, iy) &&
         pathIsWalkable(px, py, ix, iy, room, objects)
       ) {
-        const itemWeight = obj.numbered ? (obj.weight ?? 0) : (obj.weight ?? 0) * item.quantity;
+        const itemWeight = (obj.weight ?? 0) * (obj.numbered ? 1 : item.quantity);
         const tooHeavy = currentWeight + itemWeight > maxWeight;
-        const tintColor = tooHeavy ? '#6b4210' : '#5aad70';
-
-        // Tint only the item's own pixels by compositing onto a temporary canvas.
-        // source-atop fills the tint color only where the sprite has opaque pixels,
-        // leaving the transparent (non-item) areas unchanged.
-        const tmp = new OffscreenCanvas(TILE, TILE);
-        const tmpCtx = tmp.getContext('2d')!;
-        tmpCtx.drawImage(bm, 0, 0, TILE, TILE);
-        tmpCtx.globalCompositeOperation = 'source-atop';
-        tmpCtx.globalAlpha = 0.55;
-        tmpCtx.fillStyle = tintColor;
-        tmpCtx.fillRect(0, 0, TILE, TILE);
-        ctx.drawImage(tmp, BORDER + ix * TILE, BORDER + iy * TILE);
+        tintCtx.clearRect(0, 0, TILE, TILE);
+        tintCtx.globalCompositeOperation = 'source-over';
+        tintCtx.drawImage(bm, 0, 0, TILE, TILE);
+        tintCtx.globalCompositeOperation = 'source-atop';
+        tintCtx.fillStyle = tooHeavy ? '#6b4210' : '#5aad70';
+        tintCtx.fillRect(0, 0, TILE, TILE);
+        ctx.drawImage(tintCanvas, BORDER + ix * TILE, BORDER + iy * TILE);
       }
     }
   }
