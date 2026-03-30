@@ -7,6 +7,7 @@ const INV_SIZE = 21;
 const MAX_WEIGHT = 200;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
+const MAX_EXPLOSION_DEPTH = 2;
 export const PICKUP_RANGE = 4; // max Chebyshev distance to pick up an item
 
 // AFK idle detection
@@ -124,6 +125,19 @@ export function calcFireCooldown(refire?: number): number {
  *  speed=9 → ~76ms/step, speed=1 → ~682ms/step, floor 50ms. */
 export function calcMsPerStep(speed: number): number {
   return Math.max(50, Math.round(1500 / (speed * 2.2)));
+}
+
+/** Resolve explosion parameters from a weapon/boombit object definition. */
+function resolveExplosionParams(
+  obj: ObjDef,
+  fallbackType: number,
+  objects: Array<ObjDef | null>,
+): { boomObjType: number; radius: number; piercing: boolean } {
+  const boomObjType = obj.boombit ?? obj.movingobj ?? fallbackType;
+  const radius = Math.max(1, obj.explodes! - 1);
+  const boomObj = objects[boomObjType];
+  const piercing = (boomObj?.piercing ?? 0) > 0;
+  return { boomObjType, radius, piercing };
 }
 
 interface Player {
@@ -887,6 +901,7 @@ export class GameSession {
     boomObjType: number,
     radius: number,
     piercing: boolean,
+    depth: number = 0,
   ): void {
     const boomObj = this.world.objects[boomObjType];
     if (!boomObj) return;
@@ -899,6 +914,12 @@ export class GameSession {
     // Direct hit: damage any player standing exactly on the landing tile
     const centerHit = this.findPlayerHitOnPath([{ x: landX, y: landY }], roomIdx);
     if (centerHit) this.dealDamage(centerHit.player, damage, attacker);
+
+    // Pre-compute chain-reaction params (invariant across all 8 rays)
+    const willChain = boomObj.explodes && depth < MAX_EXPLOSION_DEPTH;
+    const chainParams = willChain
+      ? resolveExplosionParams(boomObj, boomObjType, this.world.objects)
+      : null;
 
     for (const { dx, dy } of EXPLOSION_DIRS) {
       const targetX = Math.max(0, Math.min(GRID - 1, landX + dx * radius));
@@ -926,6 +947,20 @@ export class GameSession {
         this.activeMissiles.delete(id);
         this.broadcastToRoom(roomIdx, { type: 'MISSILE_END', id });
         if (hitPlayer) this.dealDamage(hitPlayer, damage, attacker);
+
+        if (chainParams && finalPath.length > 0) {
+          const endTile = finalPath[finalPath.length - 1];
+          this.triggerExplosion(
+            attacker,
+            roomIdx,
+            endTile.x,
+            endTile.y,
+            chainParams.boomObjType,
+            chainParams.radius,
+            chainParams.piercing,
+            depth + 1,
+          );
+        }
       }, finalPath.length * msPerStep);
       this.activeMissiles.set(id, timer);
     }
@@ -1046,10 +1081,11 @@ export class GameSession {
       const landTile = finalPath[finalPath.length - 1];
       // Trigger explosion for exploding weapons
       if (obj.explodes) {
-        const boomObjType = obj.boombit ?? obj.movingobj ?? handItem.type;
-        const radius = Math.max(1, obj.explodes - 1);
-        const boomObj = this.world.objects[boomObjType];
-        const piercingFlag = (boomObj?.piercing ?? 0) > 0;
+        const {
+          boomObjType,
+          radius,
+          piercing: piercingFlag,
+        } = resolveExplosionParams(obj, handItem.type, this.world.objects);
 
         if (obj.lost && !hitPlayer && finalPath.length < range) {
           const onEdge =
