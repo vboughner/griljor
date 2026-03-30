@@ -11,8 +11,8 @@ Later Playability:
 
 ## Feedback from play
 - [ ] sometimes seeing people in rooms when they are not really there anymore
-- [ ] consider something new to help you understand when you are invisible to others
-- [ ] check this bug: are you still visible to others when standing on a potted plant?
+- [x] consider something new to help you understand when you are invisible to others
+- [x] check this bug: are you still visible to others when standing on a potted plant?
 - [ ] consider in team games, making all teammates visible everywhere (this might be at the same time we save them from friendly fire)
 - [ ] player list doesn't immediately include other people that have joined the game until you see them for the first time, they should be announced when they join
 - [ ] no sound yet, add some rudimentary sounds?
