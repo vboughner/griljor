@@ -59,7 +59,7 @@ or spawn placement
 - [ ] **day/night cycle** — some rooms are lit during the day and dark at night based on in-game time
 - [ ] **spread/arc weapons** — shotguns, wide-arc blasters, and 360° explosions fire multiple projectiles; a whole weapon category is missing
 - [ ] **flammable chain reactions** — flammable map objects (barrels, etc.) should ignite and explode when hit by an explosion; currently not implemented
-- [ ] **ammo reload from quiver** — bows should reload from arrows carried in inventory; currently they just run out
+- [x] **ammo reload from quiver** — bows should reload from arrows carried in inventory; currently they just run out
 - [ ] **object look/examine messages** — each item in the original had flavor text shown when looking at or examining it; currently only a name tooltip is shown
 
 ## Production
