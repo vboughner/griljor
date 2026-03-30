@@ -274,7 +274,7 @@ export class GameSession {
             this.onMessage(playerId, msg);
             break;
           case 'LEAVING_GAME':
-            this.onLeave(playerId);
+            this.onLeave(playerId, 'left');
             break;
           case 'PICKUP':
             this.onPickup(playerId, msg);
@@ -302,12 +302,12 @@ export class GameSession {
 
     ws.on('close', () => {
       const playerId = this.wsToId.get(ws);
-      if (playerId !== undefined) this.onLeave(playerId);
+      if (playerId !== undefined) this.onLeave(playerId, 'disconnected');
     });
 
     ws.on('error', () => {
       const playerId = this.wsToId.get(ws);
-      if (playerId !== undefined) this.onLeave(playerId);
+      if (playerId !== undefined) this.onLeave(playerId, 'disconnected');
     });
   }
 
@@ -1522,7 +1522,7 @@ export class GameSession {
 
   // ── Leave ─────────────────────────────────────────────────────────────────
 
-  private onLeave(playerId: number): void {
+  private onLeave(playerId: number, reason: 'left' | 'disconnected'): void {
     const player = this.players.get(playerId);
     if (!player) return;
 
@@ -1534,10 +1534,11 @@ export class GameSession {
 
     this.dropPlayerItems(player);
 
+    const playerName = player.name;
     this.players.delete(playerId);
     this.wsToId.delete(player.ws);
     this.clearVisibility(playerId);
-    this.broadcast({ type: 'LEAVING_GAME', id: playerId });
+    this.broadcast({ type: 'LEAVING_GAME', id: playerId, name: playerName, reason });
     if (this.players.size === 0) {
       if (this.world.resetOnEmpty) {
         const delay = this.world.resetAfterSeconds * 1000;
@@ -1605,7 +1606,7 @@ export class GameSession {
       // Grace period exhausted — kick the player
       player.afkWarnTimer = setTimeout(() => {
         player.afkWarnTimer = null;
-        this.onLeave(player.id);
+        this.onLeave(player.id, 'disconnected');
         try {
           player.ws.close();
         } catch {

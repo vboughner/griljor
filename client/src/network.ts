@@ -42,7 +42,7 @@ type S2CMessage =
     }
   | { type: 'PLAYER_STATS'; id: number; kills: number; deaths: number }
   | { type: 'MY_LOCATION'; id: number; room: number; x: number; y: number }
-  | { type: 'LEAVING_GAME'; id: number }
+  | { type: 'LEAVING_GAME'; id: number; name: string; reason: 'left' | 'disconnected' }
   | { type: 'MESSAGE'; from: number; name: string; to: number | 'all'; text: string }
   | { type: 'ITEM_REMOVED'; room: number; x: number; y: number }
   | { type: 'ITEM_ADDED'; room: number; x: number; y: number; item: InventoryItem }

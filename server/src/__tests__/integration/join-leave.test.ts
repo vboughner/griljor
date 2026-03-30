@@ -54,14 +54,28 @@ describe('join / leave', () => {
     expect(infos.some((m) => m.name === 'Bob')).toBe(true);
   });
 
-  it('LEAVING_GAME broadcast when player disconnects', () => {
+  it('LEAVING_GAME broadcast with reason "disconnected" when player closes connection', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');
     bob.ws.flush();
     alice.ws.close();
     expect(session.playerCount).toBe(1);
-    const leaves = bob.ws.messagesOfType('LEAVING_GAME');
-    expect(leaves.some((m) => m.id === alice.id)).toBe(true);
+    const leave = bob.ws.messagesOfType('LEAVING_GAME').find((m) => m.id === alice.id);
+    expect(leave).toBeDefined();
+    expect(leave!.name).toBe('Alice');
+    expect(leave!.reason).toBe('disconnected');
+  });
+
+  it('LEAVING_GAME broadcast with reason "left" when player sends LEAVING_GAME', () => {
+    const alice = joinPlayer(session, 'Alice');
+    const bob = joinPlayer(session, 'Bob');
+    bob.ws.flush();
+    alice.ws.receive({ type: 'LEAVING_GAME' });
+    expect(session.playerCount).toBe(1);
+    const leave = bob.ws.messagesOfType('LEAVING_GAME').find((m) => m.id === alice.id);
+    expect(leave).toBeDefined();
+    expect(leave!.name).toBe('Alice');
+    expect(leave!.reason).toBe('left');
   });
 
   it('player count decrements after disconnect', () => {

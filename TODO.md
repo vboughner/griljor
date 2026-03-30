@@ -38,7 +38,7 @@ Later Playability:
 ## Change / Add / Reorg
 - [ ] wait a little longer to reset the map after no one is left in it, and consider a timer in the lobby that tells you how long until the map resets (30 seconds?)
 - [ ] help users in the lobby know when server is going to get reset (when no one is left in it)
-- [ ] when someone leaves the game after 5 seconds there should be a message that they left the game, but when someone disconnects suddenly, they should be said to have disconnected
+- [x] when someone leaves the game after 5 seconds there should be a message that they left the game, but when someone disconnects suddenly, they should be said to have disconnected
 - [ ] it might be nice for the dmg and health? numbers to move upwards a little more than they do
 - [x] let the chat history be taller, contain more text, perhaps use up space that is not needed by the player list
 - [x] make the mouse graphic not so tall, figure out a better way to display what the mouse buttons are for, it kind of needs a redesign for the modern era

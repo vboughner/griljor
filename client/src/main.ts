@@ -905,6 +905,11 @@ async function main(): Promise<void> {
       network.onLeave = async (msg) => {
         await gameOnLeave(msg);
         removePlayer(msg.id);
+        if (msg.reason === 'left') {
+          appendReport(`${msg.name} left the game.`);
+        } else {
+          appendReport(`${msg.name} disconnected.`);
+        }
       };
 
       network.onPlayerStats = (msg) => {
