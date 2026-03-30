@@ -2180,7 +2180,8 @@
       "movingobj": 211,
       "speed": 2,
       "damage": 10,
-      "explodes": 7,
+      "explodes": 10,
+      "spread": 16,
       "boombit": 212,
       "flammable": 7,
       "_index": 211
@@ -2196,7 +2197,7 @@
       "stop": true,
       "movingobj": 212,
       "directional": true,
-      "speed": 6,
+      "speed": 3,
       "damage": 40,
       "piercing": 1,
       "destroys": 1,

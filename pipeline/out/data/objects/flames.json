@@ -767,10 +767,11 @@
       "movingobj": 78,
       "speed": 2,
       "damage": 10,
-      "explodes": 7,
+      "explodes": 10,
       "boombit": 79,
       "flammable": 7,
-      "_index": 78
+      "_index": 78,
+      "spread": 16
     },
     {
       "bitmap": "079_bitmap.png",
@@ -784,7 +785,7 @@
       "stop": true,
       "movingobj": 79,
       "directional": true,
-      "speed": 6,
+      "speed": 3,
       "damage": 40,
       "piercing": 1,
       "destroys": 1,

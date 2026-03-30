@@ -15,16 +15,30 @@ const AFK_IDLE_MS = 5 * 60 * 1000; // idle time before first warning (5 min)
 const AFK_WARN_INTERVAL_MS = 1 * 60 * 1000; // interval between warnings (1 min)
 const AFK_GRACE_MINUTES = 5; // number of warnings before kick
 
-const EXPLOSION_DIRS = [
-  { dx: 0, dy: -1 },
-  { dx: 1, dy: -1 },
-  { dx: 1, dy: 0 },
-  { dx: 1, dy: 1 },
-  { dx: 0, dy: 1 },
-  { dx: -1, dy: 1 },
-  { dx: -1, dy: 0 },
-  { dx: -1, dy: -1 },
-] as const;
+const DEFAULT_SPREAD = 8;
+
+/** Generate evenly-spaced explosion ray targets for a given spread count and radius. */
+function explosionTargets(
+  spread: number,
+  radius: number,
+): Array<{ offsetX: number; offsetY: number; dx: number; dy: number }> {
+  const targets: Array<{ offsetX: number; offsetY: number; dx: number; dy: number }> = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < spread; i++) {
+    const angle = (i * 2 * Math.PI) / spread;
+    // north (dy=-1) is angle 0
+    const offsetX = Math.round(radius * Math.sin(angle));
+    const offsetY = Math.round(-radius * Math.cos(angle));
+    const key = `${offsetX},${offsetY}`;
+    if (seen.has(key)) continue; // deduplicate targets that round to the same tile
+    seen.add(key);
+    // dx/dy for sprite direction: sign of the offset
+    const dx = Math.sign(offsetX);
+    const dy = Math.sign(offsetY);
+    targets.push({ offsetX, offsetY, dx, dy });
+  }
+  return targets;
+}
 
 export const PUNCH_DAMAGE = 10;
 export const PUNCH_COOLDOWN_MS = 400;
@@ -132,12 +146,13 @@ function resolveExplosionParams(
   obj: ObjDef,
   fallbackType: number,
   objects: Array<ObjDef | null>,
-): { boomObjType: number; radius: number; piercing: boolean } {
+): { boomObjType: number; radius: number; piercing: boolean; spread: number } {
   const boomObjType = obj.boombit ?? obj.movingobj ?? fallbackType;
   const radius = Math.max(1, obj.explodes! - 1);
   const boomObj = objects[boomObjType];
   const piercing = (boomObj?.piercing ?? 0) > 0;
-  return { boomObjType, radius, piercing };
+  const spread = obj.spread ?? DEFAULT_SPREAD;
+  return { boomObjType, radius, piercing, spread };
 }
 
 interface Player {
@@ -901,6 +916,7 @@ export class GameSession {
     boomObjType: number,
     radius: number,
     piercing: boolean,
+    spread: number = DEFAULT_SPREAD,
     depth: number = 0,
   ): void {
     const boomObj = this.world.objects[boomObjType];
@@ -915,15 +931,15 @@ export class GameSession {
     const centerHit = this.findPlayerHitOnPath([{ x: landX, y: landY }], roomIdx);
     if (centerHit) this.dealDamage(centerHit.player, damage, attacker);
 
-    // Pre-compute chain-reaction params (invariant across all 8 rays)
+    // Pre-compute chain-reaction params (invariant across all rays)
     const willChain = boomObj.explodes && depth < MAX_EXPLOSION_DEPTH;
     const chainParams = willChain
       ? resolveExplosionParams(boomObj, boomObjType, this.world.objects)
       : null;
 
-    for (const { dx, dy } of EXPLOSION_DIRS) {
-      const targetX = Math.max(0, Math.min(GRID - 1, landX + dx * radius));
-      const targetY = Math.max(0, Math.min(GRID - 1, landY + dy * radius));
+    for (const { offsetX, offsetY, dx, dy } of explosionTargets(spread, radius)) {
+      const targetX = Math.max(0, Math.min(GRID - 1, landX + offsetX));
+      const targetY = Math.max(0, Math.min(GRID - 1, landY + offsetY));
       const path = this.calcMissilePath(roomData, landX, landY, targetX, targetY, radius, piercing);
       if (path.length === 0) continue;
 
@@ -958,6 +974,7 @@ export class GameSession {
             chainParams.boomObjType,
             chainParams.radius,
             chainParams.piercing,
+            chainParams.spread,
             depth + 1,
           );
         }
@@ -1085,6 +1102,7 @@ export class GameSession {
           boomObjType,
           radius,
           piercing: piercingFlag,
+          spread: explSpread,
         } = resolveExplosionParams(obj, handItem.type, this.world.objects);
 
         if (obj.lost && !hitPlayer && finalPath.length < range) {
@@ -1144,6 +1162,7 @@ export class GameSession {
                 boomObjType,
                 radius,
                 piercingFlag,
+                explSpread,
               );
             }, contTravelMs);
             this.activeMissiles.set(contId, contTimer);
@@ -1159,6 +1178,7 @@ export class GameSession {
           boomObjType,
           radius,
           piercingFlag,
+          explSpread,
         );
       }
       // Drop throwable items (lost+stop, non-exploding) at landing position
