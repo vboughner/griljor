@@ -10,11 +10,11 @@ Later Playability:
 - [ ] make a new hotkey that let's you swap what's in your hand with what is in your first inventory slot (or maybe a set of funciton keys you can set things in your inventory to let you quickly swap with (advanced feature)
 
 ## Feedback from play
-- [ ] sometimes seeing people in rooms when they are not really there anymore
-- [ ] consider something new to help you understand when you are invisible to others
-- [ ] check this bug: are you still visible to others when standing on a potted plant?
+- [x] sometimes seeing people in rooms when they are not really there anymore
+- [x] consider something new to help you understand when you are invisible to others
+- [x] check this bug: are you still visible to others when standing on a potted plant?
 - [ ] consider in team games, making all teammates visible everywhere (this might be at the same time we save them from friendly fire)
-- [ ] player list doesn't immediately include other people that have joined the game until you see them for the first time, they should be announced when they join
+- [x] player list doesn't immediately include other people that have joined the game until you see them for the first time, they should be announced when they join
 - [ ] no sound yet, add some rudimentary sounds?
 
 ## Maps
@@ -38,7 +38,7 @@ Later Playability:
 ## Change / Add / Reorg
 - [ ] wait a little longer to reset the map after no one is left in it, and consider a timer in the lobby that tells you how long until the map resets (30 seconds?)
 - [ ] help users in the lobby know when server is going to get reset (when no one is left in it)
-- [ ] when someone leaves the game after 5 seconds there should be a message that they left the game, but when someone disconnects suddenly, they should be said to have disconnected
+- [x] when someone leaves the game after 5 seconds there should be a message that they left the game, but when someone disconnects suddenly, they should be said to have disconnected
 - [ ] it might be nice for the dmg and health? numbers to move upwards a little more than they do
 - [x] let the chat history be taller, contain more text, perhaps use up space that is not needed by the player list
 - [x] make the mouse graphic not so tall, figure out a better way to display what the mouse buttons are for, it kind of needs a redesign for the modern era
@@ -47,7 +47,7 @@ Later Playability:
 - [ ] add hot key setting and mouse changes settings (but how will they save these, do we need profiles, or maybe just 3 good hotkey setting choices)
 
 ## Make teams work:
-- [ ] display which team people are in the player list, make your team more obvious on the map (in colors?)
+- [x] display which team people are in the player list, make your team more obvious on the map (in colors?)
 - [ ] consider friendly fire options for teammates (i.e. cannot hurt members of your own team)
 
 ## Remaining Differences with Legacy
@@ -57,10 +57,9 @@ or spawn placement
 - [ ] **win conditions** — no game ever ends; the original had capture-the-flag mechanics (`flag`/`flagteams` on objects) and a game timer with rewards
 - [ ] **dark rooms + flashlight** — several maps (castle, hack, outdoor) have rooms that are dark by default; flashlight items illuminate a radius around the bearer
 - [ ] **day/night cycle** — some rooms are lit during the day and dark at night based on in-game time
-- [ ] **wearable items** — armor, rings, helmets with a slot system exist in item definitions but cannot be equipped
 - [ ] **spread/arc weapons** — shotguns, wide-arc blasters, and 360° explosions fire multiple projectiles; a whole weapon category is missing
 - [ ] **flammable chain reactions** — flammable map objects (barrels, etc.) should ignite and explode when hit by an explosion; currently not implemented
-- [ ] **ammo reload from quiver** — bows should reload from arrows carried in inventory; currently they just run out
+- [x] **ammo reload from quiver** — bows should reload from arrows carried in inventory; currently they just run out
 - [ ] **object look/examine messages** — each item in the original had flavor text shown when looking at or examining it; currently only a name tooltip is shown
 
 ## Production

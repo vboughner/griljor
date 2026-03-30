@@ -42,7 +42,7 @@ type S2CMessage =
     }
   | { type: 'PLAYER_STATS'; id: number; kills: number; deaths: number }
   | { type: 'MY_LOCATION'; id: number; room: number; x: number; y: number }
-  | { type: 'LEAVING_GAME'; id: number }
+  | { type: 'LEAVING_GAME'; id: number; name: string; reason: 'left' | 'disconnected' }
   | { type: 'MESSAGE'; from: number; name: string; to: number | 'all'; text: string }
   | { type: 'ITEM_REMOVED'; room: number; x: number; y: number }
   | { type: 'ITEM_ADDED'; room: number; x: number; y: number; item: InventoryItem }
@@ -77,7 +77,18 @@ type S2CMessage =
   | { type: 'YOU_DIED'; killedBy: number; killerName: string; deadForMs: number }
   | { type: 'YOU_RESPAWNED'; room: number; x: number; y: number }
   | { type: 'ROOM_OBJECT_CHANGED'; room: number; x: number; y: number; newType: number }
-  | { type: 'PLAYER_HIDDEN'; id: number };
+  | { type: 'PLAYER_HIDDEN'; id: number }
+  | {
+      type: 'PLAYER_JOINED';
+      id: number;
+      name: string;
+      avatar: string;
+      kills: number;
+      deaths: number;
+      joinedAt: number;
+      dead: boolean;
+      team: number;
+    };
 
 export class GameNetwork {
   private ws: WebSocket;
@@ -107,6 +118,7 @@ export class GameNetwork {
   onRoomObjectChanged: (msg: Extract<S2CMessage, { type: 'ROOM_OBJECT_CHANGED' }>) => void =
     () => {};
   onPlayerHidden: (msg: Extract<S2CMessage, { type: 'PLAYER_HIDDEN' }>) => void = () => {};
+  onPlayerJoined: (msg: Extract<S2CMessage, { type: 'PLAYER_JOINED' }>) => void = () => {};
   onClose: () => void = () => {};
 
   constructor(url: string) {
@@ -203,6 +215,9 @@ export class GameNetwork {
           break;
         case 'PLAYER_HIDDEN':
           this.onPlayerHidden(msg);
+          break;
+        case 'PLAYER_JOINED':
+          this.onPlayerJoined(msg);
           break;
       }
     });

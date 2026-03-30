@@ -274,7 +274,7 @@ export class GameSession {
             this.onMessage(playerId, msg);
             break;
           case 'LEAVING_GAME':
-            this.onLeave(playerId);
+            this.onLeave(playerId, 'left');
             break;
           case 'PICKUP':
             this.onPickup(playerId, msg);
@@ -302,12 +302,12 @@ export class GameSession {
 
     ws.on('close', () => {
       const playerId = this.wsToId.get(ws);
-      if (playerId !== undefined) this.onLeave(playerId);
+      if (playerId !== undefined) this.onLeave(playerId, 'disconnected');
     });
 
     ws.on('error', () => {
       const playerId = this.wsToId.get(ws);
-      if (playerId !== undefined) this.onLeave(playerId);
+      if (playerId !== undefined) this.onLeave(playerId, 'disconnected');
     });
   }
 
@@ -394,6 +394,14 @@ export class GameSession {
       team: player.team,
     });
 
+    // Broadcast join to all players (no position data).
+    const joinedMsg = this.makePlayerJoined(player);
+    for (const other of this.players.values()) {
+      if (other.id === id) continue;
+      this.send(other.ws, joinedMsg);
+      this.send(ws, this.makePlayerJoined(other));
+    }
+
     for (const other of this.players.values()) {
       if (other.id === id) continue;
       if (other.room !== player.room) {
@@ -422,12 +430,6 @@ export class GameSession {
           if (newCanSeeOther) {
             this.visibility.get(id)!.add(other.id);
             this.send(ws, this.makePlayerInfo(other));
-            this.send(ws, {
-              type: 'PLAYER_HEALTH',
-              id: other.id,
-              hp: other.hp,
-              maxHp: other.maxHp,
-            });
           }
           if (otherCanSeeNew) {
             this.visibility.get(other.id)?.add(id);
@@ -1494,7 +1496,7 @@ export class GameSession {
 
   // ── Leave ─────────────────────────────────────────────────────────────────
 
-  private onLeave(playerId: number): void {
+  private onLeave(playerId: number, reason: 'left' | 'disconnected'): void {
     const player = this.players.get(playerId);
     if (!player) return;
 
@@ -1506,10 +1508,11 @@ export class GameSession {
 
     this.dropPlayerItems(player);
 
+    const playerName = player.name;
     this.players.delete(playerId);
     this.wsToId.delete(player.ws);
     this.clearVisibility(playerId);
-    this.broadcast({ type: 'LEAVING_GAME', id: playerId });
+    this.broadcast({ type: 'LEAVING_GAME', id: playerId, name: playerName, reason });
     if (this.players.size === 0) {
       if (this.world.resetOnEmpty) {
         const delay = this.world.resetAfterSeconds * 1000;
@@ -1577,7 +1580,7 @@ export class GameSession {
       // Grace period exhausted — kick the player
       player.afkWarnTimer = setTimeout(() => {
         player.afkWarnTimer = null;
-        this.onLeave(player.id);
+        this.onLeave(player.id, 'disconnected');
         try {
           player.ws.close();
         } catch {
@@ -1851,6 +1854,20 @@ export class GameSession {
       room: p.room,
       x: p.x,
       y: p.y,
+      kills: p.kills,
+      deaths: p.deaths,
+      joinedAt: p.joinedAt,
+      dead: p.dead,
+      team: p.team,
+    };
+  }
+
+  private makePlayerJoined(p: Player): Extract<S2CMessage, { type: 'PLAYER_JOINED' }> {
+    return {
+      type: 'PLAYER_JOINED',
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar,
       kills: p.kills,
       deaths: p.deaths,
       joinedAt: p.joinedAt,

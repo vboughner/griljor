@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import WebSocket from 'ws';
 import { GameSession } from '../../session';
-import { buildTestWorld, joinPlayer, MockWebSocket } from './helpers';
+import { buildTestWorld, buildTwoRoomWorld, joinPlayer, MockWebSocket } from './helpers';
 
 describe('join / leave', () => {
   let session: GameSession;
@@ -54,14 +54,28 @@ describe('join / leave', () => {
     expect(infos.some((m) => m.name === 'Bob')).toBe(true);
   });
 
-  it('LEAVING_GAME broadcast when player disconnects', () => {
+  it('LEAVING_GAME broadcast with reason "disconnected" when player closes connection', () => {
     const alice = joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');
     bob.ws.flush();
     alice.ws.close();
     expect(session.playerCount).toBe(1);
-    const leaves = bob.ws.messagesOfType('LEAVING_GAME');
-    expect(leaves.some((m) => m.id === alice.id)).toBe(true);
+    const leave = bob.ws.messagesOfType('LEAVING_GAME').find((m) => m.id === alice.id);
+    expect(leave).toBeDefined();
+    expect(leave!.name).toBe('Alice');
+    expect(leave!.reason).toBe('disconnected');
+  });
+
+  it('LEAVING_GAME broadcast with reason "left" when player sends LEAVING_GAME', () => {
+    const alice = joinPlayer(session, 'Alice');
+    const bob = joinPlayer(session, 'Bob');
+    bob.ws.flush();
+    alice.ws.receive({ type: 'LEAVING_GAME' });
+    expect(session.playerCount).toBe(1);
+    const leave = bob.ws.messagesOfType('LEAVING_GAME').find((m) => m.id === alice.id);
+    expect(leave).toBeDefined();
+    expect(leave!.name).toBe('Alice');
+    expect(leave!.reason).toBe('left');
   });
 
   it('player count decrements after disconnect', () => {
@@ -86,5 +100,49 @@ describe('join / leave', () => {
     const aliceInfo = bob.ws.messagesOfType('PLAYER_INFO').find((m) => m.name === 'Alice');
     expect(aliceInfo?.team).toBe(2);
     multiTeamSession.destroy();
+  });
+
+  it('PLAYER_JOINED is sent to existing players when a new player joins', () => {
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.flush();
+    joinPlayer(session, 'Bob', 'b');
+    const joined = alice.ws.messagesOfType('PLAYER_JOINED');
+    expect(joined.some((m) => m.name === 'Bob')).toBe(true);
+  });
+
+  it('PLAYER_JOINED is sent to new player for each existing player', () => {
+    joinPlayer(session, 'Alice');
+    const bob = joinPlayer(session, 'Bob');
+    const joined = bob.ws.messagesOfType('PLAYER_JOINED');
+    expect(joined.some((m) => m.name === 'Alice')).toBe(true);
+  });
+
+  it('PLAYER_JOINED does not include position fields', () => {
+    joinPlayer(session, 'Alice');
+    const bob = joinPlayer(session, 'Bob');
+    const joined = bob.ws.messagesOfType('PLAYER_JOINED').find((m) => m.name === 'Alice');
+    expect(joined).toBeDefined();
+    expect(joined).not.toHaveProperty('room');
+    expect(joined).not.toHaveProperty('x');
+    expect(joined).not.toHaveProperty('y');
+  });
+
+  it('PLAYER_JOINED is sent even when players are in different rooms', () => {
+    // Use teams to force players into different rooms deterministically
+    const world = buildTwoRoomWorld();
+    world.teams = 2;
+    world.rooms[0].team = 1;
+    world.rooms[1].team = 2;
+    const twoRoomSession = new GameSession(world);
+    const alice = joinPlayer(twoRoomSession, 'Alice', 'a', 1); // spawns room 0
+    alice.ws.flush();
+    const bob = joinPlayer(twoRoomSession, 'Bob', 'b', 2); // spawns room 1
+    expect(alice.room).not.toBe(bob.room);
+    const joined = alice.ws.messagesOfType('PLAYER_JOINED');
+    expect(joined.some((m) => m.name === 'Bob')).toBe(true);
+    // Alice should NOT get PLAYER_INFO for Bob since they're in different rooms
+    const infos = alice.ws.messagesOfType('PLAYER_INFO').filter((m) => m.name === 'Bob');
+    expect(infos).toHaveLength(0);
+    twoRoomSession.destroy();
   });
 });

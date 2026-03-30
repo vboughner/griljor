@@ -8,6 +8,7 @@ import { initActionCards, setActiveItem } from './mouse-widget';
 import { runTitleScreen, drawLogo } from './title';
 import { showTooltip, hideTooltip, moveTooltip, buildItemHtml } from './tooltip';
 import { formatAge } from './utils';
+import { INDICATOR_TEAMMATE, INDICATOR_ENEMY } from './renderer';
 
 const TOMBSTONE_BIT = '/sprites/bitmaps/tombbit.png';
 const TOMBSTONE_MASK = '/sprites/bitmaps/tombmask.png';
@@ -366,6 +367,7 @@ async function main(): Promise<void> {
     id: number;
     name: string;
     avatar: string;
+    team: number;
     kills: number;
     deaths: number;
     joinedAt: number;
@@ -373,6 +375,7 @@ async function main(): Promise<void> {
     hp: number;
     maxHp: number;
     row: HTMLElement;
+    nameEl: HTMLElement;
     timeEl: HTMLElement;
     avatarCanvas: HTMLCanvasElement;
     hpFill: HTMLElement;
@@ -401,10 +404,30 @@ async function main(): Promise<void> {
     }
   }
 
+  let localTeam = 0;
+  let teamsEnabled = false;
+
+  function teamColor(team: number): string {
+    return team === localTeam ? INDICATOR_TEAMMATE : INDICATOR_ENEMY;
+  }
+
+  function updateTeamIndicators(): void {
+    for (const p of playerMap.values()) {
+      if (teamsEnabled && p.team > 0) {
+        p.nameEl.style.color = p.id === localPlayerId ? '#ccc' : teamColor(p.team);
+      } else {
+        p.nameEl.style.color = '#ccc';
+      }
+    }
+  }
+
+  let localPlayerId = -1;
+
   async function addPlayerRow(
     id: number,
     name: string,
     avatar: string,
+    team: number,
     kills: number,
     deaths: number,
     joinedAt: number,
@@ -423,6 +446,9 @@ async function main(): Promise<void> {
     const nameEl = document.createElement('div');
     nameEl.className = 'player-name';
     nameEl.textContent = name;
+    if (teamsEnabled && team > 0 && id !== localPlayerId) {
+      nameEl.style.color = teamColor(team);
+    }
 
     const kdEl = document.createElement('div');
     kdEl.className = 'player-kd';
@@ -451,6 +477,7 @@ async function main(): Promise<void> {
       id,
       name,
       avatar,
+      team,
       kills,
       deaths,
       joinedAt,
@@ -458,6 +485,7 @@ async function main(): Promise<void> {
       hp: 100,
       maxHp: 100,
       row,
+      nameEl,
       timeEl,
       avatarCanvas,
       hpFill,
@@ -840,6 +868,7 @@ async function main(): Promise<void> {
       // Set up inventory object references for the panel
       invObjects = objFile.objects;
       invObjset = mapData.map.objfilename.replace(/\.obj$/, '');
+      teamsEnabled = (mapData.map.teams_supported ?? 0) > 1;
       mapLabel.textContent = gameInfo.title ?? gameInfo.mapName;
 
       const network = new GameNetwork(gameInfo.wsUrl);
@@ -879,7 +908,8 @@ async function main(): Promise<void> {
       const game = new Game(mapData, objFile, canvas, roomInfo, status, navBtns, network);
       currentGame = game;
 
-      let localPlayerId = -1;
+      localPlayerId = -1;
+      localTeam = 0;
 
       // Wrap the callbacks Game.wireNetwork() just installed so both game
       // rendering and the player list stay in sync.
@@ -889,7 +919,30 @@ async function main(): Promise<void> {
         if (playerMap.has(msg.id)) {
           updatePlayerStats(msg.id, msg.kills, msg.deaths);
         } else {
-          void addPlayerRow(msg.id, msg.name, msg.avatar, msg.kills, msg.deaths, msg.joinedAt);
+          void addPlayerRow(
+            msg.id,
+            msg.name,
+            msg.avatar,
+            msg.team,
+            msg.kills,
+            msg.deaths,
+            msg.joinedAt,
+          );
+        }
+        void setPlayerDeadDisplay(msg.id, msg.dead);
+      };
+
+      network.onPlayerJoined = async (msg) => {
+        if (!playerMap.has(msg.id)) {
+          void addPlayerRow(
+            msg.id,
+            msg.name,
+            msg.avatar,
+            msg.team,
+            msg.kills,
+            msg.deaths,
+            msg.joinedAt,
+          );
         }
         void setPlayerDeadDisplay(msg.id, msg.dead);
       };
@@ -898,6 +951,11 @@ async function main(): Promise<void> {
       network.onLeave = async (msg) => {
         await gameOnLeave(msg);
         removePlayer(msg.id);
+        if (msg.reason === 'left') {
+          appendReport(`${msg.name} left the game.`);
+        } else {
+          appendReport(`${msg.name} disconnected.`);
+        }
       };
 
       network.onPlayerStats = (msg) => {
@@ -954,13 +1012,16 @@ async function main(): Promise<void> {
 
       network.onAccepted = (msg) => {
         localPlayerId = msg.id;
+        localTeam = msg.team;
         showGame();
         startPlayerTick();
         status.textContent = `Connected as ${playerName} (id=${msg.id})`;
         game.setMyId(msg.id);
         game.setMyTeam(msg.team);
         // Server doesn't send PLAYER_INFO for the local player back to themselves
-        void addPlayerRow(msg.id, playerName, selectedAvatar, 0, 0, Date.now());
+        void addPlayerRow(msg.id, playerName, selectedAvatar, msg.team, 0, 0, Date.now());
+        // Recolor any player rows that arrived before we knew our own team
+        updateTeamIndicators();
         void game.goToRoom(msg.room, msg.x, msg.y);
       };
 
