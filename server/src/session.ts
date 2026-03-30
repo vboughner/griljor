@@ -394,32 +394,12 @@ export class GameSession {
       team: player.team,
     });
 
-    // Notify all existing players about the new joiner (for the player list)
-    // and tell the new joiner about all existing players — no position revealed.
+    // Broadcast join to all players (no position data).
+    const joinedMsg = this.makePlayerJoined(player);
     for (const other of this.players.values()) {
       if (other.id === id) continue;
-      this.send(other.ws, {
-        type: 'PLAYER_JOINED',
-        id: player.id,
-        name: player.name,
-        avatar: player.avatar,
-        kills: player.kills,
-        deaths: player.deaths,
-        joinedAt: player.joinedAt,
-        dead: player.dead,
-        team: player.team,
-      });
-      this.send(ws, {
-        type: 'PLAYER_JOINED',
-        id: other.id,
-        name: other.name,
-        avatar: other.avatar,
-        kills: other.kills,
-        deaths: other.deaths,
-        joinedAt: other.joinedAt,
-        dead: other.dead,
-        team: other.team,
-      });
+      this.send(other.ws, joinedMsg);
+      this.send(ws, this.makePlayerJoined(other));
     }
 
     for (const other of this.players.values()) {
@@ -450,12 +430,6 @@ export class GameSession {
           if (newCanSeeOther) {
             this.visibility.get(id)!.add(other.id);
             this.send(ws, this.makePlayerInfo(other));
-            this.send(ws, {
-              type: 'PLAYER_HEALTH',
-              id: other.id,
-              hp: other.hp,
-              maxHp: other.maxHp,
-            });
           }
           if (otherCanSeeNew) {
             this.visibility.get(other.id)?.add(id);
@@ -1880,6 +1854,20 @@ export class GameSession {
       room: p.room,
       x: p.x,
       y: p.y,
+      kills: p.kills,
+      deaths: p.deaths,
+      joinedAt: p.joinedAt,
+      dead: p.dead,
+      team: p.team,
+    };
+  }
+
+  private makePlayerJoined(p: Player): Extract<S2CMessage, { type: 'PLAYER_JOINED' }> {
+    return {
+      type: 'PLAYER_JOINED',
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar,
       kills: p.kills,
       deaths: p.deaths,
       joinedAt: p.joinedAt,

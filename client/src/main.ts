@@ -8,6 +8,7 @@ import { initActionCards, setActiveItem } from './mouse-widget';
 import { runTitleScreen, drawLogo } from './title';
 import { showTooltip, hideTooltip, moveTooltip, buildItemHtml } from './tooltip';
 import { formatAge } from './utils';
+import { INDICATOR_TEAMMATE, INDICATOR_ENEMY } from './renderer';
 
 const TOMBSTONE_BIT = '/sprites/bitmaps/tombbit.png';
 const TOMBSTONE_MASK = '/sprites/bitmaps/tombmask.png';
@@ -407,7 +408,7 @@ async function main(): Promise<void> {
   let teamsEnabled = false;
 
   function teamColor(team: number): string {
-    return team === localTeam ? '#00cc00' : '#ff4444';
+    return team === localTeam ? INDICATOR_TEAMMATE : INDICATOR_ENEMY;
   }
 
   function updateTeamIndicators(): void {
@@ -908,6 +909,7 @@ async function main(): Promise<void> {
       currentGame = game;
 
       localPlayerId = -1;
+      localTeam = 0;
 
       // Wrap the callbacks Game.wireNetwork() just installed so both game
       // rendering and the player list stay in sync.

@@ -143,8 +143,8 @@ export interface OtherPlayer {
  * @param otherTeam     the other player's team number
  * @param boxOtherPlayers  master toggle — false means no indicators for anyone
  */
-const INDICATOR_TEAMMATE = '#00cc00';
-const INDICATOR_ENEMY = '#ff4444';
+export const INDICATOR_TEAMMATE = '#00cc00';
+export const INDICATOR_ENEMY = '#ff4444';
 const CORNER_LEN = 8; // px per corner arm
 
 export function playerIndicatorStyle(
