@@ -28,6 +28,8 @@ export interface ObjDef {
   boombit?: number; // object type the weapon explodes into
   piercing?: number; // non-zero: explosion missiles pass through walls
   spread?: number; // number of evenly-spaced directions; 0 or absent = default 8
+  arc?: number; // firing arc in degrees (0 = single shot; 22 = narrow cone; 180 = hemisphere)
+  fan?: number; // random angular variation in degrees added to each shot direction
   directional?: boolean; // true: sprite direction matches missile travel direction
   transparent?: boolean; // if absent/false, tile blocks line of sight
 }
