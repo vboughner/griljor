@@ -57,7 +57,6 @@ or spawn placement
 - [ ] **win conditions** — no game ever ends; the original had capture-the-flag mechanics (`flag`/`flagteams` on objects) and a game timer with rewards
 - [ ] **dark rooms + flashlight** — several maps (castle, hack, outdoor) have rooms that are dark by default; flashlight items illuminate a radius around the bearer
 - [ ] **day/night cycle** — some rooms are lit during the day and dark at night based on in-game time
-- [ ] **wearable items** — armor, rings, helmets with a slot system exist in item definitions but cannot be equipped
 - [ ] **spread/arc weapons** — shotguns, wide-arc blasters, and 360° explosions fire multiple projectiles; a whole weapon category is missing
 - [ ] **flammable chain reactions** — flammable map objects (barrels, etc.) should ignite and explode when hit by an explosion; currently not implemented
 - [ ] **ammo reload from quiver** — bows should reload from arrows carried in inventory; currently they just run out
