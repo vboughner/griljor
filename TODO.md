@@ -10,7 +10,7 @@ Later Playability:
 - [ ] make a new hotkey that let's you swap what's in your hand with what is in your first inventory slot (or maybe a set of funciton keys you can set things in your inventory to let you quickly swap with (advanced feature)
 
 ## Feedback from play
-- [ ] sometimes seeing people in rooms when they are not really there anymore
+- [x] sometimes seeing people in rooms when they are not really there anymore
 - [x] consider something new to help you understand when you are invisible to others
 - [x] check this bug: are you still visible to others when standing on a potted plant?
 - [ ] consider in team games, making all teammates visible everywhere (this might be at the same time we save them from friendly fire)
@@ -47,7 +47,7 @@ Later Playability:
 - [ ] add hot key setting and mouse changes settings (but how will they save these, do we need profiles, or maybe just 3 good hotkey setting choices)
 
 ## Make teams work:
-- [ ] display which team people are in the player list, make your team more obvious on the map (in colors?)
+- [x] display which team people are in the player list, make your team more obvious on the map (in colors?)
 - [ ] consider friendly fire options for teammates (i.e. cannot hurt members of your own team)
 
 ## Remaining Differences with Legacy

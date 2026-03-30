@@ -586,7 +586,15 @@ export class Game {
   async goToRoom(index: number, px = 10, py = 10): Promise<void> {
     if (index < 0 || index >= this.mapData.rooms.length) return;
     this.stopMoving();
+    const prevRoom = this.currentRoom;
     this.currentRoom = index;
+    // Clear players from the old room — the server will re-announce anyone
+    // visible via PLAYER_INFO after it processes our location update.
+    if (prevRoom !== index) {
+      for (const [id, p] of this.otherPlayers) {
+        if (p.room === prevRoom) this.otherPlayers.delete(id);
+      }
+    }
     this.px = px;
     this.py = py;
     this.computeVisibility();
