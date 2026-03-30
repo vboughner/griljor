@@ -743,11 +743,12 @@
       "movingobj": 78,
       "speed": 2,
       "damage": 5000,
-      "explodes": 6,
+      "explodes": 10,
       "boombit": 79,
       "vulnerable": true,
       "flammable": 5,
-      "_index": 78
+      "_index": 78,
+      "spread": 16
     },
     {
       "bitmap": "079_bitmap.png",
@@ -761,7 +762,7 @@
       "stop": true,
       "movingobj": 79,
       "directional": true,
-      "speed": 6,
+      "speed": 3,
       "damage": 60,
       "ignoring": 1,
       "piercing": 1,
