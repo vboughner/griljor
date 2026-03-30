@@ -894,6 +894,13 @@ async function main(): Promise<void> {
         void setPlayerDeadDisplay(msg.id, msg.dead);
       };
 
+      network.onPlayerJoined = async (msg) => {
+        if (!playerMap.has(msg.id)) {
+          void addPlayerRow(msg.id, msg.name, msg.avatar, msg.kills, msg.deaths, msg.joinedAt);
+        }
+        void setPlayerDeadDisplay(msg.id, msg.dead);
+      };
+
       const gameOnLeave = network.onLeave;
       network.onLeave = async (msg) => {
         await gameOnLeave(msg);

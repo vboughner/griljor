@@ -394,6 +394,34 @@ export class GameSession {
       team: player.team,
     });
 
+    // Notify all existing players about the new joiner (for the player list)
+    // and tell the new joiner about all existing players — no position revealed.
+    for (const other of this.players.values()) {
+      if (other.id === id) continue;
+      this.send(other.ws, {
+        type: 'PLAYER_JOINED',
+        id: player.id,
+        name: player.name,
+        avatar: player.avatar,
+        kills: player.kills,
+        deaths: player.deaths,
+        joinedAt: player.joinedAt,
+        dead: player.dead,
+        team: player.team,
+      });
+      this.send(ws, {
+        type: 'PLAYER_JOINED',
+        id: other.id,
+        name: other.name,
+        avatar: other.avatar,
+        kills: other.kills,
+        deaths: other.deaths,
+        joinedAt: other.joinedAt,
+        dead: other.dead,
+        team: other.team,
+      });
+    }
+
     for (const other of this.players.values()) {
       if (other.id === id) continue;
       if (other.room !== player.room) {
