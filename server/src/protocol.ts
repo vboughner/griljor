@@ -93,4 +93,20 @@ export type S2CMessage =
       joinedAt: number;
       dead: boolean;
       team: number;
-    };
+    }
+  | {
+      type: 'MONSTER_INFO';
+      id: number; // negative
+      name: string;
+      avatar: string;
+      room: number;
+      x: number;
+      y: number;
+      hp: number;
+      maxHp: number;
+      team: number;
+      dead: boolean;
+      monsterId: string; // definition id for client-side rendering hints
+    }
+  | { type: 'MONSTER_LOCATION'; id: number; room: number; x: number; y: number }
+  | { type: 'MONSTER_HIDDEN'; id: number };

@@ -1,5 +1,6 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
+import { MonsterDef, RoomMonsterSpawn } from './monster-types';
 
 export interface ObjDef {
   _index: number;
@@ -50,6 +51,7 @@ export interface RoomData {
   exitEast: number;
   exitSouth: number;
   exitWest: number;
+  monsterSpawns?: RoomMonsterSpawn[];
 }
 
 export interface World {
@@ -62,6 +64,7 @@ export interface World {
   resetOnEmpty: boolean;
   resetAfterSeconds: number;
   maxPlayers: number;
+  monsterDefs: MonsterDef[];
 }
 
 export async function loadWorld(mapName: string): Promise<World> {
@@ -72,6 +75,7 @@ export async function loadWorld(mapName: string): Promise<World> {
     map: {
       name?: string;
       objfilename: string;
+      monsterfile?: string;
       teams_supported?: number;
       resetOnEmpty?: boolean;
       resetAfterSeconds?: number;
@@ -87,6 +91,7 @@ export async function loadWorld(mapName: string): Promise<World> {
       exit_east?: number;
       exit_south?: number;
       exit_west?: number;
+      monster_spawns?: RoomMonsterSpawn[];
     }>;
   };
 
@@ -104,6 +109,25 @@ export async function loadWorld(mapName: string): Promise<World> {
   const objRaw = await readFile(objPath, 'utf-8');
   const objData = JSON.parse(objRaw) as { objects: Array<ObjDef | null> };
 
+  // Load monster definitions if the map references a monster file
+  let monsterDefs: MonsterDef[] = [];
+  if (data.map.monsterfile) {
+    const monsterName = data.map.monsterfile.replace(/\.json$/, '');
+    const monsterPath = join(
+      __dirname,
+      '..',
+      '..',
+      'pipeline',
+      'out',
+      'data',
+      'monsters',
+      `${monsterName}.json`,
+    );
+    const monsterRaw = await readFile(monsterPath, 'utf-8');
+    const monsterData = JSON.parse(monsterRaw) as { monsters: MonsterDef[] };
+    monsterDefs = monsterData.monsters;
+  }
+
   const rooms: RoomData[] = data.rooms.map((r) => ({
     name: r.name ?? '',
     floor: r.floor ?? 0,
@@ -114,6 +138,7 @@ export async function loadWorld(mapName: string): Promise<World> {
     exitEast: r.exit_east ?? -1,
     exitSouth: r.exit_south ?? -1,
     exitWest: r.exit_west ?? -1,
+    monsterSpawns: r.monster_spawns,
   }));
 
   return {
@@ -126,5 +151,6 @@ export async function loadWorld(mapName: string): Promise<World> {
     resetOnEmpty: data.map.resetOnEmpty ?? false,
     resetAfterSeconds: data.map.resetAfterSeconds ?? 30,
     maxPlayers: data.map.maxPlayers ?? 16,
+    monsterDefs,
   };
 }
