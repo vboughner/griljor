@@ -1,33 +1,21 @@
-# Static Blog on the Griljor VPS (Hugo + nginx + GitHub Actions)
+# Static Blog on the Griljor VPS (Astro + nginx + GitHub Actions)
 
-This guide sets up a Hugo static blog on the same Hetzner VPS that runs Griljor, served under a separate domain, with automatic deploys on push to GitHub.
+This guide sets up an Astro static blog on the same Hetzner VPS that runs Griljor, served under a separate domain, with automatic deploys on push to GitHub.
+
+Astro is ideal for a blog that's mostly static content but where you want the freedom to drop in React components, interactive widgets, or fully custom pages whenever you want. It ships zero JavaScript by default and only hydrates the interactive pieces you explicitly opt into.
 
 ## Prerequisites
 
 - The Griljor VPS is already running (nginx, certbot, PM2)
 - You have a domain for the blog with DNS pointing to the VPS IP (A record)
 - The blog lives in its own GitHub repository
+- Node.js is already installed on the VPS (required by Griljor)
 
 ---
 
-## 1. Install Hugo on the VPS
+## 1. Create the blog directory on the VPS
 
 SSH into the VPS as the `griljor` user:
-
-```sh
-# Download the latest Hugo extended edition (check https://github.com/gohugoio/hugo/releases for current version)
-HUGO_VERSION="0.147.0"
-wget -O /tmp/hugo.deb "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb"
-sudo dpkg -i /tmp/hugo.deb
-rm /tmp/hugo.deb
-hugo version
-```
-
-> **Note:** Hugo is only needed on the VPS if you want to build there. The GitHub Actions approach below builds in CI and only copies the output, so this step is optional. It's still handy for debugging.
-
----
-
-## 2. Create the blog directory on the VPS
 
 ```sh
 sudo mkdir -p /var/www/blog
@@ -38,7 +26,7 @@ Using `/var/www/blog` instead of a home directory path keeps the blog cleanly se
 
 ---
 
-## 3. Add an nginx server block for the blog
+## 2. Add an nginx server block for the blog
 
 Create `/etc/nginx/sites-available/blog`:
 
@@ -83,7 +71,7 @@ Certbot will modify the server block to add SSL lines and an HTTP-to-HTTPS redir
 
 ---
 
-## 4. Set up SSH deploy key for GitHub Actions
+## 3. Set up SSH deploy key for GitHub Actions
 
 On your **local machine** (not the VPS), generate a dedicated deploy key:
 
@@ -110,7 +98,7 @@ Then:
 
 ---
 
-## 5. GitHub Actions workflow for auto-deploy
+## 4. GitHub Actions workflow for auto-deploy
 
 In your blog repository, create `.github/workflows/deploy.yml`:
 
@@ -127,17 +115,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: true  # Hugo themes are often git submodules
 
-      - name: Setup Hugo
-        uses: peaceiris/actions-hugo@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          hugo-version: "0.147.0"
-          extended: true
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
-        run: hugo --minify
+        run: npm run build
 
       - name: Deploy via rsync
         env:
@@ -151,69 +140,156 @@ jobs:
 
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/deploy_key" \
-            public/ \
+            dist/ \
             griljor@${DEPLOY_HOST}:/var/www/blog/
 ```
 
 How it works:
-- On every push to `main`, GitHub Actions checks out the repo, builds with Hugo, and rsyncs the `public/` output directory to `/var/www/blog/` on the VPS
+- On every push to `main`, GitHub Actions checks out the repo, installs deps, runs `astro build`, and rsyncs the `dist/` output directory to `/var/www/blog/` on the VPS
 - The `--delete` flag removes files from the VPS that no longer exist in the build output, keeping the deployment clean
 - Build happens in CI (free 2000 min/month on GitHub Actions), so the VPS does no build work
 
 ---
 
-## 6. Create a Hugo blog (local setup)
+## 5. Create an Astro blog (local setup)
 
-On your local machine, create a new Hugo site in a fresh repository:
+On your local machine, create a new Astro site in a fresh repository:
 
 ```sh
-hugo new site myblog
+npm create astro@latest myblog
 cd myblog
+```
+
+The CLI wizard will ask you a few questions. Recommended choices:
+- Template: **"blog"** (gives you a working blog with markdown support out of the box)
+- TypeScript: **Yes** (strict)
+- Install dependencies: **Yes**
+
+### Add React support
+
+This lets you use React components anywhere in your Astro pages and blog posts:
+
+```sh
+npx astro add react
+```
+
+This installs `@astrojs/react`, `react`, and `react-dom`, and updates your `astro.config.mjs` automatically.
+
+### Configure the site URL
+
+Edit `astro.config.mjs`:
+
+```js
+import { defineConfig } from 'astro/config';
+import react from '@astrojs/react';
+import mdx from '@astrojs/mdx';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://yourblog.com',
+  integrations: [mdx(), sitemap(), react()],
+});
+```
+
+### Project structure
+
+The blog template gives you:
+
+```
+myblog/
+├── public/              # Static assets (images, favicon, etc.)
+├── src/
+│   ├── components/      # Astro and React components
+│   ├── content/
+│   │   └── blog/        # Markdown/MDX blog posts
+│   ├── layouts/         # Page layouts
+│   ├── pages/           # File-based routing
+│   │   ├── index.astro  # Home page
+│   │   └── blog/        # Blog listing and post pages
+│   └── styles/          # Global styles
+├── astro.config.mjs
+└── package.json
+```
+
+### Write a blog post
+
+Create `src/content/blog/hello-world.md`:
+
+```md
+---
+title: "Hello World"
+description: "My first blog post"
+pubDate: "Apr 04 2026"
+---
+
+This is my first blog post built with Astro.
+```
+
+### Use React components in posts (MDX)
+
+Rename any post to `.mdx` to use components inside it:
+
+`src/content/blog/interactive-post.mdx`:
+
+```mdx
+---
+title: "A Post with Interactive Stuff"
+description: "Mixing markdown with React components"
+pubDate: "Apr 05 2026"
+---
+
+Here's some regular markdown text.
+
+import Counter from '../../components/Counter.tsx';
+
+And here's an interactive React counter:
+
+<Counter client:load />
+
+The `client:load` directive tells Astro to hydrate this component
+in the browser. Everything else on this page ships as zero JS.
+```
+
+`src/components/Counter.tsx`:
+
+```tsx
+import { useState } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+  return (
+    <button onClick={() => setCount(count + 1)}>
+      Clicks: {count}
+    </button>
+  );
+}
+```
+
+### Astro's hydration directives
+
+These control when (and whether) a component's JavaScript loads in the browser:
+
+| Directive | Behavior |
+|-----------|----------|
+| `client:load` | Hydrates immediately on page load |
+| `client:idle` | Hydrates once the browser is idle (good for below-the-fold) |
+| `client:visible` | Hydrates when the component scrolls into view |
+| `client:only="react"` | Renders only on the client (skip server render) |
+| *(no directive)* | Renders to static HTML, ships zero JS |
+
+This is what makes Astro great for blogs: most of the page is static HTML, and you only pay the JS cost for the pieces that actually need interactivity.
+
+### Preview locally
+
+```sh
+npm run dev
+# Open http://localhost:4321
+```
+
+### Push to deploy
+
+```sh
 git init
-```
-
-Pick a theme. For example, [PaperMod](https://github.com/adityatelange/hugo-PaperMod) is a popular, clean blog theme:
-
-```sh
-git submodule add https://github.com/adityatelange/hugo-PaperMod.git themes/PaperMod
-```
-
-Edit `hugo.toml`:
-
-```toml
-baseURL = "https://yourblog.com/"
-languageCode = "en-us"
-title = "My Blog"
-theme = "PaperMod"
-
-[params]
-  defaultTheme = "auto"
-  showReadingTime = true
-  showShareButtons = false
-  showPostNavLinks = true
-
-[outputs]
-  home = ["HTML", "RSS", "JSON"]
-```
-
-Create your first post:
-
-```sh
-hugo new posts/hello-world.md
-```
-
-Edit `content/posts/hello-world.md` — set `draft: false` when ready to publish.
-
-Preview locally:
-
-```sh
-hugo server -D
-# Open http://localhost:1313
-```
-
-When it looks good:
-
-```sh
 git add -A
 git commit -m "Initial blog setup"
 git remote add origin https://github.com/yourusername/myblog.git
@@ -221,6 +297,30 @@ git push -u origin main
 ```
 
 The GitHub Actions workflow triggers automatically and deploys to your VPS.
+
+---
+
+## 6. Create fully custom pages
+
+Astro uses file-based routing. Any `.astro` or `.tsx` file in `src/pages/` becomes a route:
+
+- `src/pages/about.astro` → `yourblog.com/about`
+- `src/pages/projects.astro` → `yourblog.com/projects`
+
+An Astro page can be entirely custom — no blog layout required:
+
+```astro
+---
+// src/pages/playground.astro
+import Layout from '../layouts/Base.astro';
+import MyReactApp from '../components/MyReactApp.tsx';
+---
+<Layout title="Playground">
+  <MyReactApp client:load />
+</Layout>
+```
+
+This lets you have a standard blog alongside completely bespoke interactive pages, all in one site.
 
 ---
 
@@ -236,8 +336,8 @@ VPS (Hetzner CX22)
 
 GitHub
 ├── vboughner/griljor (game repo, unchanged)
-└── yourusername/myblog (blog repo)
-    └── .github/workflows/deploy.yml → builds Hugo + rsyncs to VPS
+└── yourusername/myblog (blog repo, Astro)
+    └── .github/workflows/deploy.yml → builds Astro + rsyncs to VPS
 ```
 
 ---
@@ -245,7 +345,7 @@ GitHub
 ## Maintenance notes
 
 - **Adding HTTPS for the blog does not affect griljor.com** — certbot manages each domain's certificate independently
-- **Hugo version**: pin the same version in `hugo.toml` (`hugo.version`) and in the GitHub Actions workflow to avoid build drift
-- **Theme updates**: `cd themes/PaperMod && git pull origin master`, then commit the submodule change
+- **Node.js version**: pin the same version in the GitHub Actions workflow and on the VPS to avoid build drift
 - **DNS**: add an A record for `yourblog.com` pointing to the same VPS IP, using Cloudflare DNS-only (grey cloud) or your registrar's DNS
 - **If you later want `www.yourblog.com` too**: add it to the nginx `server_name` line (`server_name yourblog.com www.yourblog.com;`) and re-run `sudo certbot --nginx -d yourblog.com -d www.yourblog.com`
+- **Updating Astro**: run `npx @astrojs/upgrade` in your blog repo to update Astro and its integrations together
