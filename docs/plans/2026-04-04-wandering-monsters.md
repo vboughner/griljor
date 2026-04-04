@@ -140,7 +140,8 @@ A new JSON file lives alongside object definitions at `pipeline/out/data/monster
 ### Schema Rationale
 
 - **`behavior.type`** is a discriminated union: `"wander"`, `"patrol"`, `"chase"`, `"flee"`, `"stationary"`. New types can be added by implementing a new `BehaviorHandler` without modifying existing ones.
-- **`combat`** references existing weapon `type` IDs from the object definition file. The monster "equips" this weapon and fires it using the same `calcMissilePath`/`dealDamage` logic players use.
+- **`combat.aggressive`** is a boolean (Option A). When `true`, the monster will chase and attack non-team players in `aggroRange`, temporarily overriding its primary movement behavior. When `false`, the monster never initiates attacks. A future Option B upgrade could replace this with a richer `aggression` enum (`"none"`, `"passive"`, `"defensive"`, `"aggressive"`).
+- **`combat.weaponType`** references existing weapon `type` IDs from the object definition file. The monster "equips" this weapon and fires it using the same `calcMissilePath`/`dealDamage` logic players use.
 - **`items.pickup`** and **`items.carry`** enable the thief/collector pattern: the monster picks up floor items, carries them, and deposits them elsewhere. `dropOnDeath` means carried items scatter when killed.
 - **`chat`** is optional. Monsters with `chat` periodically say things in the room via MESSAGE protocol.
 
@@ -339,12 +340,34 @@ interface BehaviorContext {
 ### Built-in Behaviors
 
 1. **`WanderBehavior`** — picks a random adjacent walkable tile and moves there. Matches legacy `dweeby_move`.
-2. **`PatrolBehavior`** — moves between waypoints (room corners or specified points). Switches to chase if enemy player in range.
+2. **`PatrolBehavior`** — moves between waypoints (room corners or specified points).
 3. **`ChaseBehavior`** — pathfinds toward nearest enemy player using Chebyshev steps. Falls back to wander if no target.
 4. **`FleeBehavior`** — moves away from nearest player. Matches legacy `dodgy_move` (evasive).
 5. **`StationaryBehavior`** — stays put but can still fire and chat.
 
 Each behavior handler is a pure function of current state, making them independently testable.
+
+### Behavior Composition: Single Primary + Implicit Overrides (Option A)
+
+Each monster has **one primary movement behavior** (the `behavior.type` field). However, the aggression system and item system can **temporarily override** movement:
+
+1. **Aggression override**: A `wander` monster with `combat.aggressive: true` will temporarily switch to chase behavior when it detects a player in `aggroRange`. When the target escapes `pursuitRange` or dies, it reverts to wandering. The override priority is hardcoded in `MonsterManager.onMoveTick()`.
+
+2. **Item delivery override**: A monster carrying an item with `carry.deliverTo` set will pathfind toward its delivery point, overriding normal movement until the item is delivered.
+
+**Override priority** (highest wins):
+1. Flee (if `behavior.type === 'flee'` and threat nearby)
+2. Aggression chase (if combat.aggressive and enemy in range)
+3. Item delivery (if carrying an item with a delivery target)
+4. Primary behavior (the configured `behavior.type`)
+
+This produces composite behaviors from simple definitions:
+- **Dweeb**: `wander` + `passive` = just wanders around
+- **Guard**: `patrol` + `aggressive` = patrols waypoints, chases intruders, returns to patrol
+- **Thief**: `flee` + `passive` + `pickup` = grabs items, runs from players, delivers loot home
+- **Merchant**: `wander` + `none` + `chat` = wanders slowly and talks to nearby players
+
+**Future upgrade path (Option B)**: If we need more complex compositions, the override priority list can be made data-driven (a `behaviors[]` array with priority/condition pairs in the monster definition). The individual behavior handlers stay unchanged — only the selection logic in `onMoveTick` needs to become table-driven instead of hardcoded.
 
 ### Extensibility via Registry
 
@@ -357,9 +380,10 @@ behaviorRegistry.set('patrol', () => new PatrolBehavior());
 
 The `MonsterManager` runs each monster's AI on a `setInterval` tied to `behavior.moveInterval`. On each tick:
 1. Build `BehaviorContext` from current game state
-2. Call `behavior.onTick(monster, context)` to get an action
-3. Execute the action (move, fire, chat, pickup, drop)
-4. Update visibility for players
+2. Evaluate override priority (aggression, item delivery)
+3. Call the selected behavior's `onTick(monster, context)` to get an action
+4. Execute the action (move, fire, chat, pickup, drop)
+5. Update visibility for players
 
 ---
 
