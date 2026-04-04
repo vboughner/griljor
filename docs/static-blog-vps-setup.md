@@ -8,7 +8,7 @@ Astro is ideal for a blog that's mostly static content but where you want the fr
 
 - The Griljor VPS is already running (nginx, certbot, PM2)
 - You have a domain for the blog with DNS pointing to the VPS IP (A record)
-- The blog lives in its own GitHub repository
+- The blog lives in its own GitHub repository (`vboughner/ai-blog`)
 - Node.js is already installed on the VPS (required by Griljor)
 
 ---
@@ -156,8 +156,8 @@ How it works:
 On your local machine, create a new Astro site in a fresh repository:
 
 ```sh
-npm create astro@latest myblog
-cd myblog
+npm create astro@latest ai-blog
+cd ai-blog
 ```
 
 The CLI wizard will ask you a few questions. Recommended choices:
@@ -196,7 +196,7 @@ export default defineConfig({
 The blog template gives you:
 
 ```
-myblog/
+ai-blog/
 ├── public/              # Static assets (images, favicon, etc.)
 ├── src/
 │   ├── components/      # Astro and React components
@@ -292,7 +292,7 @@ npm run dev
 git init
 git add -A
 git commit -m "Initial blog setup"
-git remote add origin https://github.com/yourusername/myblog.git
+git remote add origin https://github.com/vboughner/ai-blog.git
 git push -u origin main
 ```
 
@@ -336,7 +336,7 @@ VPS (Hetzner CX22)
 
 GitHub
 ├── vboughner/griljor (game repo, unchanged)
-└── yourusername/myblog (blog repo, Astro)
+└── vboughner/ai-blog (blog repo, Astro)
     └── .github/workflows/deploy.yml → builds Astro + rsyncs to VPS
 ```
 
