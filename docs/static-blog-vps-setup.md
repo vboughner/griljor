@@ -1,8 +1,8 @@
-# Static Blog on the Griljor VPS (Astro + nginx + GitHub Actions)
+# Static Blog on the Griljor VPS (astro-modular + nginx + GitHub Actions)
 
-This guide sets up an Astro static blog on the same Hetzner VPS that runs Griljor, served under a separate domain, with automatic deploys on push to GitHub.
+This guide sets up an [astro-modular](https://github.com/davidvkimball/astro-modular) blog on the same Hetzner VPS that runs Griljor, served under a separate domain, with automatic deploys on push to GitHub.
 
-Astro is ideal for a blog that's mostly static content but where you want the freedom to drop in React components, interactive widgets, or fully custom pages whenever you want. It ships zero JavaScript by default and only hydrates the interactive pieces you explicitly opt into.
+astro-modular is a feature-rich Astro blog theme with Obsidian vault integration, 16+ built-in color themes, a command palette with search, content graph visualization, MDX support, and more — all shipping minimal JavaScript by default.
 
 ## Prerequisites
 
@@ -119,7 +119,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -145,124 +145,128 @@ jobs:
 ```
 
 How it works:
-- On every push to `main`, GitHub Actions checks out the repo, installs deps, runs `astro build`, and rsyncs the `dist/` output directory to `/var/www/blog/` on the VPS
+- On every push to `main`, GitHub Actions checks out the repo, installs deps, builds the site, and rsyncs the `dist/` output directory to `/var/www/blog/` on the VPS
 - The `--delete` flag removes files from the VPS that no longer exist in the build output, keeping the deployment clean
 - Build happens in CI (free 2000 min/month on GitHub Actions), so the VPS does no build work
+- astro-modular's `npm run build` script automatically runs preprocessing steps (image sync, alias processing, graph data generation) before the Astro build
 
 ---
 
-## 5. Create an Astro blog (local setup)
+## 5. Set up astro-modular (local setup)
 
-On your local machine, create a new Astro site in a fresh repository:
+On your local machine, clone or scaffold the astro-modular template into a fresh repository:
 
 ```sh
-npm create astro@latest myblog
+npx create-astro-modular myblog
 cd myblog
+npm install
 ```
 
-The CLI wizard will ask you a few questions. Recommended choices:
-- Template: **"blog"** (gives you a working blog with markdown support out of the box)
-- TypeScript: **Yes** (strict)
-- Install dependencies: **Yes**
-
-### Add React support
-
-This lets you use React components anywhere in your Astro pages and blog posts:
+Alternatively, you can clone the template directly:
 
 ```sh
-npx astro add react
+git clone https://github.com/davidvkimball/astro-modular.git myblog
+cd myblog
+rm -rf .git
+npm install
 ```
 
-This installs `@astrojs/react`, `react`, and `react-dom`, and updates your `astro.config.mjs` automatically.
+> **Note:** astro-modular's upstream repo uses pnpm, but it works fine with npm. If you see a `pnpm-lock.yaml` file after cloning, delete it — npm will generate its own `package-lock.json` on install.
 
-### Configure the site URL
+### Configure the site
 
-Edit `astro.config.mjs`:
+Edit `src/config.ts` — this is the central configuration file:
 
-```js
-import { defineConfig } from 'astro/config';
-import react from '@astrojs/react';
-import mdx from '@astrojs/mdx';
-import sitemap from '@astrojs/sitemap';
-
-export default defineConfig({
+```ts
+export const siteConfig: SiteConfig = {
+  title: 'My Blog',
+  description: 'A blog about things',
+  author: 'Your Name',
+  language: 'en',
   site: 'https://yourblog.com',
-  integrations: [mdx(), sitemap(), react()],
-});
+  // ... theme, fonts, features, etc.
+};
 ```
+
+Key settings in `src/config.ts`:
+- **`site`** — your blog's URL (used for RSS, sitemap, Open Graph)
+- **`theme`** — choose from 16+ built-in themes (minimal, nord, dracula, catppuccin, gruvbox, rose-pine, solarized, etc.)
+- **`fonts`** — configure body, heading, and monospace font families
+- **`tableOfContents`** — enable/disable and set depth
+- **`commandPalette`** — search scope and keyboard shortcut
+- **`deployment`** — leave unset or ignore; we deploy via rsync, not a platform adapter
 
 ### Project structure
-
-The blog template gives you:
 
 ```
 myblog/
 ├── public/              # Static assets (images, favicon, etc.)
 ├── src/
-│   ├── components/      # Astro and React components
+│   ├── config.ts        # Central site configuration (title, theme, fonts, features)
+│   ├── components/      # Astro components (Header, Footer, PostCard, CommandPalette, etc.)
 │   ├── content/
-│   │   └── blog/        # Markdown/MDX blog posts
+│   │   ├── posts/       # Blog posts (Markdown/MDX)
+│   │   ├── pages/       # Static pages
+│   │   ├── projects/    # Project showcases
+│   │   └── docs/        # Documentation pages
 │   ├── layouts/         # Page layouts
-│   ├── pages/           # File-based routing
-│   │   ├── index.astro  # Home page
-│   │   └── blog/        # Blog listing and post pages
-│   └── styles/          # Global styles
+│   ├── pages/           # File-based routing (index, posts/, projects/, etc.)
+│   ├── themes/          # Built-in color themes
+│   ├── styles/          # CSS / Tailwind styles
+│   └── utils/           # Remark/rehype plugins for Obsidian compatibility
+├── scripts/             # Build-time preprocessing (image sync, graph data, etc.)
 ├── astro.config.mjs
 └── package.json
 ```
 
 ### Write a blog post
 
-Create `src/content/blog/hello-world.md`:
+Create `src/content/posts/hello-world.md`:
 
 ```md
 ---
 title: "Hello World"
 description: "My first blog post"
-pubDate: "Apr 04 2026"
+pubDate: 2026-04-04
 ---
 
-This is my first blog post built with Astro.
+This is my first blog post built with astro-modular.
 ```
 
-### Use React components in posts (MDX)
+### Obsidian integration
 
-Rename any post to `.mdx` to use components inside it:
+astro-modular is designed to work as an Obsidian vault. The `src/content/` directory *is* the vault — you can open it directly in Obsidian and write posts there. Features that work out of the box:
 
-`src/content/blog/interactive-post.mdx`:
+- `[[Wikilinks]]` between posts
+- `![[Embeds]]` for including content from other notes
+- Callouts (`> [!note]`, `> [!warning]`, etc.)
+- `%%Comments%%` (stripped from published output)
+- Image sizing syntax
+- Mermaid diagrams and LaTeX math (KaTeX)
+
+### Use MDX for interactive components
+
+Rename any post to `.mdx` to embed interactive components:
+
+`src/content/posts/interactive-post.mdx`:
 
 ```mdx
 ---
 title: "A Post with Interactive Stuff"
-description: "Mixing markdown with React components"
-pubDate: "Apr 05 2026"
+description: "Mixing markdown with components"
+pubDate: 2026-04-05
 ---
 
 Here's some regular markdown text.
 
 import Counter from '../../components/Counter.tsx';
 
-And here's an interactive React counter:
+And here's an interactive counter:
 
 <Counter client:load />
 
 The `client:load` directive tells Astro to hydrate this component
 in the browser. Everything else on this page ships as zero JS.
-```
-
-`src/components/Counter.tsx`:
-
-```tsx
-import { useState } from 'react';
-
-export default function Counter() {
-  const [count, setCount] = useState(0);
-  return (
-    <button onClick={() => setCount(count + 1)}>
-      Clicks: {count}
-    </button>
-  );
-}
 ```
 
 ### Astro's hydration directives
@@ -277,13 +281,11 @@ These control when (and whether) a component's JavaScript loads in the browser:
 | `client:only="react"` | Renders only on the client (skip server render) |
 | *(no directive)* | Renders to static HTML, ships zero JS |
 
-This is what makes Astro great for blogs: most of the page is static HTML, and you only pay the JS cost for the pieces that actually need interactivity.
-
 ### Preview locally
 
 ```sh
 npm run dev
-# Open http://localhost:4321
+# Open http://localhost:5000
 ```
 
 ### Push to deploy
@@ -302,21 +304,21 @@ The GitHub Actions workflow triggers automatically and deploys to your VPS.
 
 ## 6. Create fully custom pages
 
-Astro uses file-based routing. Any `.astro` or `.tsx` file in `src/pages/` becomes a route:
+Astro uses file-based routing. Any `.astro` file in `src/pages/` becomes a route:
 
 - `src/pages/about.astro` → `yourblog.com/about`
 - `src/pages/projects.astro` → `yourblog.com/projects`
 
-An Astro page can be entirely custom — no blog layout required:
+astro-modular includes several page types out of the box (posts, projects, docs), but you can add entirely custom pages too:
 
 ```astro
 ---
 // src/pages/playground.astro
 import Layout from '../layouts/Base.astro';
-import MyReactApp from '../components/MyReactApp.tsx';
+import MyWidget from '../components/MyWidget.tsx';
 ---
 <Layout title="Playground">
-  <MyReactApp client:load />
+  <MyWidget client:load />
 </Layout>
 ```
 
@@ -336,8 +338,8 @@ VPS (Hetzner CX22)
 
 GitHub
 ├── vboughner/griljor (game repo, unchanged)
-└── yourusername/myblog (blog repo, Astro)
-    └── .github/workflows/deploy.yml → builds Astro + rsyncs to VPS
+└── yourusername/myblog (blog repo, astro-modular)
+    └── .github/workflows/deploy.yml → builds site + rsyncs to VPS
 ```
 
 ---
@@ -345,7 +347,7 @@ GitHub
 ## Maintenance notes
 
 - **Adding HTTPS for the blog does not affect griljor.com** — certbot manages each domain's certificate independently
-- **Node.js version**: pin the same version in the GitHub Actions workflow and on the VPS to avoid build drift
+- **Node.js version**: astro-modular requires Node.js 24+. Pin the same version in the GitHub Actions workflow and on the VPS to avoid build drift
 - **DNS**: add an A record for `yourblog.com` pointing to the same VPS IP, using Cloudflare DNS-only (grey cloud) or your registrar's DNS
 - **If you later want `www.yourblog.com` too**: add it to the nginx `server_name` line (`server_name yourblog.com www.yourblog.com;`) and re-run `sudo certbot --nginx -d yourblog.com -d www.yourblog.com`
-- **Updating Astro**: run `npx @astrojs/upgrade` in your blog repo to update Astro and its integrations together
+- **Updating astro-modular**: run `npm run update` to pull the latest theme framework files while preserving your content and configuration
