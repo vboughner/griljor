@@ -8,7 +8,7 @@ astro-modular is a feature-rich Astro blog theme with Obsidian vault integration
 
 - The Griljor VPS is already running (nginx, certbot, PM2)
 - You have a domain for the blog with DNS pointing to the VPS IP (A record)
-- The blog lives in its own GitHub repository
+- The blog lives in its own GitHub repository (`vboughner/ai-blog`)
 - Node.js is already installed on the VPS (required by Griljor)
 
 ---
@@ -157,16 +157,16 @@ How it works:
 On your local machine, clone or scaffold the astro-modular template into a fresh repository:
 
 ```sh
-npx create-astro-modular myblog
-cd myblog
+npx create-astro-modular ai-blog
+cd ai-blog
 npm install
 ```
 
 Alternatively, you can clone the template directly:
 
 ```sh
-git clone https://github.com/davidvkimball/astro-modular.git myblog
-cd myblog
+git clone https://github.com/davidvkimball/astro-modular.git ai-blog
+cd ai-blog
 rm -rf .git
 npm install
 ```
@@ -199,7 +199,7 @@ Key settings in `src/config.ts`:
 ### Project structure
 
 ```
-myblog/
+ai-blog/
 ├── public/              # Static assets (images, favicon, etc.)
 ├── src/
 │   ├── config.ts        # Central site configuration (title, theme, fonts, features)
@@ -294,7 +294,7 @@ npm run dev
 git init
 git add -A
 git commit -m "Initial blog setup"
-git remote add origin https://github.com/yourusername/myblog.git
+git remote add origin https://github.com/vboughner/ai-blog.git
 git push -u origin main
 ```
 
@@ -338,7 +338,7 @@ VPS (Hetzner CX22)
 
 GitHub
 ├── vboughner/griljor (game repo, unchanged)
-└── yourusername/myblog (blog repo, astro-modular)
+└── vboughner/ai-blog (blog repo, astro-modular)
     └── .github/workflows/deploy.yml → builds site + rsyncs to VPS
 ```
 
