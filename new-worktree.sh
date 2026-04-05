@@ -39,7 +39,10 @@ if [[ -z "$FEATURE" ]]; then
   exit 1
 fi
 
-TARGET_DIR="$(dirname "$REPO_DIR")/griljor-${N}-${FEATURE}"
+WORKTREES_DIR="$(dirname "$REPO_DIR")/worktrees"
+TARGET_DIR="${WORKTREES_DIR}/griljor-${N}-${FEATURE}"
+
+mkdir -p "$WORKTREES_DIR"
 
 echo "Creating worktree: $TARGET_DIR"
 echo "Branch: $BRANCH"

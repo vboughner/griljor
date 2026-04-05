@@ -26,7 +26,7 @@ Examples:
 ./new-worktree.sh 3 lighting
 ```
 
-This creates `../griljor-<N>-<feature>/`, checks out or creates the branch, and runs `npm install` in `server/` and `client/`.
+This creates `../worktrees/griljor-<N>-<feature>/`, checks out or creates the branch, and runs `npm install` in `server/` and `client/`.
 
 ## Starting Dev Servers
 
@@ -51,9 +51,9 @@ To stop:
 | Worktree              | N | Lobby | Game 0 | Game 1 | Client                         |
 |-----------------------|---|-------|--------|--------|--------------------------------|
 | `griljor/`            | 0 | 3000  | 3001   | 3002   | http://localhost:5073          |
-| `griljor-1-teams/`    | 1 | 3100  | 3101   | 3102   | http://localhost:5173          |
-| `griljor-2-combat/`   | 2 | 3200  | 3201   | 3202   | http://localhost:5273          |
-| `griljor-3-lighting/` | 3 | 3300  | 3301   | 3302   | http://localhost:5373          |
+| `worktrees/griljor-1-teams/`    | 1 | 3100  | 3101   | 3102   | http://localhost:5173          |
+| `worktrees/griljor-2-combat/`   | 2 | 3200  | 3201   | 3202   | http://localhost:5273          |
+| `worktrees/griljor-3-lighting/` | 3 | 3300  | 3301   | 3302   | http://localhost:5373          |
 
 Formula for worktree N, map index M (0-based):
 - Lobby: `3000 + N*100`
@@ -70,14 +70,30 @@ Formula for worktree N, map index M (0-based):
 | Re-attach | `tmux attach-session -t <session-name>` |
 | List sessions | `tmux ls` |
 
+## Quick Navigation
+
+A `gg` shell function (defined in `~/.bashrc`) lets you jump between worktrees:
+
+```sh
+gg      # cd to ~/dev/griljor/ (main repo)
+gg 1    # cd to ~/dev/worktrees/griljor-1-*/
+gg 2    # cd to ~/dev/worktrees/griljor-2-*/
+```
+
+Definition (add to `~/.bashrc`):
+
+```sh
+function gg() { if [[ -n "$1" ]]; then cd ~/dev/worktrees/griljor-$1-*/; else cd ~/dev/griljor/; fi; }
+```
+
 ## Removing a Worktree
 
 ```sh
 # Stop the dev session first:
-cd ../griljor-1-teams && ./dev.sh stop
+cd ../worktrees/griljor-1-teams && ./dev.sh stop
 
 # Remove the worktree:
-git worktree remove ../griljor-1-teams
+git worktree remove ../worktrees/griljor-1-teams
 
 # Optionally delete the branch:
 git branch -d teams
