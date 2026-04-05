@@ -10,7 +10,7 @@ Run multiple isolated dev environments simultaneously. See [`WORKTREES.md`](WORK
 ./dev.sh                   # start lobby + game (battle) + client in tmux
 ./dev.sh battle dungeon    # start lobby + 2 games + client
 ./dev.sh stop              # kill the tmux session
-./new-worktree.sh 1 teams  # create worktree ../griljor-1-teams/ on branch 'teams'
+./new-worktree.sh 1 teams  # create worktree ../worktrees/griljor-1-teams/ on branch 'teams'
 ```
 
 ---
