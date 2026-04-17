@@ -2,6 +2,7 @@ import WebSocket from 'ws';
 import { C2SMessage, S2CMessage, InventoryItem } from './protocol';
 import { World, ObjDef, RecObj, RoomData } from './world';
 import { filterText, randomScold } from './filter';
+import { MonsterManager, MonsterSessionInterface } from './monster-manager';
 
 const INV_SIZE = 21;
 const MAX_WEIGHT = 200;
@@ -253,6 +254,8 @@ export class GameSession {
   // viewerId → Set of visible player IDs (symmetric)
   private visibility = new Map<number, Set<number>>();
 
+  private monsterManager: MonsterManager;
+
   constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
     this.onPlayerCountChange = opts?.onPlayerCountChange;
     this.world = world;
@@ -261,6 +264,8 @@ export class GameSession {
     );
     this.initRoomItems();
     this.regenInterval = setInterval(() => this.regenTick(), 1000);
+    this.monsterManager = new MonsterManager(this.buildMonsterSessionInterface());
+    this.monsterManager.init();
   }
 
   destroy(): void {
@@ -271,6 +276,7 @@ export class GameSession {
       clearInterval(this.regenInterval);
       this.regenInterval = null;
     }
+    this.monsterManager.destroy();
   }
 
   private regenTick(): void {
@@ -305,6 +311,7 @@ export class GameSession {
     this.roomItems.clear();
     this.initRoomItems();
     this.chatHistory = [];
+    this.monsterManager.reset();
   }
 
   get playerCount(): number {
@@ -543,6 +550,17 @@ export class GameSession {
             newType: current[i].type,
           });
         }
+      }
+    }
+
+    // Send visible monsters in the player's starting room
+    for (const monsterInfo of this.monsterManager.getMonsterInfosForRoom(player.room)) {
+      const room = this.world.rooms[player.room];
+      if (
+        room &&
+        spotIsVisible(room, this.world.objects, player.x, player.y, monsterInfo.x, monsterInfo.y)
+      ) {
+        this.send(ws, monsterInfo);
       }
     }
 
@@ -901,6 +919,30 @@ export class GameSession {
     return null;
   }
 
+  /**
+   * Scan path for the first entity (player or monster) hit.
+   * Returns { hitAtStep, playerId?, monsterId? } or null.
+   */
+  private findEntityHitOnPath(
+    path: Array<{ x: number; y: number }>,
+    roomIdx: number,
+    excludeId?: number,
+  ): { hitAtStep: number; playerId?: number; monsterId?: number } | null {
+    for (let i = 0; i < path.length; i++) {
+      const { x, y } = path[i];
+      for (const p of this.players.values()) {
+        if (p.room !== roomIdx) continue;
+        if (excludeId !== undefined && p.id === excludeId) continue;
+        if (p.x === x && p.y === y) return { hitAtStep: i + 1, playerId: p.id };
+      }
+      const monster = this.monsterManager.findMonsterOnTile(roomIdx, x, y);
+      if (monster && (excludeId === undefined || monster.id !== excludeId)) {
+        return { hitAtStep: i + 1, monsterId: monster.id };
+      }
+    }
+    return null;
+  }
+
   private calcMissilePath(
     room: RoomData,
     x0: number,
@@ -972,9 +1014,14 @@ export class GameSession {
     const roomData = this.world.rooms[roomIdx];
     if (!roomData) return;
 
-    // Direct hit: damage any player standing exactly on the landing tile
-    const centerHit = this.findPlayerHitOnPath([{ x: landX, y: landY }], roomIdx);
-    if (centerHit) this.dealDamage(centerHit.player, damage, attacker);
+    // Direct hit: damage any entity standing exactly on the landing tile
+    const centerHit = this.findEntityHitOnPath([{ x: landX, y: landY }], roomIdx);
+    if (centerHit?.playerId !== undefined) {
+      const p = this.players.get(centerHit.playerId);
+      if (p) this.dealDamage(p, damage, attacker);
+    } else if (centerHit?.monsterId !== undefined) {
+      this.monsterManager.damageMonster(centerHit.monsterId, damage, attacker.id);
+    }
 
     // Pre-compute chain-reaction params (invariant across all rays)
     const willChain = boomObj.explodes && depth < MAX_EXPLOSION_DEPTH;
@@ -988,9 +1035,8 @@ export class GameSession {
       const path = this.calcMissilePath(roomData, landX, landY, targetX, targetY, radius, piercing);
       if (path.length === 0) continue;
 
-      // Find first player hit along this ray (attacker included — self-damage allowed)
-      const hit = this.findPlayerHitOnPath(path, roomIdx);
-      const hitPlayer = hit?.player ?? null;
+      // Find first entity hit along this ray (attacker included — self-damage allowed)
+      const hit = this.findEntityHitOnPath(path, roomIdx);
       const finalPath = path.slice(0, hit?.hitAtStep ?? path.length);
       const id = this.nextMissileId++;
       this.broadcastToRoom(roomIdx, {
@@ -1007,7 +1053,12 @@ export class GameSession {
       const timer = setTimeout(() => {
         this.activeMissiles.delete(id);
         this.broadcastToRoom(roomIdx, { type: 'MISSILE_END', id });
-        if (hitPlayer) this.dealDamage(hitPlayer, damage, attacker);
+        if (hit?.playerId !== undefined) {
+          const hp = this.players.get(hit.playerId);
+          if (hp) this.dealDamage(hp, damage, attacker);
+        } else if (hit?.monsterId !== undefined) {
+          this.monsterManager.damageMonster(hit.monsterId, damage, attacker.id);
+        }
 
         if (chainParams && finalPath.length > 0) {
           const endTile = finalPath[finalPath.length - 1];
@@ -1166,10 +1217,9 @@ export class GameSession {
   ): void {
     const path = this.calcMissilePath(room, player.x, player.y, targetX, targetY, range, false);
 
-    // Find first player hit along path (excluding the shooter)
-    const hit = this.findPlayerHitOnPath(path, player.room, playerId);
-    const hitPlayer = hit?.player ?? null;
-    const finalPath = path.slice(0, hit?.hitAtStep ?? path.length);
+    // Find first entity (player or monster) hit along path (excluding the shooter)
+    const entityHit = this.findEntityHitOnPath(path, player.room, playerId);
+    const finalPath = path.slice(0, entityHit?.hitAtStep ?? path.length);
     if (finalPath.length === 0) return;
 
     const id = this.nextMissileId++;
@@ -1190,7 +1240,12 @@ export class GameSession {
     const timer = setTimeout(() => {
       this.activeMissiles.delete(id);
       this.broadcastToRoom(player.room, { type: 'MISSILE_END', id });
-      if (hitPlayer) this.dealDamage(hitPlayer, damage, player);
+      if (entityHit?.playerId !== undefined) {
+        const hitPlayer = this.players.get(entityHit.playerId);
+        if (hitPlayer) this.dealDamage(hitPlayer, damage, player);
+      } else if (entityHit?.monsterId !== undefined) {
+        this.monsterManager.damageMonster(entityHit.monsterId, damage, player.id);
+      }
       const landTile = finalPath[finalPath.length - 1];
       // Trigger explosion for exploding weapons
       if (obj.explodes) {
@@ -1201,7 +1256,7 @@ export class GameSession {
           spread: explSpread,
         } = resolveExplosionParams(obj, handItem.type, this.world.objects);
 
-        if (obj.lost && !hitPlayer && finalPath.length < range) {
+        if (obj.lost && !entityHit && finalPath.length < range) {
           const onEdge =
             (dy === -1 && landTile.y === 0) ||
             (dx === 1 && landTile.x === GRID - 1) ||
@@ -1323,8 +1378,13 @@ export class GameSession {
         dx,
         dy,
       });
-      const hit = this.findPlayerHitOnPath([{ x: entryX, y: entryY }], nextRoomIdx, player.id);
-      if (hit) this.dealDamage(hit.player, PUNCH_DAMAGE, player);
+      const hit = this.findEntityHitOnPath([{ x: entryX, y: entryY }], nextRoomIdx, player.id);
+      if (hit?.playerId !== undefined) {
+        const p = this.players.get(hit.playerId);
+        if (p) this.dealDamage(p, PUNCH_DAMAGE, player);
+      } else if (hit?.monsterId !== undefined) {
+        this.monsterManager.damageMonster(hit.monsterId, PUNCH_DAMAGE, player.id);
+      }
       return;
     }
 
@@ -1337,8 +1397,13 @@ export class GameSession {
       dy,
     });
 
-    const hit = this.findPlayerHitOnPath([{ x: targetX, y: targetY }], player.room, player.id);
-    if (hit) this.dealDamage(hit.player, PUNCH_DAMAGE, player);
+    const hit = this.findEntityHitOnPath([{ x: targetX, y: targetY }], player.room, player.id);
+    if (hit?.playerId !== undefined) {
+      const p = this.players.get(hit.playerId);
+      if (p) this.dealDamage(p, PUNCH_DAMAGE, player);
+    } else if (hit?.monsterId !== undefined) {
+      this.monsterManager.damageMonster(hit.monsterId, PUNCH_DAMAGE, player.id);
+    }
   }
 
   private onUseItem(playerId: number, msg: Extract<C2SMessage, { type: 'USE_ITEM' }>): void {
@@ -1760,6 +1825,61 @@ export class GameSession {
         text: 'Welcome back, I see you are still active!',
       });
     }
+  }
+
+  private buildMonsterSessionInterface(): MonsterSessionInterface {
+    return {
+      world: this.world,
+      broadcastToRoom: (room, msg) => this.broadcastToRoom(room, msg),
+      broadcast: (msg) => this.broadcast(msg),
+      getPlayersInRoom: (room) => {
+        const result: Array<{ id: number; x: number; y: number; team: number; dead: boolean }> = [];
+        for (const p of this.players.values()) {
+          if (p.room === room)
+            result.push({ id: p.id, x: p.x, y: p.y, team: p.team, dead: p.dead });
+        }
+        return result;
+      },
+      isWalkable: (room, x, y) => {
+        const roomData = this.world.rooms[room];
+        if (!roomData?.spot) return false;
+        if (x < 0 || x >= GRID || y < 0 || y >= GRID) return false;
+        const cell = roomData.spot[x]?.[y];
+        if (!cell) return false;
+        const [flId, wlId] = cell;
+        if (!flId && !wlId) return !roomData.floor; // void tile
+        const wallObj = wlId > 0 ? this.world.objects[wlId] : null;
+        const floorObj = flId > 0 ? this.world.objects[flId] : null;
+        if (wallObj && !wallObj.movement) return false;
+        if (floorObj && !floorObj.movement) return false;
+        // Also check recorded_objects for blocking non-takeable objects
+        for (const ro of roomData.recorded_objects) {
+          if (ro.x === x && ro.y === y && ro.type > 0) {
+            const obj = this.world.objects[ro.type];
+            if (obj?.takeable) continue;
+            if (obj && !obj.movement) return false;
+          }
+        }
+        return true;
+      },
+      isTileOccupiedByPlayer: (room, x, y, excludeId?) => {
+        for (const p of this.players.values()) {
+          if (p.room === room && p.x === x && p.y === y) {
+            if (excludeId !== undefined && p.id === excludeId) continue;
+            return true;
+          }
+        }
+        return false;
+      },
+      addFloorItem: (room, x, y, item) => {
+        const roomMap = this.roomItems.get(room) ?? new Map<string, InventoryItem>();
+        roomMap.set(`${x},${y}`, item);
+        this.roomItems.set(room, roomMap);
+        this.broadcast({ type: 'ITEM_ADDED', room, x, y, item });
+      },
+      findNearbyFreeTile: (room, x, y) => this.nearbyFreeTile(room, x, y),
+      getPlayerName: (id) => this.players.get(id)?.name,
+    };
   }
 
   private broadcastGM(text: string): void {
