@@ -15,7 +15,23 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DIRNAME="$(basename "$REPO_DIR")"
+
+# Walk up ancestor directories to find one starting with "griljor"
+_search="$REPO_DIR"
+DIRNAME=""
+while [[ "$_search" != "/" ]]; do
+  _base="$(basename "$_search")"
+  if [[ "$_base" == griljor || "$_base" == griljor-* ]]; then
+    DIRNAME="$_base"
+    break
+  fi
+  _search="$(dirname "$_search")"
+done
+
+if [[ -z "$DIRNAME" ]]; then
+  echo "Error: cannot find a 'griljor' or 'griljor-<N>-<feature>' ancestor directory."
+  exit 1
+fi
 
 # Parse N from dirname
 if [[ "$DIRNAME" == "griljor" ]]; then
