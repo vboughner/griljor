@@ -106,9 +106,7 @@ describe('join / leave', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.flush();
     joinPlayer(session, 'Bob');
-    const reports = alice.ws
-      .messagesOfType('REPORT')
-      .filter((m) => m.text.includes('Bob'));
+    const reports = alice.ws.messagesOfType('REPORT').filter((m) => m.text.includes('Bob'));
     expect(reports).toHaveLength(1);
     expect(reports[0].text).toBe('Bob joined the game.');
   });
@@ -118,9 +116,7 @@ describe('join / leave', () => {
     const alice = joinPlayer(multiTeamSession, 'Alice', 'a', 1);
     alice.ws.flush();
     joinPlayer(multiTeamSession, 'Bob', 'b', 2);
-    const reports = alice.ws
-      .messagesOfType('REPORT')
-      .filter((m) => m.text.includes('Bob'));
+    const reports = alice.ws.messagesOfType('REPORT').filter((m) => m.text.includes('Bob'));
     expect(reports).toHaveLength(1);
     expect(reports[0].text).toBe('Bob joined the game (team 2).');
     multiTeamSession.destroy();
@@ -130,18 +126,14 @@ describe('join / leave', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.flush();
     joinPlayer(session, 'Bob');
-    const reports = alice.ws
-      .messagesOfType('REPORT')
-      .filter((m) => m.text.includes('Bob'));
+    const reports = alice.ws.messagesOfType('REPORT').filter((m) => m.text.includes('Bob'));
     expect(reports[0].text).not.toContain('team');
   });
 
   it('new player receives their own REPORT join message', () => {
     joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');
-    const reports = bob.ws
-      .messagesOfType('REPORT')
-      .filter((m) => m.text.includes('Bob joined'));
+    const reports = bob.ws.messagesOfType('REPORT').filter((m) => m.text.includes('Bob joined'));
     expect(reports).toHaveLength(1);
   });
 
