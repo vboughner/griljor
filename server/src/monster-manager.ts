@@ -1,6 +1,7 @@
 import { Monster, MonsterDef, RoomMonsterSpawn } from './monster-types';
 import { InventoryItem, S2CMessage } from './protocol';
 import { World } from './world';
+import { getBehavior, BehaviorContext } from './behaviors';
 
 // ── Narrow interface between MonsterManager and GameSession ────────────────
 
@@ -16,6 +17,16 @@ export interface MonsterSessionInterface {
   addFloorItem(room: number, x: number, y: number, item: InventoryItem): void;
   findNearbyFreeTile(room: number, x: number, y: number): { x: number; y: number } | null;
   getPlayerName(id: number): string | undefined;
+  spotIsVisible(room: number, x1: number, y1: number, x2: number, y2: number): boolean;
+  sendToPlayer(playerId: number, msg: S2CMessage): void;
+  getAllPlayers(): Array<{
+    id: number;
+    room: number;
+    x: number;
+    y: number;
+    team: number;
+    dead: boolean;
+  }>;
 }
 
 const GRID = 20;
@@ -25,6 +36,8 @@ export class MonsterManager {
   private nextMonsterId = -1;
   // Track spawn timers for replenishment (keyed by "roomIdx:monsterId")
   private spawnTimers = new Map<string, ReturnType<typeof setInterval>>();
+  // Monster visibility: playerId → Set of monster IDs visible to that player
+  private monsterVisibility = new Map<number, Set<number>>();
 
   constructor(private session: MonsterSessionInterface) {}
 
@@ -69,6 +82,7 @@ export class MonsterManager {
       clearInterval(timer);
     }
     this.spawnTimers.clear();
+    this.monsterVisibility.clear();
   }
 
   /** Reset: destroy and re-init. */
@@ -131,6 +145,66 @@ export class MonsterManager {
     return this.getMonstersInRoom(room).map((m) => this.makeMonsterInfo(m));
   }
 
+  /** Initialize visibility tracking for a player (call on join). */
+  initPlayerVisibility(playerId: number): void {
+    this.monsterVisibility.set(playerId, new Set());
+  }
+
+  /** Remove visibility tracking for a player (call on leave). */
+  clearPlayerVisibility(playerId: number): void {
+    this.monsterVisibility.delete(playerId);
+  }
+
+  /**
+   * Recompute which monsters a player can see, sending MONSTER_INFO for
+   * newly visible monsters and MONSTER_HIDDEN for those that left LOS.
+   * Call when a player moves or changes rooms.
+   */
+  updatePlayerVisibility(playerId: number, playerRoom: number, px: number, py: number): void {
+    const visSet = this.monsterVisibility.get(playerId);
+    if (!visSet) return;
+
+    // Build set of monster IDs that should be visible now
+    const nowVisible = new Set<number>();
+    for (const m of this.monsters.values()) {
+      if (m.dead || m.room !== playerRoom) continue;
+      if (this.session.spotIsVisible(playerRoom, px, py, m.x, m.y)) {
+        nowVisible.add(m.id);
+      }
+    }
+
+    // Send MONSTER_INFO for newly visible
+    for (const mId of nowVisible) {
+      if (!visSet.has(mId)) {
+        const m = this.monsters.get(mId);
+        if (m) this.session.sendToPlayer(playerId, this.makeMonsterInfo(m));
+      }
+    }
+
+    // Send MONSTER_HIDDEN for no longer visible
+    for (const mId of visSet) {
+      if (!nowVisible.has(mId)) {
+        this.session.sendToPlayer(playerId, { type: 'MONSTER_HIDDEN', id: mId });
+      }
+    }
+
+    // Replace the set
+    this.monsterVisibility.set(playerId, nowVisible);
+  }
+
+  /**
+   * When a player changes rooms, clear all monster visibility for them
+   * (they'll get fresh visibility in the new room from updatePlayerVisibility).
+   */
+  onPlayerRoomChange(playerId: number): void {
+    const visSet = this.monsterVisibility.get(playerId);
+    if (!visSet) return;
+    for (const mId of visSet) {
+      this.session.sendToPlayer(playerId, { type: 'MONSTER_HIDDEN', id: mId });
+    }
+    visSet.clear();
+  }
+
   // ── Internal ────────────────────────────────────────────────────────────
 
   private spawnMonster(def: MonsterDef, roomIdx: number, spawn: RoomMonsterSpawn): Monster | null {
@@ -166,6 +240,9 @@ export class MonsterManager {
     };
 
     this.monsters.set(id, monster);
+
+    // Start AI movement tick
+    this.startMoveTick(monster, def);
 
     // Broadcast to players already in the room
     this.session.broadcastToRoom(roomIdx, this.makeMonsterInfo(monster));
@@ -300,6 +377,9 @@ export class MonsterManager {
     monster.carriedItems = [];
     monster.currentTarget = null;
 
+    // Restart AI movement tick
+    this.startMoveTick(monster, def);
+
     this.session.broadcastToRoom(monster.room, this.makeMonsterInfo(monster));
   }
 
@@ -316,9 +396,83 @@ export class MonsterManager {
     }
   }
 
+  private startMoveTick(monster: Monster, def: MonsterDef): void {
+    if (monster.moveTimer !== null) {
+      clearInterval(monster.moveTimer);
+    }
+    const interval = def.behavior.moveInterval;
+    if (interval <= 0) return; // no movement
+    monster.moveTimer = setInterval(() => {
+      this.onMoveTick(monster, def);
+    }, interval);
+  }
+
+  private onMoveTick(monster: Monster, def: MonsterDef): void {
+    if (monster.dead) return;
+
+    const behavior = getBehavior(def.behavior.type);
+    const context = this.buildBehaviorContext(monster);
+    const action = behavior.onTick(monster, def.behavior, context);
+
+    if (action.type === 'move') {
+      this.moveMonster(monster, action.x, action.y);
+    }
+    // 'idle' → do nothing
+  }
+
+  private buildBehaviorContext(monster: Monster): BehaviorContext {
+    const players = this.session.getPlayersInRoom(monster.room).filter((p) => !p.dead);
+
+    return {
+      nearbyPlayers: players,
+      isWalkable: (x, y) => this.session.isWalkable(monster.room, x, y),
+      isOccupied: (x, y) => this.isTileOccupied(monster.room, x, y),
+    };
+  }
+
+  private moveMonster(monster: Monster, newX: number, newY: number): void {
+    monster.x = newX;
+    monster.y = newY;
+
+    // Update visibility for all players in this room
+    for (const player of this.session.getAllPlayers()) {
+      if (player.room !== monster.room) continue;
+      const visSet = this.monsterVisibility.get(player.id);
+      if (!visSet) continue;
+
+      const canSee = this.session.spotIsVisible(
+        monster.room,
+        player.x,
+        player.y,
+        monster.x,
+        monster.y,
+      );
+      const wasSeen = visSet.has(monster.id);
+
+      if (canSee && !wasSeen) {
+        // Newly visible: send full info
+        visSet.add(monster.id);
+        this.session.sendToPlayer(player.id, this.makeMonsterInfo(monster));
+      } else if (canSee && wasSeen) {
+        // Still visible: send location update
+        this.session.sendToPlayer(player.id, {
+          type: 'MONSTER_LOCATION',
+          id: monster.id,
+          room: monster.room,
+          x: monster.x,
+          y: monster.y,
+        });
+      } else if (!canSee && wasSeen) {
+        // No longer visible
+        visSet.delete(monster.id);
+        this.session.sendToPlayer(player.id, { type: 'MONSTER_HIDDEN', id: monster.id });
+      }
+    }
+  }
+
   private clearMonsterTimers(monster: Monster): void {
     if (monster.moveTimer !== null) {
-      clearTimeout(monster.moveTimer);
+      clearInterval(monster.moveTimer);
       monster.moveTimer = null;
     }
     if (monster.chatTimer !== null) {

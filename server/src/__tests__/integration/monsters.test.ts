@@ -302,4 +302,121 @@ describe('Monster system — Phase 2 (spawn, damage, death)', () => {
     const monsterInfos = alice.ws.messagesOfType('MONSTER_INFO');
     expect(monsterInfos.length).toBe(0);
   });
+
+  // ── Phase 3: Movement & Visibility ────────────────────────────────────
+
+  it('wandering monster moves after moveInterval ticks', () => {
+    const world = buildMonsterTestWorld();
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    // Move Alice near the monster so she can see it
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 14, y: 15 });
+    alice.ws.flush();
+
+    // Advance by the wander moveInterval (2000ms)
+    vi.advanceTimersByTime(2000);
+
+    // Monster should have moved — check for MONSTER_LOCATION message
+    const locations = alice.ws.messagesOfType('MONSTER_LOCATION');
+    // May get MONSTER_INFO (if it walked into view) or MONSTER_LOCATION (already visible)
+    const monsterMsgs = [
+      ...locations,
+      ...alice.ws.messagesOfType('MONSTER_INFO').filter((m) => !m.dead),
+    ];
+    expect(monsterMsgs.length).toBeGreaterThan(0);
+  });
+
+  it('stationary monster does not move', () => {
+    const world = buildMonsterTestWorld();
+    // Use the guard (stationary behavior)
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'guard', count: 1, spawnX: 15, spawnY: 15, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 14, y: 15 });
+    alice.ws.flush();
+
+    // Advance several intervals
+    vi.advanceTimersByTime(5000);
+
+    // Should NOT get any MONSTER_LOCATION (stationary doesn't move)
+    const locations = alice.ws.messagesOfType('MONSTER_LOCATION');
+    expect(locations.length).toBe(0);
+  });
+
+  it('monster behind a wall is not visible to player', () => {
+    const world = buildMonsterTestWorld();
+    // Place a wall at (13,15) between player and monster at (15,15)
+    world.rooms[0].spot![13][15] = [4, 0]; // wall object (id=4, blocks LOS)
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    // Move to (12,15) — wall at (13,15) blocks LOS to monster at (15,15)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 12, y: 15 });
+    alice.ws.flush();
+
+    // Check: should NOT have MONSTER_INFO for the dweeb (blocked by wall)
+    const infos = alice.ws.messagesOfType('MONSTER_INFO');
+    const visible = infos.filter((m) => m.name === 'Dweeb');
+    expect(visible.length).toBe(0);
+  });
+
+  it('monster becomes visible when player moves to LOS', () => {
+    const world = buildMonsterTestWorld();
+    // Place a wall between player start and monster
+    world.rooms[0].spot![13][15] = [4, 0]; // wall blocks LOS
+    // Use stationary guard so monster doesn't move during test
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'guard', count: 1, spawnX: 15, spawnY: 15, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    // Start behind wall — can't see monster
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 12, y: 15 });
+    alice.ws.flush();
+
+    let infos = alice.ws.messagesOfType('MONSTER_INFO');
+    expect(infos.filter((m) => m.name === 'Guard').length).toBe(0);
+
+    // Move to (14,15) — past the wall, should now see monster at (15,15)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 14, y: 15 });
+
+    infos = alice.ws.messagesOfType('MONSTER_INFO');
+    const guard = infos.find((m) => m.name === 'Guard' && !m.dead);
+    expect(guard).toBeDefined();
+    expect(guard!.x).toBe(15);
+    expect(guard!.y).toBe(15);
+  });
+
+  it('MONSTER_HIDDEN sent when monster leaves player LOS', () => {
+    const world = buildMonsterTestWorld();
+    // Use stationary guard so it doesn't wander during test
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'guard', count: 1, spawnX: 15, spawnY: 15, spawnRate: 0 },
+    ];
+    // Pre-place a wall at (13,15) that we'll use to block LOS
+    world.rooms[0].spot![13][15] = [4, 0]; // wall object blocks LOS
+
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    // Move to (14,15) — can see monster at (15,15) (wall is behind us)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 14, y: 15 });
+
+    // Verify monster is visible
+    const infos = alice.ws.messagesOfType('MONSTER_INFO');
+    expect(infos.filter((m) => m.name === 'Guard').length).toBeGreaterThan(0);
+
+    alice.ws.flush();
+
+    // Move behind the wall — LOS now blocked
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 12, y: 15 });
+
+    const hiddens = alice.ws.messagesOfType('MONSTER_HIDDEN');
+    expect(hiddens.length).toBeGreaterThan(0);
+  });
 });

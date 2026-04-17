@@ -553,16 +553,9 @@ export class GameSession {
       }
     }
 
-    // Send visible monsters in the player's starting room
-    for (const monsterInfo of this.monsterManager.getMonsterInfosForRoom(player.room)) {
-      const room = this.world.rooms[player.room];
-      if (
-        room &&
-        spotIsVisible(room, this.world.objects, player.x, player.y, monsterInfo.x, monsterInfo.y)
-      ) {
-        this.send(ws, monsterInfo);
-      }
-    }
+    // Initialize monster visibility and compute what's visible from spawn
+    this.monsterManager.initPlayerVisibility(id);
+    this.monsterManager.updatePlayerVisibility(id, player.room, player.x, player.y);
 
     // Send empty inventory and starting stats to new player
     this.sendInventory(player);
@@ -602,12 +595,14 @@ export class GameSession {
         }
       }
       this.visibility.get(playerId)?.clear();
+      this.monsterManager.onPlayerRoomChange(playerId);
     }
 
     player.room = msg.room;
     player.x = msg.x;
     player.y = msg.y;
     this.updateVisibilityOnMove(playerId);
+    this.monsterManager.updatePlayerVisibility(playerId, player.room, player.x, player.y);
   }
 
   private updateVisibilityOnMove(moverId: number): void {
@@ -1729,6 +1724,7 @@ export class GameSession {
     this.players.delete(playerId);
     this.wsToId.delete(player.ws);
     this.clearVisibility(playerId);
+    this.monsterManager.clearPlayerVisibility(playerId);
     this.broadcast({ type: 'LEAVING_GAME', id: playerId, name: playerName, reason });
     if (this.players.size === 0) {
       if (this.world.resetOnEmpty) {
@@ -1879,6 +1875,36 @@ export class GameSession {
       },
       findNearbyFreeTile: (room, x, y) => this.nearbyFreeTile(room, x, y),
       getPlayerName: (id) => this.players.get(id)?.name,
+      spotIsVisible: (room, x1, y1, x2, y2) => {
+        const roomData = this.world.rooms[room];
+        if (!roomData) return false;
+        return spotIsVisible(roomData, this.world.objects, x1, y1, x2, y2);
+      },
+      sendToPlayer: (playerId, msg) => {
+        const p = this.players.get(playerId);
+        if (p) this.send(p.ws, msg);
+      },
+      getAllPlayers: () => {
+        const result: Array<{
+          id: number;
+          room: number;
+          x: number;
+          y: number;
+          team: number;
+          dead: boolean;
+        }> = [];
+        for (const p of this.players.values()) {
+          result.push({
+            id: p.id,
+            room: p.room,
+            x: p.x,
+            y: p.y,
+            team: p.team,
+            dead: p.dead,
+          });
+        }
+        return result;
+      },
     };
   }
 
@@ -1900,6 +1926,8 @@ export class GameSession {
       console.warn(`[${context}] ${player.name} team=${player.team} no spawn — staying in place`);
     }
     this.recomputeVisibilityAfterTeleport(player);
+    this.monsterManager.onPlayerRoomChange(player.id);
+    this.monsterManager.updatePlayerVisibility(player.id, player.room, player.x, player.y);
     this.send(player.ws, { type: 'YOU_RESPAWNED', room: player.room, x: player.x, y: player.y });
   }
 
