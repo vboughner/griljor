@@ -518,6 +518,12 @@ export class GameSession {
       this.send(other.ws, { type: 'PLAYER_HEALTH', id, hp: player.hp, maxHp: player.maxHp });
     }
 
+    const joinText =
+      this.world.teams > 1
+        ? `${player.name} joined the game (team ${player.team}).`
+        : `${player.name} joined the game.`;
+    this.broadcastGM(joinText);
+
     console.log(`[+] ${msg.name} (id=${id}) joined. Players: ${this.players.size}`);
     this.startAfkTimer(player);
   }
