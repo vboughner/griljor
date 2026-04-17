@@ -102,47 +102,47 @@ describe('join / leave', () => {
     multiTeamSession.destroy();
   });
 
-  it('GM broadcasts a join message to existing players when a new player joins', () => {
+  it('broadcasts a REPORT join message to existing players when a new player joins', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.flush();
     joinPlayer(session, 'Bob');
-    const gmMsgs = alice.ws
-      .messagesOfType('MESSAGE')
-      .filter((m) => m.name === 'GM' && m.text.includes('Bob'));
-    expect(gmMsgs).toHaveLength(1);
-    expect(gmMsgs[0].text).toBe('Bob joined the game.');
+    const reports = alice.ws
+      .messagesOfType('REPORT')
+      .filter((m) => m.text.includes('Bob'));
+    expect(reports).toHaveLength(1);
+    expect(reports[0].text).toBe('Bob joined the game.');
   });
 
-  it('GM join message includes team number when map has multiple teams', () => {
+  it('REPORT join message includes team number when map has multiple teams', () => {
     const multiTeamSession = new GameSession({ ...buildTestWorld(), teams: 2 });
     const alice = joinPlayer(multiTeamSession, 'Alice', 'a', 1);
     alice.ws.flush();
     joinPlayer(multiTeamSession, 'Bob', 'b', 2);
-    const gmMsgs = alice.ws
-      .messagesOfType('MESSAGE')
-      .filter((m) => m.name === 'GM' && m.text.includes('Bob'));
-    expect(gmMsgs).toHaveLength(1);
-    expect(gmMsgs[0].text).toBe('Bob joined the game (team 2).');
+    const reports = alice.ws
+      .messagesOfType('REPORT')
+      .filter((m) => m.text.includes('Bob'));
+    expect(reports).toHaveLength(1);
+    expect(reports[0].text).toBe('Bob joined the game (team 2).');
     multiTeamSession.destroy();
   });
 
-  it('GM join message omits team when map has no teams', () => {
+  it('REPORT join message omits team when map has no teams', () => {
     const alice = joinPlayer(session, 'Alice');
     alice.ws.flush();
     joinPlayer(session, 'Bob');
-    const gmMsgs = alice.ws
-      .messagesOfType('MESSAGE')
-      .filter((m) => m.name === 'GM' && m.text.includes('Bob'));
-    expect(gmMsgs[0].text).not.toContain('team');
+    const reports = alice.ws
+      .messagesOfType('REPORT')
+      .filter((m) => m.text.includes('Bob'));
+    expect(reports[0].text).not.toContain('team');
   });
 
-  it('new player receives their own GM join message', () => {
+  it('new player receives their own REPORT join message', () => {
     joinPlayer(session, 'Alice');
     const bob = joinPlayer(session, 'Bob');
-    const gmMsgs = bob.ws
-      .messagesOfType('MESSAGE')
-      .filter((m) => m.name === 'GM' && m.text.includes('Bob joined'));
-    expect(gmMsgs).toHaveLength(1);
+    const reports = bob.ws
+      .messagesOfType('REPORT')
+      .filter((m) => m.text.includes('Bob joined'));
+    expect(reports).toHaveLength(1);
   });
 
   it('PLAYER_JOINED is sent to existing players when a new player joins', () => {

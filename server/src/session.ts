@@ -522,7 +522,7 @@ export class GameSession {
       this.world.teams > 1
         ? `${player.name} joined the game (team ${player.team}).`
         : `${player.name} joined the game.`;
-    this.broadcastGM(joinText);
+    this.broadcast({ type: 'REPORT', text: joinText });
 
     console.log(`[+] ${msg.name} (id=${id}) joined. Players: ${this.players.size}`);
     this.startAfkTimer(player);
