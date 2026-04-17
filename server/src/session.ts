@@ -16,6 +16,45 @@ const AFK_WARN_INTERVAL_MS = 1 * 60 * 1000; // interval between warnings (1 min)
 const AFK_GRACE_MINUTES = 5; // number of warnings before kick
 
 const DEFAULT_SPREAD = 8;
+const DEFAULT_ARC_SPREAD = 5; // default number of projectiles for arc weapons when spread absent
+
+/** Compute direction vectors for an arc weapon's spread pattern.
+ *  centerAngle: the angle (radians) the player aimed at
+ *  arcDeg: total arc width in degrees
+ *  spreadCount: number of projectiles to fire within the arc
+ *  range: weapon range in tiles
+ *  originX, originY: shooter position
+ *  Returns an array of { targetX, targetY, dx, dy } for each projectile. */
+export function arcDirections(
+  centerAngle: number,
+  arcDeg: number,
+  spreadCount: number,
+  range: number,
+  originX: number,
+  originY: number,
+): Array<{ targetX: number; targetY: number; dx: number; dy: number }> {
+  const halfArc = ((arcDeg / 2) * Math.PI) / 180;
+  const count = Math.max(1, spreadCount);
+  const results: Array<{ targetX: number; targetY: number; dx: number; dy: number }> = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < count; i++) {
+    // Spread projectiles evenly across the arc; single projectile fires center
+    const t = count === 1 ? 0 : (i / (count - 1)) * 2 - 1; // -1 to 1
+    const angle = centerAngle + t * halfArc;
+    // Target tile at full range in this direction
+    const targetX = originX + Math.round(Math.sin(angle) * range);
+    const targetY = originY + Math.round(-Math.cos(angle) * range);
+    const dx = Math.sign(targetX - originX) || Math.sign(Math.sin(angle));
+    const dy = Math.sign(targetY - originY) || Math.sign(-Math.cos(angle));
+    // Deduplicate identical target directions
+    const key = `${targetX},${targetY}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    results.push({ targetX, targetY, dx, dy });
+  }
+  return results;
+}
 
 /** Generate evenly-spaced explosion ray targets for a given spread count and radius. */
 function explosionTargets(
@@ -1054,25 +1093,78 @@ export class GameSession {
     // Record fire time now (committed to firing)
     player.lastFireTime = Date.now();
 
-    // Compute unit direction toward target
+    // Compute center direction toward target
     const rawDx = msg.targetX - player.x;
     const rawDy = msg.targetY - player.y;
     if (rawDx === 0 && rawDy === 0) return;
-    const dx = Math.sign(rawDx);
-    const dy = Math.sign(rawDy);
 
     const room = this.world.rooms[player.room];
     if (!room) return;
 
-    const path = this.calcMissilePath(
-      room,
-      player.x,
-      player.y,
-      msg.targetX,
-      msg.targetY,
-      range,
-      false,
-    );
+    const speed = bulletObj?.speed ?? obj.speed ?? 5;
+    const msPerStep = calcMsPerStep(speed);
+
+    // Arc weapons fire multiple missiles in a cone pattern
+    const arcDeg = obj.arc ?? 0;
+    if (arcDeg > 0) {
+      const centerAngle = Math.atan2(rawDx, -rawDy);
+      const spreadCount = obj.spread ?? DEFAULT_ARC_SPREAD;
+      const dirs = arcDirections(centerAngle, arcDeg, spreadCount, range, player.x, player.y);
+      for (const dir of dirs) {
+        this.fireSingleMissile(
+          player,
+          playerId,
+          obj,
+          handItem,
+          room,
+          range,
+          damage,
+          movingObjType,
+          msPerStep,
+          dir.targetX,
+          dir.targetY,
+          dir.dx,
+          dir.dy,
+        );
+      }
+    } else {
+      const dx = Math.sign(rawDx);
+      const dy = Math.sign(rawDy);
+      this.fireSingleMissile(
+        player,
+        playerId,
+        obj,
+        handItem,
+        room,
+        range,
+        damage,
+        movingObjType,
+        msPerStep,
+        msg.targetX,
+        msg.targetY,
+        dx,
+        dy,
+      );
+    }
+  }
+
+  /** Fire a single missile projectile from a player toward a target. */
+  private fireSingleMissile(
+    player: Player,
+    playerId: number,
+    obj: ObjDef,
+    handItem: InventoryItem,
+    room: RoomData,
+    range: number,
+    damage: number,
+    movingObjType: number,
+    msPerStep: number,
+    targetX: number,
+    targetY: number,
+    dx: number,
+    dy: number,
+  ): void {
+    const path = this.calcMissilePath(room, player.x, player.y, targetX, targetY, range, false);
 
     // Find first player hit along path (excluding the shooter)
     const hit = this.findPlayerHitOnPath(path, player.room, playerId);
@@ -1081,8 +1173,6 @@ export class GameSession {
     if (finalPath.length === 0) return;
 
     const id = this.nextMissileId++;
-    const speed = bulletObj?.speed ?? obj.speed ?? 5;
-    const msPerStep = calcMsPerStep(speed);
 
     this.broadcastToRoom(player.room, {
       type: 'MISSILE_START',
