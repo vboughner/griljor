@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import { C2SMessage, S2CMessage, InventoryItem } from './protocol';
-import { World, ObjDef, RecObj, RoomData } from './world';
+import { World, ObjDef, RecObj, RoomData, PlacementConfig } from './world';
 import { filterText, randomScold } from './filter';
 
 const INV_SIZE = 21;
@@ -210,6 +210,8 @@ export class GameSession {
 
   private onPlayerCountChange?: () => void;
   private regenInterval: ReturnType<typeof setInterval> | null = null;
+  private placementInterval: ReturnType<typeof setInterval> | null = null;
+  private lastPlacementTime = 0;
 
   // viewerId → Set of visible player IDs (symmetric)
   private visibility = new Map<number, Set<number>>();
@@ -222,6 +224,10 @@ export class GameSession {
     );
     this.initRoomItems();
     this.regenInterval = setInterval(() => this.regenTick(), 1000);
+    if (world.placement) {
+      this.lastPlacementTime = Math.floor(Date.now() / 1000);
+      this.placementInterval = setInterval(() => this.placementTick(), 1000);
+    }
   }
 
   destroy(): void {
@@ -232,6 +238,10 @@ export class GameSession {
       clearInterval(this.regenInterval);
       this.regenInterval = null;
     }
+    if (this.placementInterval !== null) {
+      clearInterval(this.placementInterval);
+      this.placementInterval = null;
+    }
   }
 
   private regenTick(): void {
@@ -240,6 +250,60 @@ export class GameSession {
       player.hp = Math.min(player.maxHp, player.hp + 1);
       this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
     }
+  }
+
+  private placementTick(): void {
+    const config = this.world.placement;
+    if (!config || config.rules.length === 0) return;
+    if (this.players.size === 0) return;
+
+    const effectiveInterval = Math.max(Math.floor(config.intervalSeconds / this.players.size), 1);
+    const now = Math.floor(Date.now() / 1000);
+    if (now < this.lastPlacementTime + effectiveInterval) return;
+    this.lastPlacementTime = now;
+
+    this.executePlacementCycle(config);
+  }
+
+  private executePlacementCycle(config: PlacementConfig): void {
+    const rule = config.rules[Math.floor(Math.random() * config.rules.length)];
+    const obj = this.world.objects[rule.objType];
+    if (!obj) return;
+    if (!obj.takeable) return; // non-takeable placement deferred
+
+    for (let i = 0; i < rule.quantity; i++) {
+      let roomIdx: number;
+      if (rule.mode === 't') {
+        roomIdx = this.randomTeamRoom(rule.target);
+        if (roomIdx < 0) continue;
+      } else {
+        roomIdx = rule.target;
+        if (roomIdx < 0 || roomIdx >= this.world.rooms.length) continue;
+      }
+      this.placeItemInRoom(roomIdx, rule.objType);
+    }
+  }
+
+  private randomTeamRoom(team: number): number {
+    const candidates: number[] = [];
+    for (let i = 0; i < this.world.rooms.length; i++) {
+      if (this.world.rooms[i].team === team) candidates.push(i);
+    }
+    if (candidates.length === 0) return -1;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  private placeItemInRoom(roomIdx: number, objType: number): void {
+    const tile = this.randomWalkableTile(roomIdx);
+    if (!tile) return;
+
+    const key = `${tile.x},${tile.y}`;
+    const roomMap = this.roomItems.get(roomIdx) ?? new Map<string, InventoryItem>();
+    if (roomMap.has(key)) return; // tile already has an item
+    const item: InventoryItem = { type: objType, quantity: 1 };
+    roomMap.set(key, item);
+    this.roomItems.set(roomIdx, roomMap);
+    this.broadcast({ type: 'ITEM_ADDED', room: roomIdx, x: tile.x, y: tile.y, item });
   }
 
   private initRoomItems(): void {
@@ -266,6 +330,7 @@ export class GameSession {
     this.roomItems.clear();
     this.initRoomItems();
     this.chatHistory = [];
+    this.lastPlacementTime = Math.floor(Date.now() / 1000);
   }
 
   get playerCount(): number {

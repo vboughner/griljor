@@ -46,6 +46,7 @@ function buildMultiTeamWorld(): World {
     resetOnEmpty: false,
     resetAfterSeconds: 30,
     maxPlayers: 16,
+    placement: null,
   };
 }
 

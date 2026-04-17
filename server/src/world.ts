@@ -51,6 +51,18 @@ export interface RoomData {
   exitWest: number;
 }
 
+export interface PlacementRule {
+  mode: 't' | 'r';
+  objType: number;
+  quantity: number;
+  target: number;
+}
+
+export interface PlacementConfig {
+  intervalSeconds: number;
+  rules: PlacementRule[];
+}
+
 export interface World {
   mapName: string;
   title: string;
@@ -61,6 +73,7 @@ export interface World {
   resetOnEmpty: boolean;
   resetAfterSeconds: number;
   maxPlayers: number;
+  placement: PlacementConfig | null;
 }
 
 export async function loadWorld(mapName: string): Promise<World> {
@@ -87,6 +100,10 @@ export async function loadWorld(mapName: string): Promise<World> {
       exit_south?: number;
       exit_west?: number;
     }>;
+    placement?: {
+      intervalSeconds: number;
+      rules: Array<{ mode: string; objType: number; quantity: number; target: number }>;
+    };
   };
 
   const objName = data.map.objfilename.replace(/\.obj$/, '');
@@ -115,6 +132,22 @@ export async function loadWorld(mapName: string): Promise<World> {
     exitWest: r.exit_west ?? -1,
   }));
 
+  let placement: PlacementConfig | null = null;
+  if (data.placement && data.placement.rules.length > 0) {
+    placement = {
+      intervalSeconds: data.placement.intervalSeconds,
+      rules: data.placement.rules
+        .filter((r) => r.mode === 't' || r.mode === 'r')
+        .map((r) => ({
+          mode: r.mode as 't' | 'r',
+          objType: r.objType,
+          quantity: r.quantity,
+          target: r.target,
+        })),
+    };
+    if (placement.rules.length === 0) placement = null;
+  }
+
   return {
     mapName,
     title: data.map.name ?? mapName,
@@ -125,5 +158,6 @@ export async function loadWorld(mapName: string): Promise<World> {
     resetOnEmpty: data.map.resetOnEmpty ?? false,
     resetAfterSeconds: data.map.resetAfterSeconds ?? 30,
     maxPlayers: data.map.maxPlayers ?? 16,
+    placement,
   };
 }

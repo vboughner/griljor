@@ -330,10 +330,52 @@ def parse_map_file(path):
     }
 
 
+def _parse_pla_file(pla_path):
+    """Parse a .pla placement file. Returns dict with intervalSeconds and rules."""
+    interval = 30  # DEFAULT_HOW_OFTEN from legacy putstuff.h
+    rules = []
+    with open(pla_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            parts = line.split()
+            if not parts:
+                continue
+            cmd = parts[0].lower()
+            if cmd == 's' and len(parts) >= 2:
+                try:
+                    interval = int(parts[1])
+                except ValueError:
+                    pass
+            elif cmd in ('t', 'r') and len(parts) >= 4:
+                try:
+                    rules.append({
+                        'mode': cmd,
+                        'objType': int(parts[1]),
+                        'quantity': int(parts[2]),
+                        'target': int(parts[3]),
+                    })
+                except ValueError:
+                    pass
+    if not rules:
+        return None
+    return {'intervalSeconds': interval, 'rules': rules}
+
+
 def export_map(path, out_dir):
     """Parse one .map file, write JSON, return (format, room_count, object_count)."""
     stem = os.path.splitext(os.path.basename(path))[0]
     result = parse_map_file(path)
+
+    pla_name = result.get('map', {}).get('placement_file')
+    if pla_name and pla_name != 'none':
+        pla_dir = os.path.join(REPO, 'legacy', 'lib', 'map')
+        pla_path = os.path.join(pla_dir, pla_name)
+        if os.path.isfile(pla_path):
+            placement = _parse_pla_file(pla_path)
+            if placement:
+                result['placement'] = placement
 
     os.makedirs(out_dir, exist_ok=True)
     json_path = os.path.join(out_dir, f'{stem}.json')

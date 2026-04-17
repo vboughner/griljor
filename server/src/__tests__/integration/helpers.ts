@@ -149,6 +149,7 @@ export function buildTestWorld(): World {
     resetOnEmpty: false,
     resetAfterSeconds: 30,
     maxPlayers: 16,
+    placement: null,
   };
 }
 
@@ -199,6 +200,7 @@ export function buildTwoRoomWorld(): World {
     resetOnEmpty: false,
     resetAfterSeconds: 30,
     maxPlayers: 16,
+    placement: null,
   };
 }
 
