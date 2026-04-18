@@ -261,6 +261,9 @@ export class MonsterManager {
     // Start AI movement tick
     this.startMoveTick(monster, def);
 
+    // Start chat timer if configured
+    this.startChatTimer(monster, def);
+
     // Broadcast to players already in the room
     this.session.broadcastToRoom(roomIdx, this.makeMonsterInfo(monster));
 
@@ -394,8 +397,9 @@ export class MonsterManager {
     monster.carriedItems = [];
     monster.currentTarget = null;
 
-    // Restart AI movement tick
+    // Restart AI movement tick and chat timer
     this.startMoveTick(monster, def);
+    this.startChatTimer(monster, def);
 
     this.session.broadcastToRoom(monster.room, this.makeMonsterInfo(monster));
   }
@@ -678,13 +682,34 @@ export class MonsterManager {
     }
   }
 
+  private startChatTimer(monster: Monster, def: MonsterDef): void {
+    if (!def.chat) return;
+    if (monster.chatTimer !== null) {
+      clearInterval(monster.chatTimer);
+    }
+    const { chatInterval, chatChance, phrases } = def.chat;
+    if (chatInterval <= 0 || phrases.length === 0) return;
+    monster.chatTimer = setInterval(() => {
+      if (monster.dead) return;
+      if (Math.random() >= chatChance) return;
+      const text = phrases[Math.floor(Math.random() * phrases.length)];
+      this.session.broadcastToRoom(monster.room, {
+        type: 'MESSAGE',
+        from: monster.id,
+        name: monster.name,
+        to: 'all',
+        text,
+      });
+    }, chatInterval);
+  }
+
   private clearMonsterTimers(monster: Monster): void {
     if (monster.moveTimer !== null) {
       clearInterval(monster.moveTimer);
       monster.moveTimer = null;
     }
     if (monster.chatTimer !== null) {
-      clearTimeout(monster.chatTimer);
+      clearInterval(monster.chatTimer);
       monster.chatTimer = null;
     }
     if (monster.respawnTimer !== null) {

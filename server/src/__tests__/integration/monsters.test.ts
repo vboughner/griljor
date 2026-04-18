@@ -714,4 +714,107 @@ describe('Monster system — Phase 2 (spawn, damage, death)', () => {
     expect(removals.length).toBeGreaterThan(0);
     expect(additions.length).toBeGreaterThan(0);
   });
+
+  // ── Phase 6: Monster Chat ─────────────────────────────────────────────
+
+  it('chatty monster broadcasts messages at chat interval', () => {
+    const world = buildMonsterTestWorld();
+    // Create a chatty monster with 100% chat chance for deterministic testing
+    const chattyDef: MonsterDef = {
+      id: 'chatty',
+      name: 'Chatty',
+      avatar: 'dweeb',
+      hp: 50,
+      maxHp: 50,
+      team: 0,
+      behavior: { type: 'stationary', moveInterval: 5000 },
+      combat: { aggressive: false },
+      chat: { phrases: ['Hello!', 'Nice day!'], chatInterval: 2000, chatChance: 1.0 },
+      items: { drops: null, dropOnDeath: false, pickup: null, carry: null },
+      respawn: { delay: 0 },
+    };
+    world.monsterDefs.push(chattyDef);
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'chatty', count: 1, spawnX: 10, spawnY: 10, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.flush();
+
+    // Advance past chat interval
+    vi.advanceTimersByTime(2000);
+
+    const messages = alice.ws.messagesOfType('MESSAGE');
+    const monsterChat = messages.filter((m) => m.from < 0 && m.name === 'Chatty');
+    expect(monsterChat.length).toBe(1);
+    expect(['Hello!', 'Nice day!']).toContain(monsterChat[0].text);
+  });
+
+  it('monster with chatChance 0 never chats', () => {
+    const world = buildMonsterTestWorld();
+    const silentDef: MonsterDef = {
+      id: 'silent',
+      name: 'Silent',
+      avatar: 'dweeb',
+      hp: 50,
+      maxHp: 50,
+      team: 0,
+      behavior: { type: 'stationary', moveInterval: 5000 },
+      combat: { aggressive: false },
+      chat: { phrases: ['You should never see this'], chatInterval: 1000, chatChance: 0 },
+      items: { drops: null, dropOnDeath: false, pickup: null, carry: null },
+      respawn: { delay: 0 },
+    };
+    world.monsterDefs.push(silentDef);
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'silent', count: 1, spawnX: 10, spawnY: 10, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.flush();
+
+    vi.advanceTimersByTime(5000);
+
+    const messages = alice.ws.messagesOfType('MESSAGE');
+    const monsterChat = messages.filter((m) => m.from < 0);
+    expect(monsterChat.length).toBe(0);
+  });
+
+  it('dead monster stops chatting', () => {
+    const world = buildMonsterTestWorld();
+    const chattyDef: MonsterDef = {
+      id: 'chatty',
+      name: 'Chatty',
+      avatar: 'dweeb',
+      hp: 5,
+      maxHp: 5,
+      team: 0,
+      behavior: { type: 'stationary', moveInterval: 5000 },
+      combat: { aggressive: false },
+      chat: { phrases: ['Hello!'], chatInterval: 1000, chatChance: 1.0 },
+      items: { drops: null, dropOnDeath: false, pickup: null, carry: null },
+      respawn: { delay: 0 },
+    };
+    world.monsterDefs.push(chattyDef);
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'chatty', count: 1, spawnX: 10, spawnY: 10, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+
+    // Kill the chatty monster
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 9, y: 10 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 10 }); // punch kills (10 > 5 HP)
+    alice.ws.flush();
+
+    // Advance time — dead monster should not chat
+    vi.advanceTimersByTime(5000);
+
+    const messages = alice.ws.messagesOfType('MESSAGE');
+    const monsterChat = messages.filter((m) => m.from < 0 && m.name === 'Chatty');
+    expect(monsterChat.length).toBe(0);
+  });
 });
