@@ -62,6 +62,9 @@ export class MonsterManager {
   /** Spawn initial monsters per room config. Call after world is loaded. */
   init(): void {
     const { world } = this.session;
+    console.log(
+      `[monsters] init: ${world.monsterDefs.length} defs, checking ${world.rooms.length} rooms`,
+    );
     for (let roomIdx = 0; roomIdx < world.rooms.length; roomIdx++) {
       const room = world.rooms[roomIdx];
       const spawns = room.monsterSpawns;
@@ -257,6 +260,9 @@ export class MonsterManager {
     };
 
     this.monsters.set(id, monster);
+    console.log(
+      `[monsters] spawned "${def.name}" (id=${id}, avatar=${def.avatar}) in room ${roomIdx} at (${pos.x},${pos.y})`,
+    );
 
     // Start AI movement tick
     this.startMoveTick(monster, def);
@@ -311,8 +317,10 @@ export class MonsterManager {
     monster.dead = true;
     this.clearMonsterTimers(monster);
 
-    // Announce death
     const killerName = this.getKillerName(killerId);
+    console.log(
+      `[monsters] killed "${monster.name}" (id=${monster.id}, avatar=${monster.avatar}) in room ${monster.room} by ${killerName}`,
+    );
     this.session.broadcast({
       type: 'MESSAGE',
       from: 0,
