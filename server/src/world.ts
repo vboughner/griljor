@@ -143,7 +143,23 @@ export async function loadWorld(mapName: string): Promise<World> {
           objType: r.objType,
           quantity: r.quantity,
           target: r.target,
-        })),
+        }))
+        .filter((r) => {
+          const obj = objData.objects[r.objType];
+          if (!obj) {
+            console.warn(
+              `[${mapName}] placement rule references unknown object ${r.objType} — skipped`,
+            );
+            return false;
+          }
+          if (!obj.takeable) {
+            console.warn(
+              `[${mapName}] placement rule references non-takeable object ${r.objType} (${obj.name}) — skipped`,
+            );
+            return false;
+          }
+          return true;
+        }),
     };
     if (placement.rules.length === 0) placement = null;
   }

@@ -223,17 +223,26 @@ export class GameSession {
       r.recorded_objects.map((ro) => ({ ...ro })),
     );
     this.initRoomItems();
-    this.regenInterval = setInterval(() => this.regenTick(), 1000);
-    if (world.placement) {
-      this.lastPlacementTime = Math.floor(Date.now() / 1000);
-      this.placementInterval = setInterval(() => this.placementTick(), 1000);
-    }
   }
 
   destroy(): void {
     for (const player of this.players.values()) {
       this.clearAfkTimers(player);
     }
+    this.stopTickIntervals();
+  }
+
+  private startTickIntervals(): void {
+    if (this.regenInterval === null) {
+      this.regenInterval = setInterval(() => this.regenTick(), 1000);
+    }
+    if (this.placementInterval === null && this.world.placement) {
+      this.lastPlacementTime = Math.floor(Date.now() / 1000);
+      this.placementInterval = setInterval(() => this.placementTick(), 1000);
+    }
+  }
+
+  private stopTickIntervals(): void {
     if (this.regenInterval !== null) {
       clearInterval(this.regenInterval);
       this.regenInterval = null;
@@ -255,7 +264,6 @@ export class GameSession {
   private placementTick(): void {
     const config = this.world.placement;
     if (!config || config.rules.length === 0) return;
-    if (this.players.size === 0) return;
 
     const effectiveInterval = Math.max(Math.floor(config.intervalSeconds / this.players.size), 1);
     const now = Math.floor(Date.now() / 1000);
@@ -300,10 +308,14 @@ export class GameSession {
     const key = `${tile.x},${tile.y}`;
     const roomMap = this.roomItems.get(roomIdx) ?? new Map<string, InventoryItem>();
     if (roomMap.has(key)) return; // tile already has an item
-    const item: InventoryItem = { type: objType, quantity: 1 };
+    const obj = this.world.objects[objType];
+    const item: InventoryItem = { type: objType, quantity: obj?.charges ?? 1 };
     roomMap.set(key, item);
     this.roomItems.set(roomIdx, roomMap);
     this.broadcast({ type: 'ITEM_ADDED', room: roomIdx, x: tile.x, y: tile.y, item });
+    console.log(
+      `[placement] room ${roomIdx} (${tile.x},${tile.y}): ${obj?.name ?? `obj#${objType}`} x${item.quantity}`,
+    );
   }
 
   private initRoomItems(): void {
@@ -463,6 +475,7 @@ export class GameSession {
       afkWarningsLeft: 0,
     };
     this.players.set(id, player);
+    if (this.players.size === 1) this.startTickIntervals();
 
     // Place player in a random walkable tile in their team's room
     const spawn = this.randomSpawnForTeam(team);
@@ -1635,6 +1648,7 @@ export class GameSession {
     this.clearVisibility(playerId);
     this.broadcast({ type: 'LEAVING_GAME', id: playerId, name: playerName, reason });
     if (this.players.size === 0) {
+      this.stopTickIntervals();
       if (this.world.resetOnEmpty) {
         const delay = this.world.resetAfterSeconds * 1000;
         console.log(

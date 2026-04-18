@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GameSession } from '../../session';
-import { World, RoomData, ObjDef, PlacementConfig } from '../../world';
+import { World, RoomData, ObjDef, PlacementConfig, loadWorld } from '../../world';
 import { joinPlayer } from './helpers';
 
 function buildPlacementWorld(opts?: { placement?: PlacementConfig | null; teams?: number }): World {
@@ -387,5 +387,28 @@ describe('periodic item placement', () => {
 
     const added = alice.ws.messagesOfType('ITEM_ADDED');
     expect(added.length).toBe(0);
+  });
+});
+
+describe('loadWorld placement validation', () => {
+  it('filters out rules referencing unknown or non-takeable objects', async () => {
+    // hack1.pla references default.obj IDs (106, 183, 201, 227) but the map uses main.obj,
+    // where those IDs map to different objects. Of the 6 rules:
+    //   obj 106 (no name) — not takeable → filtered
+    //   obj 183 (stairs)  — not takeable → filtered (×3 rules)
+    //   obj 201 (hand gun) — takeable → kept (×1 rule, originally meant to be hand grenade)
+    //   obj 227 (no name) — not takeable → filtered
+    const world = await loadWorld('hack1');
+    expect(world.placement).not.toBeNull();
+    // Only the obj 201 rule survives (wrong item, but takeable)
+    expect(world.placement!.rules.length).toBe(1);
+    expect(world.placement!.rules[0].objType).toBe(201);
+  });
+
+  it('keeps valid placement rules intact', async () => {
+    // battle uses default.obj and its .pla references valid takeable items
+    const world = await loadWorld('battle');
+    expect(world.placement).not.toBeNull();
+    expect(world.placement!.rules.length).toBeGreaterThan(0);
   });
 });
