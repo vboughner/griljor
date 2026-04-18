@@ -350,7 +350,7 @@ export class MonsterManager {
           type: 'MONSTER_HIDDEN',
           id: monster.id,
         });
-      }, 100);
+      }, 5000);
     }
   }
 
