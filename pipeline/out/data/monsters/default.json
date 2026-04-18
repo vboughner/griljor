@@ -22,7 +22,7 @@
       },
       "items": {
         "drops": [
-          { "type": 3, "quantity": 1, "chance": 0.5 }
+          { "type": 203, "quantity": 1, "chance": 0.5 }
         ],
         "dropOnDeath": true,
         "pickup": null,
