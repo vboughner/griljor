@@ -128,7 +128,7 @@ export function tileViewBlocked(
 
 /**
  * Returns true if tile (x2,y2) is visible from tile (x1,y1).
- * Adjacent tiles (1 Chebyshev step) are always visible.
+ * Adjacent tiles are always visible.
  * The looker's own tile (x1,y1) is not checked; the target tile IS checked.
  * Used for player-to-player visibility (can you see someone hiding in a forest?).
  */

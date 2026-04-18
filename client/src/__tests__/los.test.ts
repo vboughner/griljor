@@ -71,21 +71,25 @@ describe('losRayTiles', () => {
   });
 
   it('off-axis (0,0)→(1,3) — follows actual geometric line', () => {
-    // Line from (0.5,0.5) to (1.5,3.5): passes through (0,1), (0,2)/(1,2), (1,2), (1,3)
+    // Line from (0.5,0.5) to (1.5,3.5): crosses y=1 at x≈0.67 (tile 0,1),
+    // hits corner (1,2) simultaneously, then continues to (1,3).
     // NOT through (1,1) like chebyshevPath would
-    const tiles = losRayTiles(0, 0, 1, 3);
-    expect(tiles).not.toContainEqual({ x: 1, y: 1 });
-    expect(tiles).toContainEqual({ x: 0, y: 1 });
-    expect(tiles).toContainEqual({ x: 1, y: 3 });
+    expect(losRayTiles(0, 0, 1, 3)).toEqual([
+      { x: 0, y: 1 },
+      { x: 1, y: 2 },
+      { x: 1, y: 3 },
+    ]);
   });
 
   it('off-axis (0,0)→(3,1) — follows actual geometric line', () => {
-    // Line from (0.5,0.5) to (3.5,1.5): passes through (1,0), (2,0)/(2,1), (2,1), (3,1)
+    // Line from (0.5,0.5) to (3.5,1.5): crosses x=1 at y≈0.83 (tile 1,0),
+    // hits corner (2,1) simultaneously, then continues to (3,1).
     // NOT through (1,1) like chebyshevPath would
-    const tiles = losRayTiles(0, 0, 3, 1);
-    expect(tiles).not.toContainEqual({ x: 1, y: 1 });
-    expect(tiles).toContainEqual({ x: 1, y: 0 });
-    expect(tiles).toContainEqual({ x: 3, y: 1 });
+    expect(losRayTiles(0, 0, 3, 1)).toEqual([
+      { x: 1, y: 0 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+    ]);
   });
 
   it('boundary crossing is permissive — corner-touching tiles excluded', () => {
