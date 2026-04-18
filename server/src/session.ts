@@ -783,7 +783,7 @@ export class GameSession {
     // Visibility: LOS must not be blocked
     if (!spotIsVisible(room, this.world.objects, player.x, player.y, msg.x, msg.y)) return;
 
-    // Walkability: every tile along the Chebyshev path (including destination)
+    // Walkability: every tile along the LOS ray path (including destination)
     // must be walkable — catches transparent-but-unwalkable tiles like windows.
     for (const { x, y } of losRayTiles(player.x, player.y, msg.x, msg.y)) {
       const cell = room.spot?.[x]?.[y];
