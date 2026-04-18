@@ -854,15 +854,13 @@ async function main(): Promise<void> {
           avatarCol.appendChild(monsterStrip);
         }
 
-        // Player avatars with "Players:" label when monsters are present
+        // Player avatars with "Players:" label
         const playerStrip = document.createElement('span');
         playerStrip.className = 'server-avatars';
-        if (mAvatars.length > 0) {
-          const pLabel = document.createElement('span');
-          pLabel.className = 'monster-label';
-          pLabel.textContent = 'Players:';
-          playerStrip.appendChild(pLabel);
-        }
+        const pLabel = document.createElement('span');
+        pLabel.className = 'monster-label';
+        pLabel.textContent = 'Players:';
+        playerStrip.appendChild(pLabel);
         for (const entry of game.avatars ?? []) {
           appendAvatarCanvas(playerStrip, entry.avatar, entry.name);
         }
