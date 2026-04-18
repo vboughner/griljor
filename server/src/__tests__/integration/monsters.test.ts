@@ -34,7 +34,7 @@ function buildMonsterTestWorld(): World {
     avatar: 'robot',
     hp: 50,
     maxHp: 50,
-    team: 1,
+    team: 0, // neutral — attacks all players
     behavior: { type: 'stationary', moveInterval: 1000 },
     combat: { aggressive: true, weaponType: 2, aggroRange: 8, fireInterval: 1200 },
     chat: null,
@@ -307,6 +307,8 @@ describe('Monster system — Phase 2 (spawn, damage, death)', () => {
 
   it('wandering monster moves after moveInterval ticks', () => {
     const world = buildMonsterTestWorld();
+    // Ensure monster always moves (no pause)
+    world.monsterDefs[0].behavior.pauseChance = 0;
     session = new GameSession(world);
 
     const alice = joinPlayer(session, 'Alice');
@@ -418,5 +420,145 @@ describe('Monster system — Phase 2 (spawn, damage, death)', () => {
 
     const hiddens = alice.ws.messagesOfType('MONSTER_HIDDEN');
     expect(hiddens.length).toBeGreaterThan(0);
+  });
+
+  // ── Phase 4: Monster Combat ───────────────────────────────────────────
+
+  it('aggressive monster fires at a nearby player', () => {
+    const world = buildMonsterTestWorld();
+    // Guard: aggressive, weaponType=2 (sword, damage 30, range 5), fireInterval=1200
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'guard', count: 1, spawnX: 10, spawnY: 10, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    // Place Alice in range of the guard (team 0, guard is team 1)
+    const alice = joinPlayer(session, 'Alice', 'a', 0);
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 13 });
+    alice.ws.flush();
+
+    // Advance past the guard's moveInterval (1000ms) to trigger aggro check
+    vi.advanceTimersByTime(1000);
+
+    // Should see MISSILE_START from the guard
+    const missiles = alice.ws.messagesOfType('MISSILE_START');
+    expect(missiles.length).toBeGreaterThan(0);
+
+    const missile = missiles[0];
+    expect(missile.id).toBeLessThan(0); // monster missile IDs are negative
+    expect(missile.room).toBe(0);
+    expect(missile.objType).toBe(2); // sword type
+
+    // Advance time for missile to arrive
+    vi.advanceTimersByTime(5000);
+
+    // Player should take damage
+    const hits = alice.ws.messagesOfType('PLAYER_HIT');
+    const aliceHit = hits.find((h) => h.victimId === alice.id);
+    expect(aliceHit).toBeDefined();
+    expect(aliceHit!.damage).toBe(30);
+  });
+
+  it('aggressive monster respects fire interval cooldown', () => {
+    const world = buildMonsterTestWorld();
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'guard', count: 1, spawnX: 10, spawnY: 10, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice', 'a', 0);
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 13 });
+    alice.ws.flush();
+
+    // First tick: should fire
+    vi.advanceTimersByTime(1000);
+    expect(alice.ws.messagesOfType('MISSILE_START').length).toBeGreaterThan(0);
+
+    // Second tick (1000ms later, but fireInterval is 1200ms): should NOT fire again
+    alice.ws.flush();
+    vi.advanceTimersByTime(1000);
+    const missiles2 = alice.ws.messagesOfType('MISSILE_START').length;
+    expect(missiles2).toBe(0);
+
+    // Third tick (another 1000ms, total 2000ms since first fire > 1200ms): should fire
+    alice.ws.flush();
+    vi.advanceTimersByTime(1000);
+    const missiles3 = alice.ws.messagesOfType('MISSILE_START').length;
+    expect(missiles3).toBeGreaterThan(0);
+  });
+
+  it('aggressive monster does not fire at same-team players', () => {
+    const world = buildMonsterTestWorld();
+    world.teams = 2; // enable teams so player team assignment works
+    // Create a team-specific guard (team 1)
+    const teamGuard: MonsterDef = {
+      ...world.monsterDefs.find((d) => d.id === 'guard')!,
+      id: 'team-guard',
+      team: 1,
+    };
+    world.monsterDefs.push(teamGuard);
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'team-guard', count: 1, spawnX: 10, spawnY: 10, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    // Alice joins team 1 (same as guard)
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 13 });
+    alice.ws.flush();
+
+    // Advance several ticks
+    vi.advanceTimersByTime(5000);
+
+    // Should NOT fire at same-team player
+    const missiles = alice.ws.messagesOfType('MISSILE_START');
+    expect(missiles.length).toBe(0);
+  });
+
+  it('monster kills player and death is announced', () => {
+    const world = buildMonsterTestWorld();
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'guard', count: 1, spawnX: 10, spawnY: 10, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice', 'a', 0);
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 13 });
+    alice.ws.flush();
+
+    // Fire + arrive repeatedly until Alice dies (100 HP, 30 damage per hit)
+    for (let i = 0; i < 10; i++) {
+      vi.advanceTimersByTime(1500); // past fireInterval
+      vi.advanceTimersByTime(5000); // missile arrives
+    }
+
+    // Alice should have died
+    const deaths = alice.ws.messagesOfType('YOU_DIED');
+    expect(deaths.length).toBeGreaterThan(0);
+
+    // Death announcement from GM
+    const msgs = alice.ws.messagesOfType('MESSAGE');
+    const deathMsg = msgs.find(
+      (m) => m.name === 'GM' && m.text.includes('Alice') && m.text.includes('slain'),
+    );
+    expect(deathMsg).toBeDefined();
+  });
+
+  it('passive monster does not fire even when player is nearby', () => {
+    const world = buildMonsterTestWorld();
+    // Dweeb is passive (aggressive: false)
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'dweeb', count: 1, spawnX: 10, spawnY: 10, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 10, y: 11 });
+    alice.ws.flush();
+
+    vi.advanceTimersByTime(10000);
+
+    const missiles = alice.ws.messagesOfType('MISSILE_START');
+    expect(missiles.length).toBe(0);
   });
 });

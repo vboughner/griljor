@@ -115,6 +115,113 @@ export class FleeBehavior implements BehaviorHandler {
   }
 }
 
+// ── ChaseBehavior ─────────────────────────────────────────────────────────
+
+export class ChaseBehavior implements BehaviorHandler {
+  onTick(
+    monster: Monster,
+    config: MonsterBehaviorConfig,
+    context: BehaviorContext,
+  ): BehaviorAction {
+    // Find nearest non-team player
+    let nearest: { id: number; x: number; y: number } | null = null;
+    let nearestDist = Infinity;
+    for (const p of context.nearbyPlayers) {
+      if (p.team === monster.team && monster.team !== 0) continue;
+      const dist = Math.max(Math.abs(p.x - monster.x), Math.abs(p.y - monster.y));
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = p;
+      }
+    }
+
+    const chaseRange = config.chaseRange ?? 10;
+    if (!nearest || nearestDist > chaseRange) {
+      // No target in range — fall back to wander
+      return wanderBehavior.onTick(monster, config, context);
+    }
+
+    // Already adjacent — stay put (let combat handle it)
+    if (nearestDist <= 1) return { type: 'idle' };
+
+    // Move one Chebyshev step toward the target
+    const dx = Math.sign(nearest.x - monster.x);
+    const dy = Math.sign(nearest.y - monster.y);
+    const nx = monster.x + dx;
+    const ny = monster.y + dy;
+
+    if (context.isWalkable(nx, ny) && !context.isOccupied(nx, ny)) {
+      return { type: 'move', x: nx, y: ny };
+    }
+
+    // Direct path blocked — try cardinal components separately
+    if (dx !== 0) {
+      const altX = monster.x + dx;
+      if (context.isWalkable(altX, monster.y) && !context.isOccupied(altX, monster.y)) {
+        return { type: 'move', x: altX, y: monster.y };
+      }
+    }
+    if (dy !== 0) {
+      const altY = monster.y + dy;
+      if (context.isWalkable(monster.x, altY) && !context.isOccupied(monster.x, altY)) {
+        return { type: 'move', x: monster.x, y: altY };
+      }
+    }
+
+    return { type: 'idle' };
+  }
+}
+
+// ── PatrolBehavior ────────────────────────────────────────────────────────
+
+export class PatrolBehavior implements BehaviorHandler {
+  onTick(
+    monster: Monster,
+    config: MonsterBehaviorConfig,
+    context: BehaviorContext,
+  ): BehaviorAction {
+    const waypoints = config.waypoints;
+    if (!waypoints || waypoints.length === 0) {
+      // No waypoints: fall back to wander
+      return wanderBehavior.onTick(monster, config, context);
+    }
+
+    const target = waypoints[monster.patrolIndex % waypoints.length];
+
+    // Reached current waypoint — advance to next
+    if (monster.x === target.x && monster.y === target.y) {
+      monster.patrolIndex = (monster.patrolIndex + 1) % waypoints.length;
+      return { type: 'idle' }; // pause at waypoint for one tick
+    }
+
+    // Move one Chebyshev step toward the current waypoint
+    const dx = Math.sign(target.x - monster.x);
+    const dy = Math.sign(target.y - monster.y);
+    const nx = monster.x + dx;
+    const ny = monster.y + dy;
+
+    if (context.isWalkable(nx, ny) && !context.isOccupied(nx, ny)) {
+      return { type: 'move', x: nx, y: ny };
+    }
+
+    // Direct path blocked — try cardinal components
+    if (dx !== 0) {
+      const altX = monster.x + dx;
+      if (context.isWalkable(altX, monster.y) && !context.isOccupied(altX, monster.y)) {
+        return { type: 'move', x: altX, y: monster.y };
+      }
+    }
+    if (dy !== 0) {
+      const altY = monster.y + dy;
+      if (context.isWalkable(monster.x, altY) && !context.isOccupied(monster.x, altY)) {
+        return { type: 'move', x: monster.x, y: altY };
+      }
+    }
+
+    return { type: 'idle' };
+  }
+}
+
 // ── StationaryBehavior ────────────────────────────────────────────────────
 
 export class StationaryBehavior implements BehaviorHandler {
@@ -127,15 +234,16 @@ export class StationaryBehavior implements BehaviorHandler {
 
 const wanderBehavior = new WanderBehavior();
 const fleeBehavior = new FleeBehavior();
+const chaseBehavior = new ChaseBehavior();
+const patrolBehavior = new PatrolBehavior();
 const stationaryBehavior = new StationaryBehavior();
 
 const behaviorRegistry = new Map<string, BehaviorHandler>();
 behaviorRegistry.set('wander', wanderBehavior);
 behaviorRegistry.set('flee', fleeBehavior);
+behaviorRegistry.set('chase', chaseBehavior);
+behaviorRegistry.set('patrol', patrolBehavior);
 behaviorRegistry.set('stationary', stationaryBehavior);
-// Patrol and chase will use wander as fallback until Phase 4
-behaviorRegistry.set('patrol', wanderBehavior);
-behaviorRegistry.set('chase', wanderBehavior);
 
 export function getBehavior(type: string): BehaviorHandler {
   return behaviorRegistry.get(type) ?? stationaryBehavior;

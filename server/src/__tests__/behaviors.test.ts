@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { WanderBehavior, FleeBehavior, StationaryBehavior, BehaviorContext } from '../behaviors';
+import {
+  WanderBehavior,
+  FleeBehavior,
+  ChaseBehavior,
+  PatrolBehavior,
+  StationaryBehavior,
+  BehaviorContext,
+} from '../behaviors';
 import { Monster, MonsterBehaviorConfig } from '../monster-types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -204,6 +211,136 @@ describe('FleeBehavior', () => {
     });
     const action = flee.onTick(monster, config, context);
     expect(action.type).toBe('idle');
+  });
+});
+
+// ── ChaseBehavior ─────────────────────────────────────────────────────────
+
+describe('ChaseBehavior', () => {
+  const chase = new ChaseBehavior();
+  const config: MonsterBehaviorConfig = {
+    type: 'chase',
+    moveInterval: 1000,
+    chaseRange: 10,
+  };
+
+  it('moves toward the nearest player', () => {
+    const monster = makeMonster({ x: 10, y: 10 });
+    const context = makeContext({
+      nearbyPlayers: [{ id: 1, x: 13, y: 10, team: 1 }],
+    });
+    const action = chase.onTick(monster, config, context);
+    expect(action.type).toBe('move');
+    if (action.type === 'move') {
+      expect(action.x).toBe(11); // one step east toward player
+      expect(action.y).toBe(10);
+    }
+  });
+
+  it('stops when adjacent to target', () => {
+    const monster = makeMonster({ x: 10, y: 10 });
+    const context = makeContext({
+      nearbyPlayers: [{ id: 1, x: 11, y: 10, team: 1 }],
+    });
+    const action = chase.onTick(monster, config, context);
+    expect(action.type).toBe('idle');
+  });
+
+  it('falls back to wander when no target in range', () => {
+    const monster = makeMonster({ x: 10, y: 10 });
+    const context = makeContext({ nearbyPlayers: [] });
+    const action = chase.onTick(monster, config, context);
+    // Should wander (move to adjacent tile), not idle
+    expect(action.type).toBe('move');
+  });
+
+  it('does not chase same-team players', () => {
+    const monster = makeMonster({ x: 10, y: 10, team: 1 });
+    const context = makeContext({
+      nearbyPlayers: [{ id: 1, x: 13, y: 10, team: 1 }],
+    });
+    const action = chase.onTick(monster, config, context);
+    // No valid target — falls back to wander
+    expect(action.type).toBe('move');
+  });
+
+  it('tries cardinal directions when diagonal is blocked', () => {
+    const monster = makeMonster({ x: 10, y: 10 });
+    const context = makeContext({
+      nearbyPlayers: [{ id: 1, x: 12, y: 12, team: 1 }],
+      // Block diagonal (11,11) but allow (11,10)
+      isWalkable: (x, y) => !(x === 11 && y === 11),
+      isOccupied: () => false,
+    });
+    const action = chase.onTick(monster, config, context);
+    expect(action.type).toBe('move');
+    if (action.type === 'move') {
+      expect(action.x).toBe(11);
+      expect(action.y).toBe(10);
+    }
+  });
+});
+
+// ── PatrolBehavior ────────────────────────────────────────────────────────
+
+describe('PatrolBehavior', () => {
+  const patrol = new PatrolBehavior();
+
+  it('moves toward the current waypoint', () => {
+    const monster = makeMonster({ x: 10, y: 10, patrolIndex: 0 });
+    const config: MonsterBehaviorConfig = {
+      type: 'patrol',
+      moveInterval: 1000,
+      waypoints: [
+        { x: 15, y: 10 },
+        { x: 15, y: 15 },
+      ],
+    };
+    const action = patrol.onTick(monster, config, makeContext());
+    expect(action.type).toBe('move');
+    if (action.type === 'move') {
+      expect(action.x).toBe(11); // one step east toward waypoint (15,10)
+      expect(action.y).toBe(10);
+    }
+  });
+
+  it('advances to next waypoint when reaching current one', () => {
+    const monster = makeMonster({ x: 15, y: 10, patrolIndex: 0 });
+    const config: MonsterBehaviorConfig = {
+      type: 'patrol',
+      moveInterval: 1000,
+      waypoints: [
+        { x: 15, y: 10 },
+        { x: 15, y: 15 },
+      ],
+    };
+    const action = patrol.onTick(monster, config, makeContext());
+    expect(action.type).toBe('idle'); // pause at waypoint
+    expect(monster.patrolIndex).toBe(1); // advanced to next
+  });
+
+  it('wraps around to first waypoint after last', () => {
+    const monster = makeMonster({ x: 15, y: 15, patrolIndex: 1 });
+    const config: MonsterBehaviorConfig = {
+      type: 'patrol',
+      moveInterval: 1000,
+      waypoints: [
+        { x: 15, y: 10 },
+        { x: 15, y: 15 },
+      ],
+    };
+    patrol.onTick(monster, config, makeContext());
+    expect(monster.patrolIndex).toBe(0); // wrapped
+  });
+
+  it('falls back to wander when no waypoints', () => {
+    const monster = makeMonster();
+    const config: MonsterBehaviorConfig = {
+      type: 'patrol',
+      moveInterval: 1000,
+    };
+    const action = patrol.onTick(monster, config, makeContext());
+    expect(action.type).toBe('move');
   });
 });
 

@@ -1,7 +1,8 @@
 import { Monster, MonsterDef, RoomMonsterSpawn } from './monster-types';
 import { InventoryItem, S2CMessage } from './protocol';
 import { World } from './world';
-import { getBehavior, BehaviorContext } from './behaviors';
+import { getBehavior, BehaviorContext, ChaseBehavior } from './behaviors';
+import { calcMsPerStep } from './session';
 
 // ── Narrow interface between MonsterManager and GameSession ────────────────
 
@@ -19,6 +20,15 @@ export interface MonsterSessionInterface {
   getPlayerName(id: number): string | undefined;
   spotIsVisible(room: number, x1: number, y1: number, x2: number, y2: number): boolean;
   sendToPlayer(playerId: number, msg: S2CMessage): void;
+  calcMissilePath(
+    room: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    range: number,
+  ): Array<{ x: number; y: number }>;
+  dealDamageToPlayer(playerId: number, damage: number, attackerName: string): void;
   getAllPlayers(): Array<{
     id: number;
     room: number;
@@ -31,9 +41,13 @@ export interface MonsterSessionInterface {
 
 const GRID = 20;
 
+// Shared chase behavior instance for aggression override
+const aggroChaseBehavior = new ChaseBehavior();
+
 export class MonsterManager {
   private monsters = new Map<number, Monster>();
   private nextMonsterId = -1;
+  private nextMissileId = -1; // negative IDs to avoid collision with session missile IDs
   // Track spawn timers for replenishment (keyed by "roomIdx:monsterId")
   private spawnTimers = new Map<string, ReturnType<typeof setInterval>>();
   // Monster visibility: playerId → Set of monster IDs visible to that player
@@ -89,6 +103,7 @@ export class MonsterManager {
   reset(): void {
     this.destroy();
     this.nextMonsterId = -1;
+    this.nextMissileId = -1;
     this.init();
   }
 
@@ -410,14 +425,142 @@ export class MonsterManager {
   private onMoveTick(monster: Monster, def: MonsterDef): void {
     if (monster.dead) return;
 
-    const behavior = getBehavior(def.behavior.type);
     const context = this.buildBehaviorContext(monster);
+
+    // Aggression override: if aggressive and enemy in aggroRange with LOS, chase + fire
+    if (def.combat.aggressive) {
+      const target = this.findAggroTarget(monster, def, context);
+      if (target) {
+        monster.currentTarget = target.id;
+        // Chase toward target
+        const action = aggroChaseBehavior.onTick(monster, def.behavior, context);
+        if (action.type === 'move') {
+          this.moveMonster(monster, action.x, action.y);
+        }
+        // Try to fire at target
+        this.tryFireAtTarget(monster, def, target);
+        return;
+      } else {
+        monster.currentTarget = null;
+      }
+    }
+
+    // Primary behavior
+    const behavior = getBehavior(def.behavior.type);
     const action = behavior.onTick(monster, def.behavior, context);
 
     if (action.type === 'move') {
       this.moveMonster(monster, action.x, action.y);
     }
-    // 'idle' → do nothing
+  }
+
+  private findAggroTarget(
+    monster: Monster,
+    def: MonsterDef,
+    context: BehaviorContext,
+  ): { id: number; x: number; y: number } | null {
+    const aggroRange = def.combat.aggroRange ?? 8;
+    let nearest: { id: number; x: number; y: number } | null = null;
+    let nearestDist = Infinity;
+
+    for (const p of context.nearbyPlayers) {
+      if (p.team === monster.team && monster.team !== 0) continue;
+      const dist = Math.max(Math.abs(p.x - monster.x), Math.abs(p.y - monster.y));
+      if (dist <= aggroRange && dist < nearestDist) {
+        // Check LOS
+        if (this.session.spotIsVisible(monster.room, monster.x, monster.y, p.x, p.y)) {
+          nearestDist = dist;
+          nearest = p;
+        }
+      }
+    }
+
+    return nearest;
+  }
+
+  private tryFireAtTarget(
+    monster: Monster,
+    def: MonsterDef,
+    target: { id: number; x: number; y: number },
+  ): void {
+    const weaponType = def.combat.weaponType;
+    if (weaponType === undefined) return; // no weapon configured
+
+    const fireInterval = def.combat.fireInterval ?? 1200;
+    const now = Date.now();
+    if (now - monster.lastFireTime < fireInterval) return;
+
+    const weaponObj = this.session.world.objects[weaponType];
+    if (!weaponObj) return;
+
+    const damage = weaponObj.damage ?? 10;
+    const range = weaponObj.range ?? 5;
+    const movingObjType = weaponObj.movingobj ?? weaponType;
+    const bulletObj = weaponObj.movingobj ? this.session.world.objects[weaponObj.movingobj] : null;
+    const speed = bulletObj?.speed ?? weaponObj.speed ?? 5;
+    const msPerStep = calcMsPerStep(speed);
+
+    // Check range to target
+    const dist = Math.max(Math.abs(target.x - monster.x), Math.abs(target.y - monster.y));
+    if (dist > range) return;
+
+    monster.lastFireTime = now;
+
+    // Compute missile path
+    const path = this.session.calcMissilePath(
+      monster.room,
+      monster.x,
+      monster.y,
+      target.x,
+      target.y,
+      range,
+    );
+    if (path.length === 0) return;
+
+    // Check if a player is hit along the path
+    let hitPlayerId: number | undefined;
+    let hitAtStep = path.length;
+    for (let i = 0; i < path.length; i++) {
+      for (const p of this.session.getPlayersInRoom(monster.room)) {
+        if (p.dead) continue;
+        if (p.x === path[i].x && p.y === path[i].y) {
+          hitPlayerId = p.id;
+          hitAtStep = i + 1;
+          break;
+        }
+      }
+      if (hitPlayerId !== undefined) break;
+    }
+
+    const finalPath = path.slice(0, hitAtStep);
+    const dx = Math.sign(target.x - monster.x);
+    const dy = Math.sign(target.y - monster.y);
+
+    const missileId = this.nextMissileId--;
+
+    this.session.broadcastToRoom(monster.room, {
+      type: 'MISSILE_START',
+      id: missileId,
+      room: monster.room,
+      path: finalPath,
+      objType: movingObjType,
+      msPerStep,
+      dx,
+      dy,
+    });
+
+    const travelMs = finalPath.length * msPerStep;
+    const capturedHitPlayerId = hitPlayerId;
+    const capturedDamage = damage;
+    const capturedName = monster.name;
+    const capturedRoom = monster.room;
+
+    setTimeout(() => {
+      this.session.broadcastToRoom(capturedRoom, { type: 'MISSILE_END', id: missileId });
+      if (capturedHitPlayerId !== undefined) {
+        this.session.dealDamageToPlayer(capturedHitPlayerId, capturedDamage, capturedName);
+      }
+    }, travelMs);
   }
 
   private buildBehaviorContext(monster: Monster): BehaviorContext {

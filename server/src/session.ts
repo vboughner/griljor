@@ -1905,7 +1905,53 @@ export class GameSession {
         }
         return result;
       },
+      calcMissilePath: (room, x0, y0, x1, y1, range) => {
+        const roomData = this.world.rooms[room];
+        if (!roomData) return [];
+        return this.calcMissilePath(roomData, x0, y0, x1, y1, range, false);
+      },
+      dealDamageToPlayer: (playerId, damage, attackerName) => {
+        const victim = this.players.get(playerId);
+        if (!victim || victim.dead) return;
+        victim.hp = Math.max(0, victim.hp - damage);
+        this.broadcast({
+          type: 'PLAYER_HEALTH',
+          id: victim.id,
+          hp: victim.hp,
+          maxHp: victim.maxHp,
+        });
+        this.broadcastToRoom(victim.room, {
+          type: 'PLAYER_HIT',
+          victimId: victim.id,
+          room: victim.room,
+          x: victim.x,
+          y: victim.y,
+          damage,
+        });
+        if (victim.hp <= 0) {
+          this.killPlayerByMonster(victim, attackerName);
+        }
+      },
     };
+  }
+
+  /** Kill a player that was slain by a monster (no Player killer object). */
+  private killPlayerByMonster(victim: Player, killerName: string): void {
+    console.log(
+      `[combat] ${victim.name} killed by monster ${killerName} at room=${victim.room} (${victim.x},${victim.y})`,
+    );
+    victim.deaths++;
+    this.broadcast({
+      type: 'PLAYER_STATS',
+      id: victim.id,
+      kills: victim.kills,
+      deaths: victim.deaths,
+    });
+
+    this.broadcastGM(`${victim.name} was slain by ${killerName}.`);
+    this.dropPlayerItems(victim);
+    this.sendInventory(victim);
+    this.scheduleRespawn(victim, null);
   }
 
   private broadcastGM(text: string): void {
