@@ -1418,7 +1418,7 @@ export class GameSession {
       if (obj.opens && doorDef.type && !(obj.opens & doorDef.type)) continue;
 
       ro.type = doorDef.alternate;
-      this.broadcastToRoom(player.room, {
+      this.broadcast({
         type: 'ROOM_OBJECT_CHANGED',
         room: player.room,
         x: msg.targetX,

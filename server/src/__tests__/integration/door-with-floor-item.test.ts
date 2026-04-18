@@ -209,3 +209,76 @@ describe('late-joining player sees current door state', () => {
     expect(bob.ws.messagesOfType('ROOM_OBJECT_CHANGED')).toHaveLength(0);
   });
 });
+
+// ── Cross-room door notification tests ───────────────────────────────────
+//
+// Two-room world: room 0 has a key and a closed door.
+// Room 0 exits east → room 1.  Room 1 exits west → room 0.
+// A player in room 1 should receive ROOM_OBJECT_CHANGED when another
+// player opens the door in room 0.
+
+function buildTwoRoomWorldWithDoor() {
+  const world = buildTestWorld();
+  world.objects[8] = { _index: 8, name: 'key', takeable: true, weight: 1, opens: 1 };
+  world.objects[9] = {
+    _index: 9,
+    name: 'closed-door',
+    swings: true,
+    movement: 0,
+    type: 1,
+    alternate: 10,
+  };
+  world.objects[10] = { _index: 10, name: 'open-door', swings: true, movement: 5, alternate: 9 };
+
+  // Key and closed door in room 0
+  world.rooms[0].recorded_objects.push({ x: 7, y: 5, type: 8, detail: 0 }); // key
+  world.rooms[0].recorded_objects.push({ x: 4, y: 5, type: 9, detail: 0 }); // closed door
+  world.rooms[0].exitEast = 1;
+
+  // Add a second room
+  const spot: number[][][] = Array.from({ length: 20 }, () =>
+    Array.from({ length: 20 }, () => [1, 0]),
+  );
+  world.rooms.push({
+    name: 'room-1',
+    floor: 0,
+    team: 0,
+    recorded_objects: [],
+    spot,
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: 0,
+  });
+  world.roomCount = 2;
+
+  return world;
+}
+
+describe('cross-room door notifications', () => {
+  it('players in other rooms receive ROOM_OBJECT_CHANGED when a door is toggled', () => {
+    const session = new GameSession(buildTwoRoomWorldWithDoor());
+
+    // Alice joins and stays in room 0
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 7, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 7, y: 5 }); // pick up key
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 5 }); // adjacent to door
+
+    // Bob joins and moves to room 1
+    const bob = joinPlayer(session, 'Bob');
+    bob.ws.receive({ type: 'MY_LOCATION', room: 1, x: 10, y: 10 });
+    bob.ws.flush(); // clear join messages
+
+    // Alice opens the door in room 0
+    alice.ws.receive({ type: 'USE_ITEM', targetX: 4, targetY: 5 });
+
+    // Bob (in room 1) must receive the door change notification
+    const changed = bob.ws.messagesOfType('ROOM_OBJECT_CHANGED');
+    expect(changed).toHaveLength(1);
+    expect(changed[0].room).toBe(0);
+    expect(changed[0].x).toBe(4);
+    expect(changed[0].y).toBe(5);
+    expect(changed[0].newType).toBe(10); // open-door
+  });
+});
