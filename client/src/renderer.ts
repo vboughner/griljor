@@ -132,6 +132,7 @@ export interface OtherPlayer {
   sprite: ImageData | null;
   dead?: boolean;
   team: number;
+  isMonster?: boolean;
 }
 
 /**
@@ -145,6 +146,7 @@ export interface OtherPlayer {
  */
 export const INDICATOR_TEAMMATE = '#00cc00';
 export const INDICATOR_ENEMY = '#ff4444';
+export const INDICATOR_MONSTER = '#ddaa00';
 const CORNER_LEN = 8; // px per corner arm
 
 export function playerIndicatorStyle(
@@ -268,20 +270,29 @@ export async function renderFrame(
       ctx.fillStyle = getColorMode() === 'dark' ? '#aaa' : '#666';
       ctx.fillRect(BORDER + other.px * TILE + 8, BORDER + other.py * TILE + 8, 16, 16);
     }
-    if (boxOtherPlayers && !other.dead) {
-      const style = playerIndicatorStyle(teamsEnabled, localTeam, other.team, boxOtherPlayers);
-      if (style) {
-        const bx = BORDER + other.px * TILE + 1;
-        const by = BORDER + other.py * TILE + 1;
+    if (!other.dead) {
+      const bx = BORDER + other.px * TILE + 1;
+      const by = BORDER + other.py * TILE + 1;
+      if (other.isMonster) {
+        // Monsters always get yellow corner brackets
         ctx.save();
-        ctx.strokeStyle = style.color;
-        ctx.lineWidth = style.lineWidth;
-        if (style.corners) {
-          strokeCorners(ctx, bx, by, TILE - 2, TILE - 2);
-        } else {
-          ctx.strokeRect(bx, by, TILE - 2, TILE - 2);
-        }
+        ctx.strokeStyle = INDICATOR_MONSTER;
+        ctx.lineWidth = 1;
+        strokeCorners(ctx, bx, by, TILE - 2, TILE - 2);
         ctx.restore();
+      } else if (boxOtherPlayers) {
+        const style = playerIndicatorStyle(teamsEnabled, localTeam, other.team, boxOtherPlayers);
+        if (style) {
+          ctx.save();
+          ctx.strokeStyle = style.color;
+          ctx.lineWidth = style.lineWidth;
+          if (style.corners) {
+            strokeCorners(ctx, bx, by, TILE - 2, TILE - 2);
+          } else {
+            ctx.strokeRect(bx, by, TILE - 2, TILE - 2);
+          }
+          ctx.restore();
+        }
       }
     }
   }

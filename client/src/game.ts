@@ -50,6 +50,19 @@ interface RemotePlayer {
   team: number;
 }
 
+interface RemoteMonster {
+  id: number;
+  name: string;
+  avatar: string;
+  room: number;
+  x: number;
+  y: number;
+  sprite: ImageData | null;
+  dead: boolean;
+  team: number;
+  monsterId: string;
+}
+
 export class Game {
   private mapData: MapFile;
   private objects: ObjDef[];
@@ -72,6 +85,7 @@ export class Game {
   private network: GameNetwork | null = null;
   private myId: number | null = null;
   private otherPlayers = new Map<number, RemotePlayer>();
+  private monsters = new Map<number, RemoteMonster>();
 
   // floor items: per-room map of "x,y" → item
   private floorItems = new Map<number, Map<string, InventoryItem>>();
@@ -496,6 +510,40 @@ export class Game {
       });
       void this.render();
       setTimeout(() => void this.render(), 360);
+    };
+
+    // ── Monster handlers ──────────────────────────────────────────────────
+
+    net.onMonsterInfo = async (msg) => {
+      const sprite = await this.loadAvatarSprite(msg.avatar);
+      this.monsters.set(msg.id, {
+        id: msg.id,
+        name: msg.name,
+        avatar: msg.avatar,
+        room: msg.room,
+        x: msg.x,
+        y: msg.y,
+        sprite,
+        dead: msg.dead,
+        team: msg.team,
+        monsterId: msg.monsterId,
+      });
+      await this.render();
+    };
+
+    net.onMonsterLocation = async (msg) => {
+      const m = this.monsters.get(msg.id);
+      if (m) {
+        m.room = msg.room;
+        m.x = msg.x;
+        m.y = msg.y;
+        await this.render();
+      }
+    };
+
+    net.onMonsterHidden = async (msg) => {
+      this.monsters.delete(msg.id);
+      await this.render();
     };
   }
 
@@ -961,11 +1009,23 @@ export class Game {
       this.status.textContent = '';
     }
 
-    // Collect other players in the same room
+    // Collect other players and monsters in the same room
     const others: OtherPlayer[] = [];
     for (const p of this.otherPlayers.values()) {
       if (p.room === this.currentRoom) {
         others.push({ px: p.x, py: p.y, sprite: p.sprite, dead: p.dead, team: p.team });
+      }
+    }
+    for (const m of this.monsters.values()) {
+      if (m.room === this.currentRoom) {
+        others.push({
+          px: m.x,
+          py: m.y,
+          sprite: m.sprite,
+          dead: m.dead,
+          team: m.team,
+          isMonster: true,
+        });
       }
     }
 

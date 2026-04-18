@@ -88,7 +88,23 @@ type S2CMessage =
       joinedAt: number;
       dead: boolean;
       team: number;
-    };
+    }
+  | {
+      type: 'MONSTER_INFO';
+      id: number;
+      name: string;
+      avatar: string;
+      room: number;
+      x: number;
+      y: number;
+      hp: number;
+      maxHp: number;
+      team: number;
+      dead: boolean;
+      monsterId: string;
+    }
+  | { type: 'MONSTER_LOCATION'; id: number; room: number; x: number; y: number }
+  | { type: 'MONSTER_HIDDEN'; id: number };
 
 export class GameNetwork {
   private ws: WebSocket;
@@ -119,6 +135,9 @@ export class GameNetwork {
     () => {};
   onPlayerHidden: (msg: Extract<S2CMessage, { type: 'PLAYER_HIDDEN' }>) => void = () => {};
   onPlayerJoined: (msg: Extract<S2CMessage, { type: 'PLAYER_JOINED' }>) => void = () => {};
+  onMonsterInfo: (msg: Extract<S2CMessage, { type: 'MONSTER_INFO' }>) => void = () => {};
+  onMonsterLocation: (msg: Extract<S2CMessage, { type: 'MONSTER_LOCATION' }>) => void = () => {};
+  onMonsterHidden: (msg: Extract<S2CMessage, { type: 'MONSTER_HIDDEN' }>) => void = () => {};
   onClose: () => void = () => {};
 
   constructor(url: string) {
@@ -218,6 +237,15 @@ export class GameNetwork {
           break;
         case 'PLAYER_JOINED':
           this.onPlayerJoined(msg);
+          break;
+        case 'MONSTER_INFO':
+          this.onMonsterInfo(msg);
+          break;
+        case 'MONSTER_LOCATION':
+          this.onMonsterLocation(msg);
+          break;
+        case 'MONSTER_HIDDEN':
+          this.onMonsterHidden(msg);
           break;
       }
     });
