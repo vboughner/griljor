@@ -7,6 +7,7 @@ export interface GameInfo {
   players: number;
   maxPlayers: number;
   avatars: Array<{ avatar: string; name: string; team: number }>;
+  monsterAvatars: string[];
 }
 
 const LOBBY_HTTP =

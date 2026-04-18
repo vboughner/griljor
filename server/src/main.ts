@@ -62,6 +62,7 @@ async function main(): Promise<void> {
       wsUrl,
       players: game.playerCount,
       avatars: game.playerAvatars,
+      monsterAvatars: game.monsterAvatars,
     });
   }
 
@@ -84,6 +85,7 @@ async function main(): Promise<void> {
     rooms: world.roomCount,
     wsUrl,
     maxPlayers: world.maxPlayers,
+    monsterAvatars: game.monsterAvatars,
   });
 
   // Heartbeat every 5s (safety net; immediate heartbeats are sent on join/leave)

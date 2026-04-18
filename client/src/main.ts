@@ -671,14 +671,18 @@ async function main(): Promise<void> {
     for (const btn of serverList.querySelectorAll<HTMLButtonElement>('.join-btn')) {
       const taken = (btn.dataset.avatars ?? '').split(',');
       const takenNames = (btn.dataset.names ?? '').split(',').filter(Boolean);
+      const monsterAvatars = (btn.dataset.monsterAvatars ?? '').split(',').filter(Boolean);
       const full = btn.dataset.full === 'true';
       const avatarTaken = taken.includes(selected);
+      const monsterConflict = monsterAvatars.includes(selected);
       const nameTaken = takenNames.includes(currentName);
-      btn.disabled = full || avatarTaken || nameTaken;
+      btn.disabled = full || avatarTaken || monsterConflict || nameTaken;
       const isTeamBtn = btn.dataset.team !== undefined;
       let tipText: string | null = null;
       if (full) {
         tipText = isTeamBtn ? 'This team is full.' : 'This game is full.';
+      } else if (monsterConflict) {
+        tipText = 'Your avatar is used by a monster in this map. Pick a different one to join.';
       } else if (avatarTaken) {
         tipText = 'Your avatar is already in use in this game. Pick a different one to join.';
       } else if (nameTaken) {
@@ -750,6 +754,26 @@ async function main(): Promise<void> {
         teamLines.className = 'server-team-col server-team-lines';
         const countSpans: HTMLSpanElement[] = [];
         const joinBtns: HTMLButtonElement[] = [];
+
+        // Monster avatars first
+        const multiMonstAvatars = game.monsterAvatars ?? [];
+        if (multiMonstAvatars.length > 0) {
+          const monsterLine = document.createElement('div');
+          monsterLine.className = 'server-team-line';
+          const monsterStrip = document.createElement('span');
+          monsterStrip.className = 'server-avatars server-monster-avatars';
+          const label = document.createElement('span');
+          label.className = 'monster-label';
+          label.textContent = 'Monsters:';
+          monsterStrip.appendChild(label);
+          for (const avatar of multiMonstAvatars) {
+            appendAvatarCanvas(monsterStrip, avatar, `Monster (${avatar})`);
+          }
+          monsterLine.appendChild(monsterStrip);
+          teamLines.appendChild(monsterLine);
+        }
+
+        // Team lines with "Team N" labels
         for (let t = 1; t <= game.teams; t++) {
           const teamAvatars = (game.avatars ?? []).filter((a) => a.team === t);
           const teamCount = teamAvatars.length;
@@ -760,6 +784,16 @@ async function main(): Promise<void> {
 
           const avatarStrip = document.createElement('span');
           avatarStrip.className = 'server-avatars';
+          const teamLabel = document.createElement('span');
+          teamLabel.className = 'monster-label';
+          teamLabel.textContent = `Team ${t}:`;
+          avatarStrip.appendChild(teamLabel);
+          if (teamAvatars.length === 0) {
+            const none = document.createElement('span');
+            none.className = 'none-label';
+            none.textContent = 'none';
+            avatarStrip.appendChild(none);
+          }
           for (const entry of teamAvatars) {
             appendAvatarCanvas(avatarStrip, entry.avatar, entry.name);
           }
@@ -780,6 +814,7 @@ async function main(): Promise<void> {
           btn.dataset.names = nameKeys;
           btn.dataset.full = String(teamFull);
           btn.dataset.team = String(t);
+          btn.dataset.monsterAvatars = multiMonstAvatars.join(',');
           btn.addEventListener('click', () => joinServer(game, t));
           joinBtns.push(btn);
         }
@@ -804,13 +839,45 @@ async function main(): Promise<void> {
         for (const btn of joinBtns) joinCol.appendChild(btn);
         row.appendChild(joinCol);
       } else {
-        // Single-team: original column order (avatars, count, teams, rooms, join)
+        // Single-team: avatars column with optional monsters + players labels
         const full = game.players >= game.maxPlayers;
-        const avatarStrip = document.createElement('span');
-        avatarStrip.className = 'server-avatars';
-        for (const entry of game.avatars ?? []) {
-          appendAvatarCanvas(avatarStrip, entry.avatar, entry.name);
+        const mAvatars = game.monsterAvatars ?? [];
+
+        const avatarCol = document.createElement('div');
+        avatarCol.className = 'server-avatars';
+
+        // Monster avatars first (if any)
+        if (mAvatars.length > 0) {
+          const monsterStrip = document.createElement('span');
+          monsterStrip.className = 'server-avatars server-monster-avatars';
+          const mLabel = document.createElement('span');
+          mLabel.className = 'monster-label';
+          mLabel.textContent = 'Monsters:';
+          monsterStrip.appendChild(mLabel);
+          for (const avatar of mAvatars) {
+            appendAvatarCanvas(monsterStrip, avatar, `Monster (${avatar})`);
+          }
+          avatarCol.appendChild(monsterStrip);
         }
+
+        // Player avatars with "Players:" label
+        const playerStrip = document.createElement('span');
+        playerStrip.className = 'server-avatars';
+        const pLabel = document.createElement('span');
+        pLabel.className = 'monster-label';
+        pLabel.textContent = 'Players:';
+        playerStrip.appendChild(pLabel);
+        const playerAvatars = game.avatars ?? [];
+        if (playerAvatars.length === 0) {
+          const none = document.createElement('span');
+          none.className = 'none-label';
+          none.textContent = 'none';
+          playerStrip.appendChild(none);
+        }
+        for (const entry of playerAvatars) {
+          appendAvatarCanvas(playerStrip, entry.avatar, entry.name);
+        }
+        avatarCol.appendChild(playerStrip);
         const playersSpan = document.createElement('span');
         playersSpan.className = 'server-players';
         playersSpan.textContent = `${game.players}/${game.maxPlayers}`;
@@ -829,12 +896,13 @@ async function main(): Promise<void> {
         btn.dataset.avatars = avatarKeys;
         btn.dataset.names = nameKeys;
         btn.dataset.full = String(full);
+        btn.dataset.monsterAvatars = mAvatars.join(',');
         btn.addEventListener('click', () => joinServer(game));
 
         row.appendChild(roomsSpan);
         row.appendChild(teamsSpan);
         row.appendChild(playersSpan);
-        row.appendChild(avatarStrip);
+        row.appendChild(avatarCol);
         row.appendChild(btn);
       }
 

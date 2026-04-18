@@ -1,0 +1,111 @@
+{
+  "monsters": [
+    {
+      "id": "dweeb",
+      "name": "Dweeb",
+      "avatar": "moronus",
+      "hp": 40,
+      "maxHp": 40,
+      "team": 0,
+      "behavior": {
+        "type": "wander",
+        "moveInterval": 2000,
+        "pauseChance": 0.3
+      },
+      "combat": {
+        "aggressive": false
+      },
+      "chat": {
+        "phrases": ["Meep!", "Bloop bloop.", "Dweeb dweeb!", "Huh?"],
+        "chatInterval": 15000,
+        "chatChance": 0.2
+      },
+      "items": {
+        "drops": [
+          { "type": 203, "quantity": 1, "chance": 0.5 }
+        ],
+        "dropOnDeath": true,
+        "pickup": null,
+        "carry": null
+      },
+      "respawn": {
+        "delay": 30000
+      }
+    },
+    {
+      "id": "guard",
+      "name": "Guard",
+      "avatar": "aragorn",
+      "hp": 80,
+      "maxHp": 80,
+      "team": 0,
+      "behavior": {
+        "type": "patrol",
+        "moveInterval": 1500,
+        "waypoints": [
+          { "x": 5, "y": 5 },
+          { "x": 15, "y": 5 },
+          { "x": 15, "y": 15 },
+          { "x": 5, "y": 15 }
+        ],
+        "chaseRange": 6
+      },
+      "combat": {
+        "aggressive": true,
+        "aggroRange": 8,
+        "weaponType": 61,
+        "fireInterval": 1500,
+        "targetPriority": "nearest"
+      },
+      "chat": null,
+      "items": {
+        "drops": [
+          { "type": 61, "quantity": 1, "chance": 0.3 }
+        ],
+        "dropOnDeath": true,
+        "pickup": null,
+        "carry": null
+      },
+      "respawn": {
+        "delay": 60000
+      }
+    },
+    {
+      "id": "thief",
+      "name": "Thief",
+      "avatar": "spook",
+      "hp": 25,
+      "maxHp": 25,
+      "team": 0,
+      "behavior": {
+        "type": "flee",
+        "moveInterval": 800,
+        "fleeRange": 6,
+        "idleBehavior": "wander"
+      },
+      "combat": {
+        "aggressive": false
+      },
+      "chat": {
+        "phrases": ["Heh heh heh!", "Mine now!", "You'll never catch me!"],
+        "chatInterval": 10000,
+        "chatChance": 0.4
+      },
+      "items": {
+        "drops": null,
+        "dropOnDeath": true,
+        "pickup": {
+          "range": 3,
+          "types": "any",
+          "maxCarry": 3
+        },
+        "carry": {
+          "deliverTo": "home"
+        }
+      },
+      "respawn": {
+        "delay": 45000
+      }
+    }
+  ]
+}
