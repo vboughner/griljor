@@ -870,7 +870,7 @@ async function main(): Promise<void> {
         const playerAvatars = game.avatars ?? [];
         if (playerAvatars.length === 0) {
           const none = document.createElement('span');
-          none.className = 'monster-label';
+          none.className = 'none-label';
           none.textContent = 'none';
           playerStrip.appendChild(none);
         }
