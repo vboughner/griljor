@@ -8603,5 +8603,130 @@
   ],
   "room_count": 5,
   "objects": [],
-  "object_count": 0
+  "object_count": 0,
+  "placement": {
+    "intervalSeconds": 20,
+    "rules": [
+      {
+        "mode": "r",
+        "objType": 72,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "r",
+        "objType": 78,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "r",
+        "objType": 78,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "r",
+        "objType": 78,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "r",
+        "objType": 78,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "r",
+        "objType": 88,
+        "quantity": 3,
+        "target": 1
+      },
+      {
+        "mode": "r",
+        "objType": 88,
+        "quantity": 3,
+        "target": 1
+      },
+      {
+        "mode": "r",
+        "objType": 88,
+        "quantity": 3,
+        "target": 1
+      },
+      {
+        "mode": "r",
+        "objType": 94,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "r",
+        "objType": 98,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "r",
+        "objType": 74,
+        "quantity": 3,
+        "target": 2
+      },
+      {
+        "mode": "r",
+        "objType": 74,
+        "quantity": 3,
+        "target": 2
+      },
+      {
+        "mode": "r",
+        "objType": 74,
+        "quantity": 3,
+        "target": 2
+      },
+      {
+        "mode": "r",
+        "objType": 74,
+        "quantity": 3,
+        "target": 2
+      },
+      {
+        "mode": "r",
+        "objType": 87,
+        "quantity": 2,
+        "target": 2
+      },
+      {
+        "mode": "r",
+        "objType": 76,
+        "quantity": 3,
+        "target": 3
+      },
+      {
+        "mode": "r",
+        "objType": 76,
+        "quantity": 3,
+        "target": 3
+      },
+      {
+        "mode": "r",
+        "objType": 76,
+        "quantity": 3,
+        "target": 3
+      },
+      {
+        "mode": "r",
+        "objType": 80,
+        "quantity": 1,
+        "target": 3
+      },
+      {
+        "mode": "r",
+        "objType": 81,
+        "quantity": 1,
+        "target": 3
+      }
+    ]
+  }
 }

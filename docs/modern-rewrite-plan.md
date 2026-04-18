@@ -248,12 +248,13 @@ Maps with `.pla` files: battle, castle, flames, flash, hack1, hometown,
 ivarr, outdoor, paradise3, ring, shelter, shooter, three, trek, tunnel,
 two, twoperson.
 
-**Not yet implemented** in the modern rewrite. When added, the server would:
-1. Parse the map's `.pla` file (or a JSON equivalent) at game start.
-2. Set a repeating timer at the specified interval.
-3. On each tick, iterate the placement lines and call the existing
-   `ITEM_ADDED` broadcast path to drop items onto a random walkable tile
-   in the target room, exactly as if a player had dropped them there.
+**Implemented.** The pipeline parses `.pla` files into JSON `placement`
+configs in each map's data file. At load time, `loadWorld` validates rules
+against the map's object file and filters out invalid/non-takeable
+references. The server picks one random rule per cycle and places items
+on a random walkable tile via `ITEM_ADDED`. Placed items use `obj.charges`
+for their initial quantity. The placement interval (and regen interval)
+only run while at least one player is connected.
 
 **Stretch: web-based editors**
 - editmap as a browser-based map editor

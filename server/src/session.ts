@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import { C2SMessage, S2CMessage, InventoryItem } from './protocol';
-import { World, ObjDef, RecObj, RoomData } from './world';
+import { World, ObjDef, RecObj, RoomData, PlacementConfig } from './world';
 import { filterText, randomScold } from './filter';
 
 const INV_SIZE = 21;
@@ -299,6 +299,8 @@ export class GameSession {
 
   private onPlayerCountChange?: () => void;
   private regenInterval: ReturnType<typeof setInterval> | null = null;
+  private placementInterval: ReturnType<typeof setInterval> | null = null;
+  private lastPlacementTime = 0;
 
   // viewerId → Set of visible player IDs (symmetric)
   private visibility = new Map<number, Set<number>>();
@@ -310,16 +312,33 @@ export class GameSession {
       r.recorded_objects.map((ro) => ({ ...ro })),
     );
     this.initRoomItems();
-    this.regenInterval = setInterval(() => this.regenTick(), 1000);
   }
 
   destroy(): void {
     for (const player of this.players.values()) {
       this.clearAfkTimers(player);
     }
+    this.stopTickIntervals();
+  }
+
+  private startTickIntervals(): void {
+    if (this.regenInterval === null) {
+      this.regenInterval = setInterval(() => this.regenTick(), 1000);
+    }
+    if (this.placementInterval === null && this.world.placement) {
+      this.lastPlacementTime = Math.floor(Date.now() / 1000);
+      this.placementInterval = setInterval(() => this.placementTick(), 1000);
+    }
+  }
+
+  private stopTickIntervals(): void {
     if (this.regenInterval !== null) {
       clearInterval(this.regenInterval);
       this.regenInterval = null;
+    }
+    if (this.placementInterval !== null) {
+      clearInterval(this.placementInterval);
+      this.placementInterval = null;
     }
   }
 
@@ -329,6 +348,63 @@ export class GameSession {
       player.hp = Math.min(player.maxHp, player.hp + 1);
       this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
     }
+  }
+
+  private placementTick(): void {
+    const config = this.world.placement;
+    if (!config || config.rules.length === 0) return;
+
+    const effectiveInterval = Math.max(Math.floor(config.intervalSeconds / this.players.size), 1);
+    const now = Math.floor(Date.now() / 1000);
+    if (now < this.lastPlacementTime + effectiveInterval) return;
+    this.lastPlacementTime = now;
+
+    this.executePlacementCycle(config);
+  }
+
+  private executePlacementCycle(config: PlacementConfig): void {
+    const rule = config.rules[Math.floor(Math.random() * config.rules.length)];
+    const obj = this.world.objects[rule.objType];
+    if (!obj) return;
+    if (!obj.takeable) return; // non-takeable placement deferred
+
+    for (let i = 0; i < rule.quantity; i++) {
+      let roomIdx: number;
+      if (rule.mode === 't') {
+        roomIdx = this.randomTeamRoom(rule.target);
+        if (roomIdx < 0) continue;
+      } else {
+        roomIdx = rule.target;
+        if (roomIdx < 0 || roomIdx >= this.world.rooms.length) continue;
+      }
+      this.placeItemInRoom(roomIdx, rule.objType);
+    }
+  }
+
+  private randomTeamRoom(team: number): number {
+    const candidates: number[] = [];
+    for (let i = 0; i < this.world.rooms.length; i++) {
+      if (this.world.rooms[i].team === team) candidates.push(i);
+    }
+    if (candidates.length === 0) return -1;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  private placeItemInRoom(roomIdx: number, objType: number): void {
+    const tile = this.randomWalkableTile(roomIdx);
+    if (!tile) return;
+
+    const key = `${tile.x},${tile.y}`;
+    const roomMap = this.roomItems.get(roomIdx) ?? new Map<string, InventoryItem>();
+    if (roomMap.has(key)) return; // tile already has an item
+    const obj = this.world.objects[objType];
+    const item: InventoryItem = { type: objType, quantity: obj?.charges ?? 1 };
+    roomMap.set(key, item);
+    this.roomItems.set(roomIdx, roomMap);
+    this.broadcast({ type: 'ITEM_ADDED', room: roomIdx, x: tile.x, y: tile.y, item });
+    console.log(
+      `[placement] room ${roomIdx} (${tile.x},${tile.y}): ${obj?.name ?? `obj#${objType}`} x${item.quantity}`,
+    );
   }
 
   private initRoomItems(): void {
@@ -355,6 +431,7 @@ export class GameSession {
     this.roomItems.clear();
     this.initRoomItems();
     this.chatHistory = [];
+    this.lastPlacementTime = Math.floor(Date.now() / 1000);
   }
 
   get playerCount(): number {
@@ -487,6 +564,7 @@ export class GameSession {
       afkWarningsLeft: 0,
     };
     this.players.set(id, player);
+    if (this.players.size === 1) this.startTickIntervals();
 
     // Place player in a random walkable tile in their team's room
     const spawn = this.randomSpawnForTeam(team);
@@ -1716,6 +1794,7 @@ export class GameSession {
     this.clearVisibility(playerId);
     this.broadcast({ type: 'LEAVING_GAME', id: playerId, name: playerName, reason });
     if (this.players.size === 0) {
+      this.stopTickIntervals();
       if (this.world.resetOnEmpty) {
         const delay = this.world.resetAfterSeconds * 1000;
         console.log(

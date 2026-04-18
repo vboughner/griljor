@@ -14463,5 +14463,34 @@
   ],
   "room_count": 8,
   "objects": [],
-  "object_count": 0
+  "object_count": 0,
+  "placement": {
+    "intervalSeconds": 60,
+    "rules": [
+      {
+        "mode": "r",
+        "objType": 62,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "r",
+        "objType": 201,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 183,
+        "quantity": 2,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 183,
+        "quantity": 2,
+        "target": 2
+      }
+    ]
+  }
 }

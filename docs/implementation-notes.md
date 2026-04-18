@@ -41,6 +41,7 @@ npm run test:client    # client only
 | `consumables.test.ts` | Heal on USE_ITEM, PLAYER_HEAL broadcast, lost item removal, full-HP guard, burden decrement, auto-reload from inventory, PLAYER_HIT broadcast, dead-player damage guard, lost weapon consumed on fire, pickup blocked by occupying player |
 | `explosion.test.ts` | Grenade produces 8 explosion rays on landing, boombit object type used, MISSILE_END per ray, blast radius damage, kill attribution, boombit fallback to movingobj |
 | `pickup-proximity.test.ts` | Out-of-range rejection, boundary pickup, same-tile pickup, LOS-blocked rejection, transparent-but-unwalkable (window) rejection, unwalkable destination rejection |
+| `placement.test.ts` | Interval timing, player-count scaling, team/room targeting, quantity, non-takeable/invalid object skipping, timer cleanup, loadWorld rule validation against object file |
 
 **`helpers.ts`** exports:
 - `MockWebSocket` — captures S→C messages; `receive(msg)` to inject C→S; `flush()`, `close()`

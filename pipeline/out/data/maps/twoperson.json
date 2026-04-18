@@ -8530,5 +8530,46 @@
   ],
   "room_count": 4,
   "objects": [],
-  "object_count": 0
+  "object_count": 0,
+  "placement": {
+    "intervalSeconds": 40,
+    "rules": [
+      {
+        "mode": "t",
+        "objType": 183,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "t",
+        "objType": 183,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 183,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 201,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "t",
+        "objType": 201,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 201,
+        "quantity": 1,
+        "target": 2
+      }
+    ]
+  }
 }

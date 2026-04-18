@@ -33,15 +33,21 @@ if [[ -z "$DIRNAME" ]]; then
   exit 1
 fi
 
-# Parse N from dirname
+# Parse N from dirname, or from parent dirname (Claude Code worktrees nest
+# under griljor-<N>-<feature>/<hash>)
 if [[ "$DIRNAME" == "griljor" ]]; then
   N=0
 elif [[ "$DIRNAME" =~ ^griljor-([0-9]+)-.+ ]]; then
   N="${BASH_REMATCH[1]}"
 else
-  echo "Error: cannot determine worktree index from directory name '$DIRNAME'."
-  echo "Expected 'griljor' or 'griljor-<N>-<feature>'."
-  exit 1
+  PARENT="$(basename "$(dirname "$REPO_DIR")")"
+  if [[ "$PARENT" =~ ^griljor-([0-9]+)-.+ ]]; then
+    N="${BASH_REMATCH[1]}"
+  else
+    echo "Error: cannot determine worktree index from directory name '$DIRNAME'."
+    echo "Expected 'griljor' or 'griljor-<N>-<feature>'."
+    exit 1
+  fi
 fi
 
 SESSION="$DIRNAME"
