@@ -139,6 +139,23 @@ describe('Monster system — Phase 2 (spawn, damage, death)', () => {
     expect(infos[1].id).toBe(-2);
   });
 
+  it('monsterAvatars returns unique avatar names from monster defs', () => {
+    const world = buildMonsterTestWorld();
+    session = new GameSession(world);
+    const avatars = session.monsterAvatars;
+    // buildMonsterTestWorld has dweeb (avatar: dweeb), guard (avatar: robot), thief (avatar: dodger)
+    expect(avatars).toContain('dweeb');
+    expect(avatars).toContain('robot');
+    expect(avatars).toContain('dodger');
+    expect(avatars.length).toBe(3);
+  });
+
+  it('monsterAvatars is empty when no monster defs', () => {
+    const world = buildTestWorld();
+    session = new GameSession(world);
+    expect(session.monsterAvatars).toEqual([]);
+  });
+
   it('does not spawn if monsterId is unknown', () => {
     const world = buildMonsterTestWorld();
     world.rooms[0].monsterSpawns = [{ monsterId: 'nonexistent', count: 1, spawnRate: 0 }];

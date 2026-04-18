@@ -451,6 +451,9 @@ export class GameSession {
       team: p.team,
     }));
   }
+  get monsterAvatars(): string[] {
+    return [...new Set(this.world.monsterDefs.map((d) => d.avatar))];
+  }
 
   handleConnection(ws: WebSocket): void {
     ws.on('message', (data) => {

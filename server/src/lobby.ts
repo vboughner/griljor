@@ -10,6 +10,7 @@ interface GameEntry {
   players: number;
   maxPlayers: number;
   avatars: Array<{ avatar: string; name: string; team: number }>;
+  monsterAvatars: string[];
   lastSeen: number;
 }
 
@@ -56,6 +57,7 @@ function isRegisterBody(b: unknown): b is {
   rooms?: number;
   wsUrl: string;
   maxPlayers?: number;
+  monsterAvatars?: string[];
 } {
   return (
     typeof b === 'object' &&
@@ -69,6 +71,7 @@ function isHeartbeatBody(b: unknown): b is {
   wsUrl: string;
   players: number;
   avatars?: Array<{ avatar: string; name: string; team: number }>;
+  monsterAvatars?: string[];
 } {
   return (
     typeof b === 'object' &&
@@ -122,6 +125,7 @@ const server = http.createServer(async (req, res) => {
         players: 0,
         maxPlayers: body.maxPlayers ?? 16,
         avatars: [],
+        monsterAvatars: body.monsterAvatars ?? [],
         lastSeen: Date.now(),
       });
       console.log(`[lobby] registered ${body.wsUrl} (${body.mapName})`);
@@ -144,6 +148,7 @@ const server = http.createServer(async (req, res) => {
       if (entry) {
         entry.players = body.players;
         entry.avatars = body.avatars ?? [];
+        if (body.monsterAvatars) entry.monsterAvatars = body.monsterAvatars;
         entry.lastSeen = Date.now();
         broadcast();
       }
