@@ -16,6 +16,45 @@ const AFK_WARN_INTERVAL_MS = 1 * 60 * 1000; // interval between warnings (1 min)
 const AFK_GRACE_MINUTES = 5; // number of warnings before kick
 
 const DEFAULT_SPREAD = 8;
+const DEFAULT_ARC_SPREAD = 5; // default number of projectiles for arc weapons when spread absent
+
+/** Compute direction vectors for an arc weapon's spread pattern.
+ *  centerAngle: the angle (radians) the player aimed at
+ *  arcDeg: total arc width in degrees
+ *  spreadCount: number of projectiles to fire within the arc
+ *  range: weapon range in tiles
+ *  originX, originY: shooter position
+ *  Returns an array of { targetX, targetY, dx, dy } for each projectile. */
+export function arcDirections(
+  centerAngle: number,
+  arcDeg: number,
+  spreadCount: number,
+  range: number,
+  originX: number,
+  originY: number,
+): Array<{ targetX: number; targetY: number; dx: number; dy: number }> {
+  const halfArc = ((arcDeg / 2) * Math.PI) / 180;
+  const count = Math.max(1, spreadCount);
+  const results: Array<{ targetX: number; targetY: number; dx: number; dy: number }> = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < count; i++) {
+    // Spread projectiles evenly across the arc; single projectile fires center
+    const t = count === 1 ? 0 : (i / (count - 1)) * 2 - 1; // -1 to 1
+    const angle = centerAngle + t * halfArc;
+    // Target tile at full range in this direction
+    const targetX = originX + Math.round(Math.sin(angle) * range);
+    const targetY = originY + Math.round(-Math.cos(angle) * range);
+    const dx = Math.sign(targetX - originX) || Math.sign(Math.sin(angle));
+    const dy = Math.sign(targetY - originY) || Math.sign(-Math.cos(angle));
+    // Deduplicate identical target directions
+    const key = `${targetX},${targetY}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    results.push({ targetX, targetY, dx, dy });
+  }
+  return results;
+}
 
 /** Generate evenly-spaced explosion ray targets for a given spread count and radius. */
 function explosionTargets(
@@ -52,24 +91,74 @@ export const PUNCH_COOLDOWN_MS = 400;
 // ── Line-of-sight helpers ──────────────────────────────────────────────────
 
 /**
- * Walk from (x1,y1) toward (x2,y2) one Chebyshev step at a time.
- * Returns each step's tile, NOT including the start tile (x1,y1).
- * Stops when (x2,y2) is reached.
+ * DDA supercover ray: returns every tile whose interior the line segment
+ * from center of (x1,y1) to center of (x2,y2) passes through.
+ * Excludes the start tile. Includes the target tile.
+ * When the ray passes exactly along a tile edge or corner (boundary),
+ * that boundary tile is excluded (permissive LOS).
  */
-export function chebyshevPath(
+export function losRayTiles(
   x1: number,
   y1: number,
   x2: number,
   y2: number,
 ): Array<{ x: number; y: number }> {
+  if (x1 === x2 && y1 === y2) return [];
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const sx = Math.sign(dx);
+  const sy = Math.sign(dy);
+  const adx = Math.abs(dx);
+  const ady = Math.abs(dy);
+
   const path: Array<{ x: number; y: number }> = [];
   let cx = x1;
   let cy = y1;
+
+  if (adx === 0) {
+    // Pure vertical
+    for (let i = 0; i < ady; i++) {
+      cy += sy;
+      path.push({ x: cx, y: cy });
+    }
+    return path;
+  }
+  if (ady === 0) {
+    // Pure horizontal
+    for (let i = 0; i < adx; i++) {
+      cx += sx;
+      path.push({ x: cx, y: cy });
+    }
+    return path;
+  }
+
+  // General DDA: track fractional progress to next grid line crossing.
+  // We use integers scaled by adx*ady to avoid floating point entirely.
+  // tMaxX/tMaxY = distance to first vertical/horizontal grid crossing.
+  // tDeltaX/tDeltaY = distance between successive crossings.
+  let tMaxX = ady; // first vertical crossing at 0.5/adx scaled = ady
+  let tMaxY = adx; // first horizontal crossing at 0.5/ady scaled = adx
+  const tDeltaX = 2 * ady; // subsequent vertical crossings
+  const tDeltaY = 2 * adx; // subsequent horizontal crossings
+
   while (cx !== x2 || cy !== y2) {
-    if (cx !== x2) cx += Math.sign(x2 - cx);
-    if (cy !== y2) cy += Math.sign(y2 - cy);
+    if (tMaxX < tMaxY) {
+      cx += sx;
+      tMaxX += tDeltaX;
+    } else if (tMaxY < tMaxX) {
+      cy += sy;
+      tMaxY += tDeltaY;
+    } else {
+      // Simultaneous crossing (corner) — step diagonally, skip grazing tiles
+      cx += sx;
+      cy += sy;
+      tMaxX += tDeltaX;
+      tMaxY += tDeltaY;
+    }
     path.push({ x: cx, y: cy });
   }
+
   return path;
 }
 
@@ -102,7 +191,7 @@ export function tileViewBlocked(
 
 /**
  * Returns true if tile (x2,y2) is visible from tile (x1,y1).
- * Adjacent tiles (1 Chebyshev step) are always visible.
+ * Adjacent tiles are always visible.
  * The looker's own tile (x1,y1) is not checked; the target tile IS checked.
  */
 export function spotIsVisible(
@@ -114,7 +203,7 @@ export function spotIsVisible(
   y2: number,
 ): boolean {
   if (x1 === x2 && y1 === y2) return true;
-  const path = chebyshevPath(x1, y1, x2, y2);
+  const path = losRayTiles(x1, y1, x2, y2);
   if (path.length <= 1) return true; // adjacent — always visible
   for (const { x, y } of path) {
     if (tileViewBlocked(room, objects, x, y)) return false;
@@ -596,6 +685,12 @@ export class GameSession {
       this.send(other.ws, { type: 'PLAYER_HEALTH', id, hp: player.hp, maxHp: player.maxHp });
     }
 
+    const joinText =
+      this.world.teams > 1
+        ? `${player.name} joined the game (team ${player.team}).`
+        : `${player.name} joined the game.`;
+    this.broadcast({ type: 'REPORT', text: joinText });
+
     console.log(`[+] ${msg.name} (id=${id}) joined. Players: ${this.players.size}`);
     this.startAfkTimer(player);
   }
@@ -766,9 +861,9 @@ export class GameSession {
     // Visibility: LOS must not be blocked
     if (!spotIsVisible(room, this.world.objects, player.x, player.y, msg.x, msg.y)) return;
 
-    // Walkability: every tile along the Chebyshev path (including destination)
+    // Walkability: every tile along the LOS ray path (including destination)
     // must be walkable — catches transparent-but-unwalkable tiles like windows.
-    for (const { x, y } of chebyshevPath(player.x, player.y, msg.x, msg.y)) {
+    for (const { x, y } of losRayTiles(player.x, player.y, msg.x, msg.y)) {
       const cell = room.spot?.[x]?.[y];
       if (cell) {
         const [flId, wlId] = cell;
@@ -1126,25 +1221,78 @@ export class GameSession {
     // Record fire time now (committed to firing)
     player.lastFireTime = Date.now();
 
-    // Compute unit direction toward target
+    // Compute center direction toward target
     const rawDx = msg.targetX - player.x;
     const rawDy = msg.targetY - player.y;
     if (rawDx === 0 && rawDy === 0) return;
-    const dx = Math.sign(rawDx);
-    const dy = Math.sign(rawDy);
 
     const room = this.world.rooms[player.room];
     if (!room) return;
 
-    const path = this.calcMissilePath(
-      room,
-      player.x,
-      player.y,
-      msg.targetX,
-      msg.targetY,
-      range,
-      false,
-    );
+    const speed = bulletObj?.speed ?? obj.speed ?? 5;
+    const msPerStep = calcMsPerStep(speed);
+
+    // Arc weapons fire multiple missiles in a cone pattern
+    const arcDeg = obj.arc ?? 0;
+    if (arcDeg > 0) {
+      const centerAngle = Math.atan2(rawDx, -rawDy);
+      const spreadCount = obj.spread ?? DEFAULT_ARC_SPREAD;
+      const dirs = arcDirections(centerAngle, arcDeg, spreadCount, range, player.x, player.y);
+      for (const dir of dirs) {
+        this.fireSingleMissile(
+          player,
+          playerId,
+          obj,
+          handItem,
+          room,
+          range,
+          damage,
+          movingObjType,
+          msPerStep,
+          dir.targetX,
+          dir.targetY,
+          dir.dx,
+          dir.dy,
+        );
+      }
+    } else {
+      const dx = Math.sign(rawDx);
+      const dy = Math.sign(rawDy);
+      this.fireSingleMissile(
+        player,
+        playerId,
+        obj,
+        handItem,
+        room,
+        range,
+        damage,
+        movingObjType,
+        msPerStep,
+        msg.targetX,
+        msg.targetY,
+        dx,
+        dy,
+      );
+    }
+  }
+
+  /** Fire a single missile projectile from a player toward a target. */
+  private fireSingleMissile(
+    player: Player,
+    playerId: number,
+    obj: ObjDef,
+    handItem: InventoryItem,
+    room: RoomData,
+    range: number,
+    damage: number,
+    movingObjType: number,
+    msPerStep: number,
+    targetX: number,
+    targetY: number,
+    dx: number,
+    dy: number,
+  ): void {
+    const path = this.calcMissilePath(room, player.x, player.y, targetX, targetY, range, false);
 
     // Find first player hit along path (excluding the shooter)
     const hit = this.findPlayerHitOnPath(path, player.room, playerId);
@@ -1153,8 +1301,6 @@ export class GameSession {
     if (finalPath.length === 0) return;
 
     const id = this.nextMissileId++;
-    const speed = bulletObj?.speed ?? obj.speed ?? 5;
-    const msPerStep = calcMsPerStep(speed);
 
     this.broadcastToRoom(player.room, {
       type: 'MISSILE_START',
@@ -1400,7 +1546,7 @@ export class GameSession {
       if (obj.opens && doorDef.type && !(obj.opens & doorDef.type)) continue;
 
       ro.type = doorDef.alternate;
-      this.broadcastToRoom(player.room, {
+      this.broadcast({
         type: 'ROOM_OBJECT_CHANGED',
         room: player.room,
         x: msg.targetX,
