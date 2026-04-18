@@ -452,7 +452,7 @@ export class GameSession {
     }));
   }
   get monsterAvatars(): string[] {
-    return [...new Set(this.world.monsterDefs.map((d) => d.avatar))];
+    return [...new Set((this.world.monsterDefs ?? []).map((d) => d.avatar))];
   }
 
   handleConnection(ws: WebSocket): void {

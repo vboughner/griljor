@@ -62,15 +62,16 @@ export class MonsterManager {
   /** Spawn initial monsters per room config. Call after world is loaded. */
   init(): void {
     const { world } = this.session;
-    console.log(
-      `[monsters] init: ${world.monsterDefs.length} defs, checking ${world.rooms.length} rooms`,
-    );
+    const defs = world.monsterDefs ?? [];
+    if (defs.length > 0) {
+      console.log(`[monsters] init: ${defs.length} defs, checking ${world.rooms.length} rooms`);
+    }
     for (let roomIdx = 0; roomIdx < world.rooms.length; roomIdx++) {
       const room = world.rooms[roomIdx];
       const spawns = room.monsterSpawns;
       if (!spawns) continue;
       for (const spawn of spawns) {
-        const def = world.monsterDefs.find((d) => d.id === spawn.monsterId);
+        const def = defs.find((d) => d.id === spawn.monsterId);
         if (!def) {
           console.warn(`[monsters] unknown monsterId "${spawn.monsterId}" in room ${roomIdx}`);
           continue;
@@ -329,13 +330,23 @@ export class MonsterManager {
       text: `${monster.name} was slain by ${killerName}.`,
     });
 
-    // Broadcast dead state
+    // Broadcast dead state (tombstone)
     this.session.broadcastToRoom(monster.room, this.makeMonsterInfo(monster));
 
     // Drop loot
     this.dropLoot(monster);
 
-    // Schedule respawn
+    // Hide tombstone after 3 seconds
+    const monsterId = monster.id;
+    const monsterRoom = monster.room;
+    setTimeout(() => {
+      this.session.broadcastToRoom(monsterRoom, {
+        type: 'MONSTER_HIDDEN',
+        id: monsterId,
+      });
+    }, 3000);
+
+    // Schedule respawn (or permanent removal)
     const def = this.session.world.monsterDefs.find((d) => d.id === monster.defId);
     if (def && def.respawn.delay > 0) {
       monster.respawnTimer = setTimeout(() => {
@@ -343,14 +354,10 @@ export class MonsterManager {
         this.respawnMonster(monster, def);
       }, def.respawn.delay);
     } else {
-      // No respawn: remove from map after a tick so clients can see the death
+      // No respawn: clean up monster entry after tombstone
       setTimeout(() => {
-        this.monsters.delete(monster.id);
-        this.session.broadcastToRoom(monster.room, {
-          type: 'MONSTER_HIDDEN',
-          id: monster.id,
-        });
-      }, 5000);
+        this.monsters.delete(monsterId);
+      }, 3000);
     }
   }
 
