@@ -3834,5 +3834,154 @@
   ],
   "room_count": 2,
   "objects": [],
-  "object_count": 0
+  "object_count": 0,
+  "placement": {
+    "intervalSeconds": 3,
+    "rules": [
+      {
+        "mode": "t",
+        "objType": 224,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 224,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 62,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 62,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 62,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 62,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 62,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 62,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 223,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 223,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 189,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 189,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 189,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 189,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 201,
+        "quantity": 5,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 201,
+        "quantity": 5,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 201,
+        "quantity": 5,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 201,
+        "quantity": 5,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 202,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 202,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 202,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 202,
+        "quantity": 1,
+        "target": 2
+      },
+      {
+        "mode": "t",
+        "objType": 227,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "t",
+        "objType": 227,
+        "quantity": 1,
+        "target": 2
+      }
+    ]
+  }
 }

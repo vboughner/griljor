@@ -150,6 +150,7 @@ export function buildTestWorld(): World {
     resetAfterSeconds: 30,
     maxPlayers: 16,
     monsterDefs: [],
+    placement: null,
   };
 }
 
@@ -201,6 +202,7 @@ export function buildTwoRoomWorld(): World {
     resetAfterSeconds: 30,
     maxPlayers: 16,
     monsterDefs: [],
+    placement: null,
   };
 }
 

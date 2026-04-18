@@ -56,6 +56,7 @@ function buildLosTestWorld(): World {
     resetOnEmpty: false,
     resetAfterSeconds: 30,
     maxPlayers: 16,
+    placement: null,
   };
 }
 
@@ -77,6 +78,7 @@ function buildTwoRoomWorld(): World {
     title: 'Two Room Test',
     teams: 0,
     roomCount: 2,
+    placement: null,
     rooms: [
       {
         name: 'room-0',

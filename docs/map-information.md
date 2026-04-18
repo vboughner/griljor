@@ -97,8 +97,9 @@ example, `battle.pla` drops neutron grenades, repair kits, food, and ammo
 at regular intervals to keep the map stocked during long games.
 
 See `docs/modern-rewrite-plan.md` for the full format description and
-implementation notes. This feature is **not yet implemented** in the modern
-rewrite.
+implementation notes. This feature is **implemented** in the modern rewrite.
+Rules are validated at load time against the map's object file; invalid or
+non-takeable references are warned and skipped.
 
 Maps **with** `.pla` files: battle, castle, flames, flash, hack1, hometown,
 ivarr, outdoor, paradise3, ring, shelter, shooter, three, tunnel, two, twoperson.

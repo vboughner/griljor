@@ -1,6 +1,6 @@
 import WebSocket from 'ws';
 import { C2SMessage, S2CMessage, InventoryItem } from './protocol';
-import { World, ObjDef, RecObj, RoomData } from './world';
+import { World, ObjDef, RecObj, RoomData, PlacementConfig } from './world';
 import { filterText, randomScold } from './filter';
 import { MonsterManager, MonsterSessionInterface } from './monster-manager';
 
@@ -92,24 +92,74 @@ export const PUNCH_COOLDOWN_MS = 400;
 // ── Line-of-sight helpers ──────────────────────────────────────────────────
 
 /**
- * Walk from (x1,y1) toward (x2,y2) one Chebyshev step at a time.
- * Returns each step's tile, NOT including the start tile (x1,y1).
- * Stops when (x2,y2) is reached.
+ * DDA supercover ray: returns every tile whose interior the line segment
+ * from center of (x1,y1) to center of (x2,y2) passes through.
+ * Excludes the start tile. Includes the target tile.
+ * When the ray passes exactly along a tile edge or corner (boundary),
+ * that boundary tile is excluded (permissive LOS).
  */
-export function chebyshevPath(
+export function losRayTiles(
   x1: number,
   y1: number,
   x2: number,
   y2: number,
 ): Array<{ x: number; y: number }> {
+  if (x1 === x2 && y1 === y2) return [];
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const sx = Math.sign(dx);
+  const sy = Math.sign(dy);
+  const adx = Math.abs(dx);
+  const ady = Math.abs(dy);
+
   const path: Array<{ x: number; y: number }> = [];
   let cx = x1;
   let cy = y1;
+
+  if (adx === 0) {
+    // Pure vertical
+    for (let i = 0; i < ady; i++) {
+      cy += sy;
+      path.push({ x: cx, y: cy });
+    }
+    return path;
+  }
+  if (ady === 0) {
+    // Pure horizontal
+    for (let i = 0; i < adx; i++) {
+      cx += sx;
+      path.push({ x: cx, y: cy });
+    }
+    return path;
+  }
+
+  // General DDA: track fractional progress to next grid line crossing.
+  // We use integers scaled by adx*ady to avoid floating point entirely.
+  // tMaxX/tMaxY = distance to first vertical/horizontal grid crossing.
+  // tDeltaX/tDeltaY = distance between successive crossings.
+  let tMaxX = ady; // first vertical crossing at 0.5/adx scaled = ady
+  let tMaxY = adx; // first horizontal crossing at 0.5/ady scaled = adx
+  const tDeltaX = 2 * ady; // subsequent vertical crossings
+  const tDeltaY = 2 * adx; // subsequent horizontal crossings
+
   while (cx !== x2 || cy !== y2) {
-    if (cx !== x2) cx += Math.sign(x2 - cx);
-    if (cy !== y2) cy += Math.sign(y2 - cy);
+    if (tMaxX < tMaxY) {
+      cx += sx;
+      tMaxX += tDeltaX;
+    } else if (tMaxY < tMaxX) {
+      cy += sy;
+      tMaxY += tDeltaY;
+    } else {
+      // Simultaneous crossing (corner) — step diagonally, skip grazing tiles
+      cx += sx;
+      cy += sy;
+      tMaxX += tDeltaX;
+      tMaxY += tDeltaY;
+    }
     path.push({ x: cx, y: cy });
   }
+
   return path;
 }
 
@@ -142,7 +192,7 @@ export function tileViewBlocked(
 
 /**
  * Returns true if tile (x2,y2) is visible from tile (x1,y1).
- * Adjacent tiles (1 Chebyshev step) are always visible.
+ * Adjacent tiles are always visible.
  * The looker's own tile (x1,y1) is not checked; the target tile IS checked.
  */
 export function spotIsVisible(
@@ -154,7 +204,7 @@ export function spotIsVisible(
   y2: number,
 ): boolean {
   if (x1 === x2 && y1 === y2) return true;
-  const path = chebyshevPath(x1, y1, x2, y2);
+  const path = losRayTiles(x1, y1, x2, y2);
   if (path.length <= 1) return true; // adjacent — always visible
   for (const { x, y } of path) {
     if (tileViewBlocked(room, objects, x, y)) return false;
@@ -250,6 +300,8 @@ export class GameSession {
 
   private onPlayerCountChange?: () => void;
   private regenInterval: ReturnType<typeof setInterval> | null = null;
+  private placementInterval: ReturnType<typeof setInterval> | null = null;
+  private lastPlacementTime = 0;
 
   // viewerId → Set of visible player IDs (symmetric)
   private visibility = new Map<number, Set<number>>();
@@ -263,7 +315,6 @@ export class GameSession {
       r.recorded_objects.map((ro) => ({ ...ro })),
     );
     this.initRoomItems();
-    this.regenInterval = setInterval(() => this.regenTick(), 1000);
     this.monsterManager = new MonsterManager(this.buildMonsterSessionInterface());
     this.monsterManager.init();
   }
@@ -272,9 +323,27 @@ export class GameSession {
     for (const player of this.players.values()) {
       this.clearAfkTimers(player);
     }
+    this.stopTickIntervals();
+  }
+
+  private startTickIntervals(): void {
+    if (this.regenInterval === null) {
+      this.regenInterval = setInterval(() => this.regenTick(), 1000);
+    }
+    if (this.placementInterval === null && this.world.placement) {
+      this.lastPlacementTime = Math.floor(Date.now() / 1000);
+      this.placementInterval = setInterval(() => this.placementTick(), 1000);
+    }
+  }
+
+  private stopTickIntervals(): void {
     if (this.regenInterval !== null) {
       clearInterval(this.regenInterval);
       this.regenInterval = null;
+    }
+    if (this.placementInterval !== null) {
+      clearInterval(this.placementInterval);
+      this.placementInterval = null;
     }
     this.monsterManager.destroy();
   }
@@ -285,6 +354,63 @@ export class GameSession {
       player.hp = Math.min(player.maxHp, player.hp + 1);
       this.broadcast({ type: 'PLAYER_HEALTH', id: player.id, hp: player.hp, maxHp: player.maxHp });
     }
+  }
+
+  private placementTick(): void {
+    const config = this.world.placement;
+    if (!config || config.rules.length === 0) return;
+
+    const effectiveInterval = Math.max(Math.floor(config.intervalSeconds / this.players.size), 1);
+    const now = Math.floor(Date.now() / 1000);
+    if (now < this.lastPlacementTime + effectiveInterval) return;
+    this.lastPlacementTime = now;
+
+    this.executePlacementCycle(config);
+  }
+
+  private executePlacementCycle(config: PlacementConfig): void {
+    const rule = config.rules[Math.floor(Math.random() * config.rules.length)];
+    const obj = this.world.objects[rule.objType];
+    if (!obj) return;
+    if (!obj.takeable) return; // non-takeable placement deferred
+
+    for (let i = 0; i < rule.quantity; i++) {
+      let roomIdx: number;
+      if (rule.mode === 't') {
+        roomIdx = this.randomTeamRoom(rule.target);
+        if (roomIdx < 0) continue;
+      } else {
+        roomIdx = rule.target;
+        if (roomIdx < 0 || roomIdx >= this.world.rooms.length) continue;
+      }
+      this.placeItemInRoom(roomIdx, rule.objType);
+    }
+  }
+
+  private randomTeamRoom(team: number): number {
+    const candidates: number[] = [];
+    for (let i = 0; i < this.world.rooms.length; i++) {
+      if (this.world.rooms[i].team === team) candidates.push(i);
+    }
+    if (candidates.length === 0) return -1;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  private placeItemInRoom(roomIdx: number, objType: number): void {
+    const tile = this.randomWalkableTile(roomIdx);
+    if (!tile) return;
+
+    const key = `${tile.x},${tile.y}`;
+    const roomMap = this.roomItems.get(roomIdx) ?? new Map<string, InventoryItem>();
+    if (roomMap.has(key)) return; // tile already has an item
+    const obj = this.world.objects[objType];
+    const item: InventoryItem = { type: objType, quantity: obj?.charges ?? 1 };
+    roomMap.set(key, item);
+    this.roomItems.set(roomIdx, roomMap);
+    this.broadcast({ type: 'ITEM_ADDED', room: roomIdx, x: tile.x, y: tile.y, item });
+    console.log(
+      `[placement] room ${roomIdx} (${tile.x},${tile.y}): ${obj?.name ?? `obj#${objType}`} x${item.quantity}`,
+    );
   }
 
   private initRoomItems(): void {
@@ -312,6 +438,7 @@ export class GameSession {
     this.initRoomItems();
     this.chatHistory = [];
     this.monsterManager.reset();
+    this.lastPlacementTime = Math.floor(Date.now() / 1000);
   }
 
   get playerCount(): number {
@@ -444,6 +571,7 @@ export class GameSession {
       afkWarningsLeft: 0,
     };
     this.players.set(id, player);
+    if (this.players.size === 1) this.startTickIntervals();
 
     // Place player in a random walkable tile in their team's room
     const spawn = this.randomSpawnForTeam(team);
@@ -746,9 +874,9 @@ export class GameSession {
     // Visibility: LOS must not be blocked
     if (!spotIsVisible(room, this.world.objects, player.x, player.y, msg.x, msg.y)) return;
 
-    // Walkability: every tile along the Chebyshev path (including destination)
+    // Walkability: every tile along the LOS ray path (including destination)
     // must be walkable — catches transparent-but-unwalkable tiles like windows.
-    for (const { x, y } of chebyshevPath(player.x, player.y, msg.x, msg.y)) {
+    for (const { x, y } of losRayTiles(player.x, player.y, msg.x, msg.y)) {
       const cell = room.spot?.[x]?.[y];
       if (cell) {
         const [flId, wlId] = cell;
@@ -1478,7 +1606,7 @@ export class GameSession {
       if (obj.opens && doorDef.type && !(obj.opens & doorDef.type)) continue;
 
       ro.type = doorDef.alternate;
-      this.broadcastToRoom(player.room, {
+      this.broadcast({
         type: 'ROOM_OBJECT_CHANGED',
         room: player.room,
         x: msg.targetX,
@@ -1727,6 +1855,7 @@ export class GameSession {
     this.monsterManager.clearPlayerVisibility(playerId);
     this.broadcast({ type: 'LEAVING_GAME', id: playerId, name: playerName, reason });
     if (this.players.size === 0) {
+      this.stopTickIntervals();
       if (this.world.resetOnEmpty) {
         const delay = this.world.resetAfterSeconds * 1000;
         console.log(

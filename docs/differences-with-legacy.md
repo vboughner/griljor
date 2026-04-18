@@ -288,7 +288,8 @@ This document catalogues every meaningful difference between the legacy C game (
   - `t <objnum> <quantity> <team>` — drop into a random room owned by that team (0 = any)
   - `r <objnum> <quantity> <roomnum>` — drop into a specific room
   Many maps have these (battle, castle, flames, hack1, hometown, ivarr, outdoor, paradise3, ring, shelter, shooter, three, trek, tunnel, etc.)
-- **Modern**: Not implemented. The architecture is described in `docs/modern-rewrite-plan.md` as a stretch goal. The server would parse the `.pla` file (or JSON equivalent) at game start, set a repeating timer, and use the existing `ITEM_ADDED` broadcast path.
+- **Modern**: Implemented. The pipeline parses each map's `.pla` file into a JSON `placement` config embedded in the map data. At game start the server validates each rule against the map's object file, warning and skipping rules that reference unknown or non-takeable objects. A repeating timer picks one random rule per cycle and places items on random walkable tiles via the `ITEM_ADDED` broadcast. The interval scales with player count (interval ÷ players). Placed items use `obj.charges` for their initial quantity (e.g. magazines spawn with 32 rounds). Regen and placement intervals only run while at least one player is connected.
+  - **Known data bugs**: hack1's `.pla` was written for `default.obj` IDs but the map uses `main.obj`; flames/flash reference non-existent teleporter IDs. These rules are filtered out at load time. Non-takeable placements (trees/bushes in ring/ivarr/outdoor) are deferred.
 
 ---
 
@@ -498,7 +499,7 @@ Ranked roughly by how much they would affect gameplay feel:
 
 1. **Fire rate limiting** — currently you can fire infinitely fast; all weapons should have an 850ms cooldown (adjustable per weapon via `refire` field)
 2. **Health regeneration** — in the original, players slowly heal between fights (1 HP/sec); without it, the only way to restore health is consumables
-3. **Periodic item placement (`.pla` files)** — weapons and items respawn on a timer; the game gets very stale without this
+3. ~~**Periodic item placement (`.pla` files)**~~ — implemented; takeable items respawn on a timer per map script
 4. **Team UI + friendly fire** — teams exist in data but have no visible UI or enforcement
 5. **Win conditions** — no game ever ends; there's nothing to play toward
 6. **Diagonal movement** — original game feels very different with 8-direction movement

@@ -108,6 +108,7 @@ describe('fire rate limiting', () => {
       resetOnEmpty: false,
       resetAfterSeconds: 30,
       maxPlayers: 16,
+      placement: null,
     };
     const grenadeSession = new GameSession(world);
     const alice = joinPlayer(grenadeSession, 'Alice');

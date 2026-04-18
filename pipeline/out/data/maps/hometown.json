@@ -29398,5 +29398,82 @@
   ],
   "room_count": 7,
   "objects": [],
-  "object_count": 0
+  "object_count": 0,
+  "placement": {
+    "intervalSeconds": 4,
+    "rules": [
+      {
+        "mode": "r",
+        "objType": 202,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "r",
+        "objType": 202,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "r",
+        "objType": 202,
+        "quantity": 1,
+        "target": 3
+      },
+      {
+        "mode": "r",
+        "objType": 202,
+        "quantity": 1,
+        "target": 4
+      },
+      {
+        "mode": "r",
+        "objType": 201,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "r",
+        "objType": 201,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "r",
+        "objType": 201,
+        "quantity": 1,
+        "target": 3
+      },
+      {
+        "mode": "r",
+        "objType": 201,
+        "quantity": 1,
+        "target": 4
+      },
+      {
+        "mode": "r",
+        "objType": 62,
+        "quantity": 1,
+        "target": 0
+      },
+      {
+        "mode": "r",
+        "objType": 62,
+        "quantity": 1,
+        "target": 1
+      },
+      {
+        "mode": "r",
+        "objType": 62,
+        "quantity": 1,
+        "target": 3
+      },
+      {
+        "mode": "r",
+        "objType": 62,
+        "quantity": 1,
+        "target": 4
+      }
+    ]
+  }
 }
