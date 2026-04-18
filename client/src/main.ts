@@ -790,7 +790,7 @@ async function main(): Promise<void> {
           avatarStrip.appendChild(teamLabel);
           if (teamAvatars.length === 0) {
             const none = document.createElement('span');
-            none.className = 'monster-label';
+            none.className = 'none-label';
             none.textContent = 'none';
             avatarStrip.appendChild(none);
           }
