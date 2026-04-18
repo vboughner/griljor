@@ -5,6 +5,7 @@
 - [ ] consider in team games, making all teammates visible everywhere (this might be at the same time we save them from friendly fire)
 
 ## Maps
+- [ ] add a reset map button in the lobby when there are no players in the map, create a confirmation window upon pressing that button that tells you how long the map has been running and asked if you want to confirm resetting everything, then allow the lobby to send a reset map message to the server, and if there are still no players in the map, allow the map to reset and give the status back to the lobby so the player knows it happened.  Better yet might be to include the amount a time a map has been running in the lobby map display itself, so that way the players can see which maps are newly reset, the display of this time should be similar to the way players time in a game is displayed
 - [ ] fix initial spawn in locked room without a key in castle map
 - [ ] in the Playtester Paradise map, in room 9, Range's End, the block gun drops a block gun and not a block, and in battle map, the blocks don't drop at end of flight
 - [ ] in the Playtester Paradise map is is possible to respawn in room 19 which is completely empty, that room should probably be deleted?
