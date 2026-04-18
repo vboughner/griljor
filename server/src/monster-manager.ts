@@ -404,6 +404,9 @@ export class MonsterManager {
     monster.y = pos.y;
     monster.carriedItems = [];
     monster.currentTarget = null;
+    console.log(
+      `[monsters] respawned "${def.name}" (id=${monster.id}, avatar=${def.avatar}) in room ${monster.homeRoom} at (${pos.x},${pos.y})`,
+    );
 
     // Restart AI movement tick and chat timer
     this.startMoveTick(monster, def);
