@@ -3,9 +3,9 @@
     {
       "id": "dweeb",
       "name": "Dweeb",
-      "avatar": "dweeb",
-      "hp": 50,
-      "maxHp": 50,
+      "avatar": "moronus",
+      "hp": 40,
+      "maxHp": 40,
       "team": 0,
       "behavior": {
         "type": "wander",
@@ -16,7 +16,7 @@
         "aggressive": false
       },
       "chat": {
-        "phrases": ["Meep!", "Bloop bloop.", "Dweeb dweeb!"],
+        "phrases": ["Meep!", "Bloop bloop.", "Dweeb dweeb!", "Huh?"],
         "chatInterval": 15000,
         "chatChance": 0.2
       },
@@ -35,10 +35,10 @@
     {
       "id": "guard",
       "name": "Guard",
-      "avatar": "guard",
+      "avatar": "aragorn",
       "hp": 80,
       "maxHp": 80,
-      "team": 1,
+      "team": 0,
       "behavior": {
         "type": "patrol",
         "moveInterval": 1500,
@@ -53,14 +53,14 @@
       "combat": {
         "aggressive": true,
         "aggroRange": 8,
-        "weaponType": 45,
-        "fireInterval": 1200,
+        "weaponType": 61,
+        "fireInterval": 1500,
         "targetPriority": "nearest"
       },
       "chat": null,
       "items": {
         "drops": [
-          { "type": 3, "quantity": 1, "chance": 0.8 }
+          { "type": 61, "quantity": 1, "chance": 0.3 }
         ],
         "dropOnDeath": true,
         "pickup": null,
@@ -73,9 +73,9 @@
     {
       "id": "thief",
       "name": "Thief",
-      "avatar": "thief",
-      "hp": 30,
-      "maxHp": 30,
+      "avatar": "spook",
+      "hp": 25,
+      "maxHp": 25,
       "team": 0,
       "behavior": {
         "type": "flee",

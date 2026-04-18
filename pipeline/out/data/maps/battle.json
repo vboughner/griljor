@@ -14,7 +14,8 @@
     "startup_file": "none",
     "placement_file": "battle.pla",
     "neutrals_allowed": false,
-    "maxPlayers": 12
+    "maxPlayers": 12,
+    "monsterfile": "default.json"
   },
   "rooms": [
     {
@@ -1754,6 +1755,18 @@
             -1
           ]
         }
+      ],
+      "monster_spawns": [
+        {
+          "monsterId": "dweeb",
+          "count": 2,
+          "spawnRate": 0
+        },
+        {
+          "monsterId": "thief",
+          "count": 1,
+          "spawnRate": 0
+        }
       ]
     },
     {
@@ -3492,6 +3505,18 @@
             -1,
             -1
           ]
+        }
+      ],
+      "monster_spawns": [
+        {
+          "monsterId": "guard",
+          "count": 1,
+          "spawnRate": 0
+        },
+        {
+          "monsterId": "dweeb",
+          "count": 1,
+          "spawnRate": 0
         }
       ]
     },
@@ -11212,6 +11237,13 @@
             -1,
             -1
           ]
+        }
+      ],
+      "monster_spawns": [
+        {
+          "monsterId": "guard",
+          "count": 1,
+          "spawnRate": 0
         }
       ]
     },
@@ -20643,6 +20675,18 @@
             -1,
             -1
           ]
+        }
+      ],
+      "monster_spawns": [
+        {
+          "monsterId": "dweeb",
+          "count": 2,
+          "spawnRate": 0
+        },
+        {
+          "monsterId": "thief",
+          "count": 1,
+          "spawnRate": 0
         }
       ]
     },
