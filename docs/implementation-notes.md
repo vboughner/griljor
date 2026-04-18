@@ -57,7 +57,7 @@ All client tests cover pure functions only (no canvas or DOM rendering):
 | `game-utils.test.ts` | `isTileBlocked`, `computeBresenhamPath`, `findNextStep`, `buildExitMap` |
 | `tooltip.test.ts` | `buildItemHtml` — HTML output for various item types |
 | `speedPenalty.test.ts` | `applyHpPenalty` — HP-based movement penalty, cap, divide-by-zero guards |
-| `los.test.ts` | `chebyshevPath`, `tileViewBlocked`, `spotIsVisible`, `tileIsVisible` — full LOS function coverage including client-specific edge cases (optional `recorded_objects`, absent `spot` field) |
+| `los.test.ts` | `losRayTiles`, `tileViewBlocked`, `spotIsVisible`, `tileIsVisible` — full LOS function coverage including DDA ray accuracy, permissive boundary exclusion, and client-specific edge cases (optional `recorded_objects`, absent `spot` field) |
 | `playerIndicatorStyle.test.ts` | Player indicator box colour logic |
 
 ### Timer discipline in integration tests
@@ -2088,9 +2088,11 @@ Players are only revealed to each other when there is a clear line of sight. Vis
 
 ### Algorithm
 
-Ported from the legacy `sight.c` implementation. Three exported pure functions in `server/src/session.ts`:
+Three exported pure functions in `server/src/session.ts`:
 
-**`chebyshevPath(x1, y1, x2, y2)`** — walks from `(x1,y1)` toward `(x2,y2)` one 8-directional step at a time (diagonal counts as one step), returning each tile visited, excluding the start tile.
+**`losRayTiles(x1, y1, x2, y2)`** — DDA (Digital Differential Analyzer) supercover ray that returns every tile whose interior the line segment from center of `(x1,y1)` to center of `(x2,y2)` passes through. Excludes the start tile, includes the target tile. Uses pure integer arithmetic (scaled by `adx * ady`) to avoid floating-point edge cases. When the ray crosses a grid corner simultaneously (both axes cross a grid line at the same point), the algorithm steps diagonally — the tiles merely grazed at the corner are excluded (permissive LOS: you can "peek" along edges and corners). Cardinal directions are handled as fast-path special cases.
+
+This replaced an earlier `chebyshevPath` implementation that walked diagonally one 8-directional step at a time. The Chebyshev stepping visited tiles the actual geometric line did not pass through, causing false LOS blocks on diagonal sightlines (e.g., for `(0,0)→(1,3)` it checked tile `(1,1)` which the real line never touches). The `chebyshevPath` function is still exported for use in movement pathfinding (`game-utils.ts`), but is no longer used for visibility.
 
 **`tileViewBlocked(room, objects, x, y)`** — returns `true` if any object on tile `(x,y)` lacks `transparent: true`:
 - floor object from `spot[x][y][0]`
@@ -2099,7 +2101,7 @@ Ported from the legacy `sight.c` implementation. Three exported pure functions i
 
 **`spotIsVisible(room, objects, x1, y1, x2, y2)`**:
 - If the path has 0 or 1 tiles (same tile or adjacent): always `true` — players must always be able to see an adjacent tile so they know it is occupied.
-- Otherwise: iterate every tile on the path (including the target tile). If any tile is view-blocked → `false`.
+- Otherwise: iterate every tile on the ray path (including the target tile). If any tile is view-blocked → `false`.
 
 ### Directional LOS
 
@@ -2153,7 +2155,7 @@ Updates happen in three places:
 
 ### Reference
 
-Legacy implementation: `legacy/src/sight.c` (`spot_is_visible`, `update_vision`).
+Legacy implementation: `legacy/src/sight.c` (`spot_is_visible`, `update_vision`). The legacy code used `diag_movement_list` (float interpolation along the parametric line) which was closer to the current DDA approach than the earlier `chebyshevPath` was.
 Research notes: `docs/legacy-light-and-sight.md`.
 
 ---
@@ -2162,17 +2164,19 @@ Research notes: `docs/legacy-light-and-sight.md`.
 
 Tiles outside the local player's current line of sight are dimmed with a semi-transparent overlay. The effect is purely cosmetic and client-side — it uses no server communication. Toggled with the `v` key (on by default).
 
-### New module: `client/src/los.ts`
+### Module: `client/src/los.ts`
 
-Three functions ported from `server/src/session.ts` plus one new rendering-specific variant:
+Four functions — the first three mirrored from `server/src/session.ts`, plus one rendering-specific variant:
 
-**`chebyshevPath(x1, y1, x2, y2)`** — identical to the server version. Walks from `(x1,y1)` to `(x2,y2)` one 8-directional Chebyshev step at a time, returning each intermediate tile excluding the start.
+**`losRayTiles(x1, y1, x2, y2)`** — identical to the server version. DDA supercover ray returning all tiles the center-to-center line passes through (excluding start, including target). Permissive boundary rule: corner-grazing tiles excluded.
+
+**`chebyshevPath(x1, y1, x2, y2)`** — retained for movement pathfinding in `game-utils.ts` (not used for LOS).
 
 **`tileViewBlocked(room, objects, x, y)`** — identical to the server version, with one difference: guards `room.recorded_objects ?? []` because `recorded_objects` is optional on the client's `RoomData` type (absent in diag-format maps).
 
-**`spotIsVisible(room, objects, x1, y1, x2, y2)`** — identical to the server version. Checks all tiles on the path including the target. Used for player-to-player visibility semantics (can you see someone hiding in a forest?). Kept for completeness and testing symmetry with the server.
+**`spotIsVisible(room, objects, x1, y1, x2, y2)`** — identical to the server version. Checks all tiles on the ray path including the target. Used for player-to-player visibility semantics (can you see someone hiding in a forest?). Kept for completeness and testing symmetry with the server.
 
-**`tileIsVisible(room, objects, x1, y1, x2, y2)`** — new rendering variant. Checks all intermediate tiles on the path **excluding the target tile**. This means a wall tile is visible if the path to it is clear — you can see the face of a wall even though you cannot see through it. `spotIsVisible` would incorrectly mark opaque target tiles as not visible.
+**`tileIsVisible(room, objects, x1, y1, x2, y2)`** — rendering variant. Checks all intermediate tiles on the ray path **excluding the target tile**. This means a wall tile is visible if the path to it is clear — you can see the face of a wall even though you cannot see through it. `spotIsVisible` would incorrectly mark opaque target tiles as not visible.
 
 ### Visibility grid computation (`computeVisibility()` in `Game`)
 
