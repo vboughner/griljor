@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { chebyshevPath, tileViewBlocked, spotIsVisible, tileIsVisible } from '../los';
+import { losRayTiles, tileViewBlocked, spotIsVisible, tileIsVisible } from '../los';
 import { ObjDef, RecObj, RoomData } from '../types';
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -36,11 +36,19 @@ function roomWithSpot(x: number, y: number, flId: number, wlId: number): RoomDat
   return { ...emptyRoom(), spot };
 }
 
-// ── chebyshevPath ────────────────────────────────────────────────────────────
+// ── losRayTiles ─────────────────────────────────────────────────────────────
 
-describe('chebyshevPath', () => {
+describe('losRayTiles', () => {
+  it('same tile returns empty array', () => {
+    expect(losRayTiles(2, 2, 2, 2)).toEqual([]);
+  });
+
+  it('adjacent horizontal returns single tile', () => {
+    expect(losRayTiles(0, 0, 1, 0)).toEqual([{ x: 1, y: 0 }]);
+  });
+
   it('straight horizontal path (0,0)→(3,0)', () => {
-    expect(chebyshevPath(0, 0, 3, 0)).toEqual([
+    expect(losRayTiles(0, 0, 3, 0)).toEqual([
       { x: 1, y: 0 },
       { x: 2, y: 0 },
       { x: 3, y: 0 },
@@ -48,34 +56,62 @@ describe('chebyshevPath', () => {
   });
 
   it('straight vertical path (0,0)→(0,3)', () => {
-    expect(chebyshevPath(0, 0, 0, 3)).toEqual([
+    expect(losRayTiles(0, 0, 0, 3)).toEqual([
       { x: 0, y: 1 },
       { x: 0, y: 2 },
       { x: 0, y: 3 },
     ]);
   });
 
-  it('diagonal path (0,0)→(2,2)', () => {
-    expect(chebyshevPath(0, 0, 2, 2)).toEqual([
+  it('perfect diagonal (0,0)→(2,2) — corner crossings, steps diagonally', () => {
+    expect(losRayTiles(0, 0, 2, 2)).toEqual([
       { x: 1, y: 1 },
       { x: 2, y: 2 },
     ]);
   });
 
-  it('L-shaped path (0,0)→(3,1) — diagonal first, then straight', () => {
-    expect(chebyshevPath(0, 0, 3, 1)).toEqual([
+  it('off-axis (0,0)→(1,3) — follows actual geometric line', () => {
+    // Line from (0.5,0.5) to (1.5,3.5): passes through (0,1), (0,2)/(1,2), (1,2), (1,3)
+    // NOT through (1,1) like chebyshevPath would
+    const tiles = losRayTiles(0, 0, 1, 3);
+    expect(tiles).not.toContainEqual({ x: 1, y: 1 });
+    expect(tiles).toContainEqual({ x: 0, y: 1 });
+    expect(tiles).toContainEqual({ x: 1, y: 3 });
+  });
+
+  it('off-axis (0,0)→(3,1) — follows actual geometric line', () => {
+    // Line from (0.5,0.5) to (3.5,1.5): passes through (1,0), (2,0)/(2,1), (2,1), (3,1)
+    // NOT through (1,1) like chebyshevPath would
+    const tiles = losRayTiles(0, 0, 3, 1);
+    expect(tiles).not.toContainEqual({ x: 1, y: 1 });
+    expect(tiles).toContainEqual({ x: 1, y: 0 });
+    expect(tiles).toContainEqual({ x: 3, y: 1 });
+  });
+
+  it('boundary crossing is permissive — corner-touching tiles excluded', () => {
+    // (0,0)→(2,2): line goes through exact corners at (1,1) grid intersection
+    // Only diagonal tiles (1,1) and (2,2) should appear; (1,0) and (0,1) should NOT
+    const tiles = losRayTiles(0, 0, 2, 2);
+    expect(tiles).not.toContainEqual({ x: 1, y: 0 });
+    expect(tiles).not.toContainEqual({ x: 0, y: 1 });
+  });
+
+  it('negative direction (3,3)→(0,0)', () => {
+    expect(losRayTiles(3, 3, 0, 0)).toEqual([
+      { x: 2, y: 2 },
       { x: 1, y: 1 },
-      { x: 2, y: 1 },
-      { x: 3, y: 1 },
+      { x: 0, y: 0 },
     ]);
   });
 
-  it('same tile returns empty array', () => {
-    expect(chebyshevPath(2, 2, 2, 2)).toEqual([]);
-  });
-
-  it('adjacent tile returns single step', () => {
-    expect(chebyshevPath(0, 0, 1, 0)).toEqual([{ x: 1, y: 0 }]);
+  it('steep angle (0,0)→(1,5) traces correct tiles', () => {
+    const tiles = losRayTiles(0, 0, 1, 5);
+    // Should pass through column 0 for several rows before crossing to column 1
+    expect(tiles).toContainEqual({ x: 0, y: 1 });
+    expect(tiles).toContainEqual({ x: 0, y: 2 });
+    expect(tiles).toContainEqual({ x: 1, y: 5 });
+    // Should NOT contain (1,1) — the line is far from that tile
+    expect(tiles).not.toContainEqual({ x: 1, y: 1 });
   });
 });
 
