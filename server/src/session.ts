@@ -1932,6 +1932,27 @@ export class GameSession {
           this.killPlayerByMonster(victim, attackerName);
         }
       },
+      removeFloorItem: (room, x, y) => {
+        const roomMap = this.roomItems.get(room);
+        if (!roomMap) return null;
+        const key = `${x},${y}`;
+        const item = roomMap.get(key) ?? null;
+        if (item) {
+          roomMap.delete(key);
+          this.broadcast({ type: 'ITEM_REMOVED', room, x, y });
+        }
+        return item;
+      },
+      getFloorItemsInRoom: (room) => {
+        const roomMap = this.roomItems.get(room);
+        if (!roomMap) return [];
+        const result: Array<{ x: number; y: number; item: InventoryItem }> = [];
+        for (const [key, item] of roomMap) {
+          const [sx, sy] = key.split(',').map(Number);
+          result.push({ x: sx, y: sy, item });
+        }
+        return result;
+      },
     };
   }
 

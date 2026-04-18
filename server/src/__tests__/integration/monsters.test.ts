@@ -47,7 +47,26 @@ function buildMonsterTestWorld(): World {
     respawn: { delay: 0 }, // no respawn
   };
 
-  base.monsterDefs = [dweebDef, guardDef];
+  const thiefDef: MonsterDef = {
+    id: 'thief',
+    name: 'Thief',
+    avatar: 'dodger',
+    hp: 30,
+    maxHp: 30,
+    team: 0,
+    behavior: { type: 'stationary', moveInterval: 1000 }, // stationary for predictable tests
+    combat: { aggressive: false },
+    chat: null,
+    items: {
+      drops: null,
+      dropOnDeath: true,
+      pickup: { range: 3, types: 'any', maxCarry: 2 },
+      carry: { deliverTo: 'home' },
+    },
+    respawn: { delay: 5000 },
+  };
+
+  base.monsterDefs = [dweebDef, guardDef, thiefDef];
   base.rooms[0].monsterSpawns = [
     { monsterId: 'dweeb', count: 1, spawnX: 15, spawnY: 15, spawnRate: 0 },
   ];
@@ -560,5 +579,139 @@ describe('Monster system — Phase 2 (spawn, damage, death)', () => {
 
     const missiles = alice.ws.messagesOfType('MISSILE_START');
     expect(missiles.length).toBe(0);
+  });
+
+  // ── Phase 5: Item Pickup / Carry / Deliver ────────────────────────────
+
+  it('thief monster picks up a nearby floor item', () => {
+    const world = buildMonsterTestWorld();
+    // Place thief at (5,5) — near the sword floor item at (5,5)
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'thief', count: 1, spawnX: 4, spawnY: 5, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.flush();
+
+    // Advance past moveInterval so the thief's onMoveTick fires
+    vi.advanceTimersByTime(1000);
+
+    // Thief should have picked up the sword at (5,5) — ITEM_REMOVED broadcast
+    const removals = alice.ws.messagesOfType('ITEM_REMOVED');
+    const swordRemoval = removals.find((r) => r.x === 5 && r.y === 5);
+    expect(swordRemoval).toBeDefined();
+  });
+
+  it('thief respects maxCarry limit', () => {
+    const world = buildMonsterTestWorld();
+    const thief = world.monsterDefs.find((d) => d.id === 'thief')!;
+    // Disable delivery so items stay carried
+    thief.items.carry = null;
+    // Thief has maxCarry: 2. Put 3 items within range.
+    // Existing items: sword at (5,5), potion at (6,6)
+    // Add another item at (4,4)
+    world.rooms[0].recorded_objects.push({ x: 4, y: 4, type: 3, detail: 0 }); // another potion
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'thief', count: 1, spawnX: 5, spawnY: 5, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.flush();
+
+    // Advance enough ticks for 3 pickup attempts
+    vi.advanceTimersByTime(3000);
+
+    // Should only pick up 2 items (maxCarry)
+    const removals = alice.ws.messagesOfType('ITEM_REMOVED');
+    expect(removals.length).toBe(2);
+  });
+
+  it('thief with type filter only picks matching items', () => {
+    const world = buildMonsterTestWorld();
+    // Override thief to only pick up swords (type 2)
+    const thief = world.monsterDefs.find((d) => d.id === 'thief')!;
+    thief.items.pickup = { range: 3, types: [2], maxCarry: 5 };
+    // Also disable delivery so the picked item stays carried
+    thief.items.carry = null;
+    // Spawn thief near the sword (5,5) but not on it
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'thief', count: 1, spawnX: 4, spawnY: 5, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.flush();
+
+    // Advance several ticks
+    vi.advanceTimersByTime(3000);
+
+    // Should only pick up the sword at (5,5), not the potion at (6,6)
+    // or any non-type-2 items
+    const removals = alice.ws.messagesOfType('ITEM_REMOVED');
+    expect(removals.length).toBe(1);
+    expect(removals[0].x).toBe(5);
+    expect(removals[0].y).toBe(5);
+  });
+
+  it('killed thief drops carried items', () => {
+    const world = buildMonsterTestWorld();
+    const thief = world.monsterDefs.find((d) => d.id === 'thief')!;
+    thief.hp = 5;
+    thief.maxHp = 5;
+    // Disable delivery so items stay carried until death
+    thief.items.carry = null;
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'thief', count: 1, spawnX: 4, spawnY: 5, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+
+    // Let thief pick up the sword at (5,5) — within range 3
+    vi.advanceTimersByTime(1000);
+
+    // Verify sword was picked up
+    const removals = alice.ws.messagesOfType('ITEM_REMOVED');
+    expect(removals.find((r) => r.x === 5 && r.y === 5)).toBeDefined();
+
+    alice.ws.flush();
+
+    // Move Alice adjacent to thief and punch it to death
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 3, y: 5 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 4, targetY: 5 });
+
+    // Thief should die and drop its carried sword
+    const itemAdds = alice.ws.messagesOfType('ITEM_ADDED');
+    const droppedSword = itemAdds.find((i) => i.item.type === 2);
+    expect(droppedSword).toBeDefined();
+  });
+
+  it('thief delivers items when at home position', () => {
+    const world = buildMonsterTestWorld();
+    // Stationary thief spawned AT a floor item: picks up on first tick,
+    // then delivers immediately since it's already at home.
+    world.rooms[0].monsterSpawns = [
+      { monsterId: 'thief', count: 1, spawnX: 5, spawnY: 5, spawnRate: 0 },
+    ];
+    session = new GameSession(world);
+
+    const alice = joinPlayer(session, 'Alice');
+    alice.ws.flush();
+
+    // First tick: thief picks up nearby item (sword at 5,5 — distance 0)
+    vi.advanceTimersByTime(1000);
+
+    // The thief spawned at (5,5) which is its home. It's stationary so it stays there.
+    // On the same tick it picks up, then tryDeliverItems checks if at home — it is!
+    // So it should immediately deliver (drop) the item.
+
+    // Check: ITEM_REMOVED for pickup, then ITEM_ADDED for delivery
+    const removals = alice.ws.messagesOfType('ITEM_REMOVED');
+    const additions = alice.ws.messagesOfType('ITEM_ADDED');
+
+    expect(removals.length).toBeGreaterThan(0);
+    expect(additions.length).toBeGreaterThan(0);
   });
 });

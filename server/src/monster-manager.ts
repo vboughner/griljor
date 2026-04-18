@@ -29,6 +29,8 @@ export interface MonsterSessionInterface {
     range: number,
   ): Array<{ x: number; y: number }>;
   dealDamageToPlayer(playerId: number, damage: number, attackerName: string): void;
+  removeFloorItem(room: number, x: number, y: number): InventoryItem | null;
+  getFloorItemsInRoom(room: number): Array<{ x: number; y: number; item: InventoryItem }>;
   getAllPlayers(): Array<{
     id: number;
     room: number;
@@ -452,6 +454,10 @@ export class MonsterManager {
     if (action.type === 'move') {
       this.moveMonster(monster, action.x, action.y);
     }
+
+    // Item interactions (after movement)
+    this.tryPickupItem(monster, def);
+    this.tryDeliverItems(monster, def);
   }
 
   private findAggroTarget(
@@ -561,6 +567,65 @@ export class MonsterManager {
         this.session.dealDamageToPlayer(capturedHitPlayerId, capturedDamage, capturedName);
       }
     }, travelMs);
+  }
+
+  private tryPickupItem(monster: Monster, def: MonsterDef): void {
+    const pickup = def.items.pickup;
+    if (!pickup) return;
+    if (monster.carriedItems.length >= pickup.maxCarry) return;
+
+    // Find the nearest floor item within pickup range
+    const floorItems = this.session.getFloorItemsInRoom(monster.room);
+    let bestItem: { x: number; y: number; item: InventoryItem } | null = null;
+    let bestDist = Infinity;
+
+    for (const fi of floorItems) {
+      const dist = Math.max(Math.abs(fi.x - monster.x), Math.abs(fi.y - monster.y));
+      if (dist > pickup.range) continue;
+      if (dist >= bestDist) continue;
+
+      // Check type filter
+      if (pickup.types !== 'any') {
+        if (!pickup.types.includes(fi.item.type)) continue;
+      } else {
+        // "any" = all takeable items
+        const obj = this.session.world.objects[fi.item.type];
+        if (!obj?.takeable) continue;
+      }
+
+      bestDist = dist;
+      bestItem = fi;
+    }
+
+    if (!bestItem) return;
+
+    // Pick it up
+    const removed = this.session.removeFloorItem(monster.room, bestItem.x, bestItem.y);
+    if (removed) {
+      monster.carriedItems.push(removed);
+    }
+  }
+
+  private tryDeliverItems(monster: Monster, def: MonsterDef): void {
+    const carry = def.items.carry;
+    if (!carry) return;
+    if (monster.carriedItems.length === 0) return;
+
+    if (carry.deliverTo === 'home') {
+      // Deliver when at home position
+      if (monster.room !== monster.homeRoom) return;
+      if (monster.x !== monster.homeX || monster.y !== monster.homeY) return;
+
+      // Drop all carried items near home
+      const items = [...monster.carriedItems];
+      monster.carriedItems = [];
+      for (const item of items) {
+        const tile = this.session.findNearbyFreeTile(monster.room, monster.x, monster.y);
+        if (tile) {
+          this.session.addFloorItem(monster.room, tile.x, tile.y, item);
+        }
+      }
+    }
   }
 
   private buildBehaviorContext(monster: Monster): BehaviorContext {
