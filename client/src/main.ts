@@ -788,6 +788,12 @@ async function main(): Promise<void> {
           teamLabel.className = 'monster-label';
           teamLabel.textContent = `Team ${t}:`;
           avatarStrip.appendChild(teamLabel);
+          if (teamAvatars.length === 0) {
+            const none = document.createElement('span');
+            none.className = 'monster-label';
+            none.textContent = 'none';
+            avatarStrip.appendChild(none);
+          }
           for (const entry of teamAvatars) {
             appendAvatarCanvas(avatarStrip, entry.avatar, entry.name);
           }
@@ -861,7 +867,14 @@ async function main(): Promise<void> {
         pLabel.className = 'monster-label';
         pLabel.textContent = 'Players:';
         playerStrip.appendChild(pLabel);
-        for (const entry of game.avatars ?? []) {
+        const playerAvatars = game.avatars ?? [];
+        if (playerAvatars.length === 0) {
+          const none = document.createElement('span');
+          none.className = 'monster-label';
+          none.textContent = 'none';
+          playerStrip.appendChild(none);
+        }
+        for (const entry of playerAvatars) {
           appendAvatarCanvas(playerStrip, entry.avatar, entry.name);
         }
         avatarCol.appendChild(playerStrip);
