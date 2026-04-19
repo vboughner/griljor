@@ -464,7 +464,7 @@ export class GameSession {
 
   tryReset(): { ok: boolean; reason?: string; startedAt: number } {
     if (this.players.size > 0) {
-      return { ok: false, reason: 'Players are still in the game', startedAt: this.startedAt };
+      return { ok: false, reason: 'One or more players has joined the game and it cannot be reset right now.', startedAt: this.startedAt };
     }
     if (this.resetTimer !== null) {
       clearTimeout(this.resetTimer);

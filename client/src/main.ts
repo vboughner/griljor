@@ -1006,7 +1006,7 @@ async function main(): Promise<void> {
           const p = modal.querySelector('p')!;
           p.textContent = result.reason ?? 'Reset failed.';
           confirmBtn.textContent = 'Reset';
-          confirmBtn.disabled = false;
+          confirmBtn.disabled = true;
         }
       } catch {
         const p = modal.querySelector('p')!;
