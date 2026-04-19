@@ -2423,6 +2423,7 @@ If conditions do not pass, the original in-room `triggerExplosion` call runs unc
 
 `getRoomExit` returns `-1` for any non-cardinal direction, so diagonal throws never cross rooms — they explode at the in-room landing tile. This matches the original game's behaviour (room exits are axis-aligned corridors).
 
+
 ---
 
 ## Map Reset from Lobby
@@ -2494,3 +2495,36 @@ CSS for `.server-uptime`, `.reset-btn` (tiny amber-bordered refresh icon), and `
 |------|-------|
 | `server/src/__tests__/integration/map-reset.test.ts` | 6 tests: `mapStartedAt` set on construction, `tryReset` succeeds when empty, fails when players present, resets `startedAt`, restores picked-up items, cancels pending auto-reset timer |
 | `client/src/__tests__/utils.test.ts` | 3 tests: `formatAge` with `'map'` context, `'player'` context, and default context |
+
+---
+
+## Phase 19 — Item Flavor Text
+
+The original game had two description messages per object: `lookmsg` (shown when looking at an item from a distance) and `examinemsg` (shown when examining an item in your possession). These were stored in the object definition files and displayed via the `get_description()` function in `legacy/src/message.c`.
+
+### Implementation
+
+Added `lookmsg` and `examinemsg` optional string fields to the client `ObjDef` type. The pipeline JSON already contained these fields — they just weren't typed or displayed.
+
+`buildItemHtml()` in `tooltip.ts` now accepts an optional `context` parameter (`'floor' | 'inventory'`, defaulting to `'inventory'`):
+
+- **Inventory/hand tooltips** → show `examinemsg`, falling back to `lookmsg` if absent
+- **Floor tooltips** → show `lookmsg` only (matches original game logic)
+
+Flavor text is rendered as an italic line below the item name, with `escapeHtml()` applied to prevent XSS. The `white-space: pre-line` CSS rule preserves line breaks in multi-line messages (e.g. the sludge gun's examinemsg).
+
+### Object file flavor text coverage
+
+Not all object sets have flavor text. Coverage by object file:
+
+| Object file | `lookmsg` | `examinemsg` | Maps using it |
+|---|---|---|---|
+| `default.json` | 0 | 0 | battle, flag, blowup, castle, hometown, outdoor, paradise, shooter, three, two, twoperson |
+| `flames.json` | 12 | 16 | flames, flash, ivarr, shelter, tunnel |
+| `standard.json` | 3 | 1 | standard |
+| `main.json` | 3 | 1 | hack, hack1 |
+| `trevor.json` | 3 | 1 | *(no maps reference this)* |
+| `ring.json` | 0 | 0 | ring |
+| `trek.json` | 0 | 0 | trek |
+
+The `flames` object set has the richest flavor text — 16 examine messages covering the potted plant growth stages, the dead rat flag, and the flame thrower. The `standard`/`main`/`trevor` sets share the same sludge gun examinemsg and a few lookmsg entries for tokens and torn items.

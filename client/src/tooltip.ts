@@ -41,11 +41,24 @@ function positionTooltip(x: number, y: number): void {
   tip.style.top = `${ly}px`;
 }
 
-export function buildItemHtml(obj: ObjDef, item: InventoryItem): string {
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+export function buildItemHtml(
+  obj: ObjDef,
+  item: InventoryItem,
+  context: 'floor' | 'inventory' = 'inventory',
+): string {
   const rows: string[] = [];
 
   const name = obj.name ?? `Object #${obj._index}`;
   rows.push(`<div class="tip-name">${name}</div>`);
+
+  const flavorMsg = context === 'inventory' ? (obj.examinemsg ?? obj.lookmsg) : obj.lookmsg;
+  if (flavorMsg) {
+    rows.push(`<div class="tip-row tip-flavor">${escapeHtml(flavorMsg)}</div>`);
+  }
 
   if (obj.weapon) {
     const parts: string[] = ['Weapon'];

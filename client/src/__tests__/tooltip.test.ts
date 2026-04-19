@@ -71,4 +71,59 @@ describe('buildItemHtml', () => {
     const html = buildItemHtml(makeObj({ numbered: false }), makeItem(1));
     expect(html).not.toContain('Qty');
   });
+
+  it('shows examinemsg in inventory context when both messages exist', () => {
+    const html = buildItemHtml(
+      makeObj({ lookmsg: 'Looks sharp.', examinemsg: 'Finely crafted steel.' }),
+      makeItem(),
+      'inventory',
+    );
+    expect(html).toContain('Finely crafted steel.');
+    expect(html).not.toContain('Looks sharp.');
+  });
+
+  it('falls back to lookmsg in inventory context when no examinemsg', () => {
+    const html = buildItemHtml(makeObj({ lookmsg: 'Looks sharp.' }), makeItem(), 'inventory');
+    expect(html).toContain('Looks sharp.');
+  });
+
+  it('shows lookmsg in floor context', () => {
+    const html = buildItemHtml(
+      makeObj({ lookmsg: 'Looks sharp.', examinemsg: 'Finely crafted steel.' }),
+      makeItem(),
+      'floor',
+    );
+    expect(html).toContain('Looks sharp.');
+    expect(html).not.toContain('Finely crafted steel.');
+  });
+
+  it('shows nothing in floor context when no lookmsg', () => {
+    const html = buildItemHtml(
+      makeObj({ examinemsg: 'Finely crafted steel.' }),
+      makeItem(),
+      'floor',
+    );
+    expect(html).not.toContain('Finely crafted steel.');
+    expect(html).not.toContain('tip-flavor');
+  });
+
+  it('shows nothing when no flavor text at all', () => {
+    const html = buildItemHtml(makeObj(), makeItem(), 'inventory');
+    expect(html).not.toContain('tip-flavor');
+  });
+
+  it('defaults to inventory context when context omitted', () => {
+    const html = buildItemHtml(makeObj({ examinemsg: 'Finely crafted steel.' }), makeItem());
+    expect(html).toContain('Finely crafted steel.');
+  });
+
+  it('escapes HTML in flavor text', () => {
+    const html = buildItemHtml(
+      makeObj({ lookmsg: '<script>alert("xss")</script>' }),
+      makeItem(),
+      'floor',
+    );
+    expect(html).not.toContain('<script>');
+    expect(html).toContain('&lt;script&gt;');
+  });
 });
