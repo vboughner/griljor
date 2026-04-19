@@ -59,4 +59,16 @@ describe('formatAge', () => {
   it('36 hours → "2 days"', () => {
     expect(formatAge(36 * 3_600_000)).toBe('2 days');
   });
+
+  it('under 45s with map context → "just started"', () => {
+    expect(formatAge(30_000, 'map')).toBe('just started');
+  });
+
+  it('under 45s with player context → "just joined"', () => {
+    expect(formatAge(30_000, 'player')).toBe('just joined');
+  });
+
+  it('under 45s with default context → "just joined"', () => {
+    expect(formatAge(10_000)).toBe('just joined');
+  });
 });

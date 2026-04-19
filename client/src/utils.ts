@@ -13,11 +13,11 @@ export function applyHpPenalty(baseDelayMs: number, hp: number, maxHp: number): 
 }
 
 /** Convert an elapsed duration (ms) to a human-readable age string. */
-export function formatAge(ms: number): string {
+export function formatAge(ms: number, context: 'player' | 'map' = 'player'): string {
   const s = ms / 1000;
   const m = s / 60;
   const h = m / 60;
-  if (s < 45) return 'just joined';
+  if (s < 45) return context === 'map' ? 'just started' : 'just joined';
   if (s < 90) return 'a minute';
   if (m < 45) return `${Math.round(m)} minutes`;
   if (m < 90) return 'an hour';

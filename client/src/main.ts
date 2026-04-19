@@ -2,7 +2,7 @@ import { MapFile, ObjectFile, ObjDef, InventoryItem } from './types';
 import { Game } from './game';
 import { ColorMode } from './assets';
 import { GameNetwork } from './network';
-import { fetchGames, watchGames, GameInfo } from './lobby';
+import { fetchGames, watchGames, resetGame, GameInfo } from './lobby';
 import { loadMaskedSprite, loadSprite } from './assets';
 import { initActionCards, setActiveItem } from './mouse-widget';
 import { runTitleScreen, drawLogo } from './title';
@@ -291,6 +291,7 @@ async function main(): Promise<void> {
   let isJoining = false;
   let lobbyRefreshTimer: ReturnType<typeof setInterval> | null = null;
   let lobbyWatcher: WebSocket | null = null;
+  let lobbyUptimeInterval: ReturnType<typeof setInterval> | null = null;
 
   // ── Avatar picker ─────────────────────────────────────────────────
   let selectedAvatar = AVATARS[Math.floor(Math.random() * AVATARS.length)];
@@ -648,12 +649,14 @@ async function main(): Promise<void> {
     lobbyScreen.style.display = 'flex';
     gameScreen.style.display = 'none';
     startLobbyWatcher();
+    startUptimeTick();
   }
 
   function showGame(): void {
     lobbyScreen.style.display = 'none';
     gameScreen.style.display = 'flex';
     stopLobbyWatcher();
+    stopUptimeTick();
   }
 
   function setInputsDisabled(disabled: boolean): void {
@@ -744,7 +747,35 @@ async function main(): Promise<void> {
 
       const mapSpan = document.createElement('span');
       mapSpan.className = 'server-map';
-      mapSpan.textContent = game.title ?? game.mapName;
+      const mapTitle = document.createElement('span');
+      mapTitle.textContent = game.title ?? game.mapName;
+      mapSpan.appendChild(mapTitle);
+
+      const uptimeWrap = document.createElement('span');
+      uptimeWrap.className = 'server-uptime';
+
+      const uptimeSpan = document.createElement('span');
+      uptimeSpan.className = 'server-uptime-text';
+      uptimeSpan.dataset.startedAt = String(game.startedAt);
+      uptimeSpan.textContent = formatAge(Date.now() - game.startedAt, 'map');
+      uptimeWrap.appendChild(uptimeSpan);
+
+      const elapsed = Date.now() - game.startedAt;
+      if (game.players === 0 && elapsed >= 15_000) {
+        const resetBtn = document.createElement('button');
+        resetBtn.className = 'reset-btn';
+        resetBtn.textContent = '\u21BB';
+        resetBtn.addEventListener('mouseenter', (e) =>
+          showTooltip('Reset map to initial state', e.clientX, e.clientY),
+        );
+        resetBtn.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
+        resetBtn.addEventListener('mouseleave', () => hideTooltip());
+        resetBtn.addEventListener('click', () => showResetConfirm(game));
+        uptimeWrap.appendChild(resetBtn);
+      }
+
+      mapSpan.appendChild(uptimeWrap);
+
       row.appendChild(mapSpan);
 
       if ((game.teams ?? 0) > 1) {
@@ -909,6 +940,77 @@ async function main(): Promise<void> {
       serverList.appendChild(row);
     }
     updateJoinButtons();
+  }
+
+  function startUptimeTick(): void {
+    if (lobbyUptimeInterval) return;
+    lobbyUptimeInterval = setInterval(() => {
+      const now = Date.now();
+      for (const el of serverList.querySelectorAll<HTMLSpanElement>('.server-uptime')) {
+        const startedAt = Number(el.dataset.startedAt);
+        if (startedAt) el.textContent = formatAge(now - startedAt, 'map');
+      }
+    }, 5000);
+  }
+
+  function stopUptimeTick(): void {
+    if (lobbyUptimeInterval) {
+      clearInterval(lobbyUptimeInterval);
+      lobbyUptimeInterval = null;
+    }
+  }
+
+  function showResetConfirm(game: GameInfo): void {
+    // Remove any existing modal
+    document.querySelector('.reset-modal-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'reset-modal-overlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'reset-modal';
+    modal.innerHTML = `
+      <h3>Reset ${game.title ?? game.mapName}?</h3>
+      <p>Map, items, monsters, and chat will all be reset to their initial state.</p>
+      <div class="reset-modal-buttons">
+        <button class="reset-modal-cancel">Cancel</button>
+        <button class="reset-modal-confirm">Reset</button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    modal.querySelector('.reset-modal-cancel')!.addEventListener('click', () => {
+      overlay.remove();
+    });
+
+    modal.querySelector('.reset-modal-confirm')!.addEventListener('click', async () => {
+      const confirmBtn = modal.querySelector('.reset-modal-confirm') as HTMLButtonElement;
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Resetting\u2026';
+      try {
+        const result = await resetGame(game.wsUrl);
+        if (result.ok) {
+          overlay.remove();
+          // The lobby watcher will broadcast the updated game list automatically
+        } else {
+          const p = modal.querySelector('p')!;
+          p.textContent = result.reason ?? 'Reset failed.';
+          confirmBtn.textContent = 'Reset';
+          confirmBtn.disabled = true;
+        }
+      } catch {
+        const p = modal.querySelector('p')!;
+        p.textContent = 'Failed to contact server.';
+        confirmBtn.textContent = 'Reset';
+        confirmBtn.disabled = false;
+      }
+    });
   }
 
   async function refreshServerList(): Promise<void> {

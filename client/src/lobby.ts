@@ -8,6 +8,7 @@ export interface GameInfo {
   maxPlayers: number;
   avatars: Array<{ avatar: string; name: string; team: number }>;
   monsterAvatars: string[];
+  startedAt: number;
 }
 
 const LOBBY_HTTP =
@@ -19,6 +20,18 @@ export async function fetchGames(): Promise<GameInfo[]> {
   const res = await fetch(`${LOBBY_HTTP}/games`);
   if (!res.ok) throw new Error(`Lobby error: ${res.status}`);
   return res.json() as Promise<GameInfo[]>;
+}
+
+export async function resetGame(
+  wsUrl: string,
+): Promise<{ ok: boolean; reason?: string; startedAt: number }> {
+  const res = await fetch(`${LOBBY_HTTP}/reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ wsUrl }),
+  });
+  if (!res.ok) throw new Error(`Reset error: ${res.status}`);
+  return res.json() as Promise<{ ok: boolean; reason?: string; startedAt: number }>;
 }
 
 export function watchGames(

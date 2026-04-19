@@ -1,6 +1,12 @@
 # Griljor Web Rewrite — ToDo list
 
-## Problems in maps
+## Make teams work:
+- [ ] consider friendly fire options for teammates (i.e. cannot hurt members of your own team)
+- [ ] consider in team games, making all teammates visible everywhere (this might be at the same time we save them from friendly fire)
+
+## Maps
+- [x] ~~add a reset map button in the lobby when there are no players in the map~~ — **Done.** Lobby shows map uptime and a small ↻ reset button (when 0 players, 15+ seconds running). Confirmation modal, lobby proxies reset to game server, server resets all items/monsters/chat to initial state.
+- [ ] fix initial spawn in locked room without a key in castle map
 - [ ] in the Playtester Paradise map, in room 9, Range's End, the block gun drops a block gun and not a block, and in battle map, the blocks don't drop at end of flight
 - [ ] in the Playtester Paradise map is is possible to respawn in room 19 which is completely empty, that room should probably be deleted?
 - [ ] the nuke is Playtester Paradise Radio Shack room (the building), the nuke is too heavy to pick up, even if you are holding nothing else
