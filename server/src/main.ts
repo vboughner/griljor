@@ -41,10 +41,33 @@ function findFreePort(startPort: number): Promise<number> {
 async function main(): Promise<void> {
   const world = await loadWorld(mapName);
 
-  const server = http.createServer((_req, res) => {
+  const server = http.createServer((req, res) => {
+    const CORS_HEADERS = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    };
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, CORS_HEADERS);
+      res.end();
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/reset') {
+      const result = game.tryReset();
+      if (result.ok) {
+        console.log(`[reset] map reset via lobby request (${world.mapName})`);
+        sendHeartbeat();
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', ...CORS_HEADERS });
+      res.end(JSON.stringify(result));
+      return;
+    }
+
     res.writeHead(200, {
       'Content-Type': 'text/plain',
-      'Access-Control-Allow-Origin': '*',
+      ...CORS_HEADERS,
     });
     res.end('Griljor server OK\n');
   });
@@ -63,6 +86,7 @@ async function main(): Promise<void> {
       players: game.playerCount,
       avatars: game.playerAvatars,
       monsterAvatars: game.monsterAvatars,
+      startedAt: game.mapStartedAt,
     });
   }
 
@@ -86,6 +110,7 @@ async function main(): Promise<void> {
     wsUrl,
     maxPlayers: world.maxPlayers,
     monsterAvatars: game.monsterAvatars,
+    startedAt: game.mapStartedAt,
   });
 
   // Heartbeat every 5s (safety net; immediate heartbeats are sent on join/leave)

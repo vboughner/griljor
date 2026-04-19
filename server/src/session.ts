@@ -308,6 +308,8 @@ export class GameSession {
 
   private monsterManager: MonsterManager;
 
+  private startedAt = Date.now();
+
   constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
     this.onPlayerCountChange = opts?.onPlayerCountChange;
     this.world = world;
@@ -439,6 +441,7 @@ export class GameSession {
     this.chatHistory = [];
     this.monsterManager.reset();
     this.lastPlacementTime = Math.floor(Date.now() / 1000);
+    this.startedAt = Date.now();
   }
 
   get playerCount(): number {
@@ -453,6 +456,22 @@ export class GameSession {
   }
   get monsterAvatars(): string[] {
     return [...new Set((this.world.monsterDefs ?? []).map((d) => d.avatar))];
+  }
+
+  get mapStartedAt(): number {
+    return this.startedAt;
+  }
+
+  tryReset(): { ok: boolean; reason?: string; startedAt: number } {
+    if (this.players.size > 0) {
+      return { ok: false, reason: 'Players are still in the game', startedAt: this.startedAt };
+    }
+    if (this.resetTimer !== null) {
+      clearTimeout(this.resetTimer);
+      this.resetTimer = null;
+    }
+    this.resetWorldState();
+    return { ok: true, startedAt: this.startedAt };
   }
 
   handleConnection(ws: WebSocket): void {
@@ -1869,9 +1888,6 @@ export class GameSession {
           this.resetWorldState();
           console.log(`[reset] map state reset (${this.world.mapName})`);
         }, delay);
-      } else {
-        this.chatHistory = [];
-        console.log('[chat] history cleared (server empty)');
       }
     }
     this.onPlayerCountChange?.();
