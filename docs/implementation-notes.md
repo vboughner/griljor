@@ -15,7 +15,7 @@ npm run test:server    # server only
 npm run test:client    # client only
 ```
 
-**270 tests total** (184 server, 86 client) as of single-hand refactor.
+**400 tests total** (297 server, 103 client) as of map reset feature.
 
 ### Server test layout (`server/src/__tests__/`)
 
@@ -42,6 +42,7 @@ npm run test:client    # client only
 | `explosion.test.ts` | Grenade produces 8 explosion rays on landing, boombit object type used, MISSILE_END per ray, blast radius damage, kill attribution, boombit fallback to movingobj |
 | `pickup-proximity.test.ts` | Out-of-range rejection, boundary pickup, same-tile pickup, LOS-blocked rejection, transparent-but-unwalkable (window) rejection, unwalkable destination rejection |
 | `placement.test.ts` | Interval timing, player-count scaling, team/room targeting, quantity, non-takeable/invalid object skipping, timer cleanup, loadWorld rule validation against object file |
+| `map-reset.test.ts` | `mapStartedAt` getter, `tryReset` success/failure, `startedAt` reset, item restoration after reset, auto-reset timer cancellation |
 
 **`helpers.ts`** exports:
 - `MockWebSocket` — captures S→C messages; `receive(msg)` to inject C→S; `flush()`, `close()`
@@ -2421,3 +2422,75 @@ If conditions do not pass, the original in-room `triggerExplosion` call runs unc
 #### Diagonal throws
 
 `getRoomExit` returns `-1` for any non-cardinal direction, so diagonal throws never cross rooms — they explode at the in-room landing tile. This matches the original game's behaviour (room exits are axis-aligned corridors).
+
+---
+
+## Map Reset from Lobby
+
+**Goal**: Allow players to reset a map's state from the lobby when no one is playing, without restarting the game server process. Also display map uptime in the lobby game list.
+
+### Data flow
+
+```
+Client (lobby UI) → POST /reset {wsUrl} → Lobby server
+                                              ↓
+                                        POST /reset → Game server
+                                              ↓
+                                        resetWorldState() if empty
+                                              ↓
+                                        {ok, startedAt} ← response
+                                              ↓
+                                        lobby updates startedAt
+                                        broadcasts to watchers
+```
+
+### Server changes
+
+#### `session.ts`
+
+- Added `private startedAt = Date.now()` field, reset in `resetWorldState()`.
+- Added `get mapStartedAt(): number` getter.
+- Added `tryReset()` public method: checks `players.size > 0` (returns error if occupied), cancels any pending auto-reset timer, calls `resetWorldState()`, returns `{ ok, startedAt }`.
+- Chat history is no longer cleared when the server empties — it persists until map reset.
+
+#### `main.ts`
+
+- HTTP handler expanded from catch-all to route-based with CORS preflight support.
+- `POST /reset` calls `game.tryReset()`, returns JSON result, triggers heartbeat on success.
+- `startedAt` included in both `/register` and `/heartbeat` payloads to the lobby.
+
+#### `lobby.ts`
+
+- `GameEntry` now includes `startedAt: number`.
+- `startedAt` accepted and stored from register and heartbeat requests.
+- New `POST /reset` endpoint: validates `wsUrl`, looks up game entry, derives HTTP URL from wsUrl (`ws:// → http://`, strips `/ws` path), forwards POST `/reset` to game server, updates `startedAt` on success, broadcasts updated game list.
+
+### Client changes
+
+#### `lobby.ts`
+
+- `GameInfo` interface now includes `startedAt: number`.
+- New `resetGame(wsUrl)` function: POSTs to lobby `/reset`, returns `{ ok, reason?, startedAt }`.
+
+#### `utils.ts`
+
+- `formatAge` now accepts `context: 'player' | 'map'` (default `'player'`).
+- For `< 45s`: returns `'just started'` for map context, `'just joined'` for player context.
+
+#### `main.ts` (lobby UI)
+
+- **Uptime display**: each game row shows a `<span class="server-uptime">` below the map title with `formatAge(elapsed, 'map')`. Updated every 5 seconds via `lobbyUptimeInterval`.
+- **Reset button**: a small `↻` button (16×16px, amber-colored matching other interactive elements) appears next to the uptime when `players === 0` and the map has been running for at least 15 seconds. Has a tooltip ("Reset map to initial state").
+- **Confirmation modal**: overlay with "Reset [Map Title]?" heading, description of what will be reset, Cancel and Reset buttons. On success the modal closes (lobby watcher auto-broadcasts the updated list). On failure (players joined since the button appeared) the error message is shown and the Reset button is disabled.
+- Uptime tick starts/stops with `showLobby()`/`showGame()`.
+
+#### `index.html`
+
+CSS for `.server-uptime`, `.reset-btn` (tiny amber-bordered refresh icon), and `.reset-modal-*` (overlay, modal box, cancel/confirm buttons matching existing amber theme).
+
+### Tests added
+
+| File | Tests |
+|------|-------|
+| `server/src/__tests__/integration/map-reset.test.ts` | 6 tests: `mapStartedAt` set on construction, `tryReset` succeeds when empty, fails when players present, resets `startedAt`, restores picked-up items, cancels pending auto-reset timer |
+| `client/src/__tests__/utils.test.ts` | 3 tests: `formatAge` with `'map'` context, `'player'` context, and default context |
