@@ -766,11 +766,7 @@ async function main(): Promise<void> {
         resetBtn.className = 'reset-btn';
         resetBtn.textContent = '\u21BB';
         resetBtn.addEventListener('mouseenter', (e) =>
-          showTooltip(
-            'Reset map to initial state',
-            e.clientX,
-            e.clientY,
-          ),
+          showTooltip('Reset map to initial state', e.clientX, e.clientY),
         );
         resetBtn.addEventListener('mousemove', (e) => moveTooltip(e.clientX, e.clientY));
         resetBtn.addEventListener('mouseleave', () => hideTooltip());
