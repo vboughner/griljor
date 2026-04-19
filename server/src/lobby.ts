@@ -11,6 +11,7 @@ interface GameEntry {
   maxPlayers: number;
   avatars: Array<{ avatar: string; name: string; team: number }>;
   monsterAvatars: string[];
+  startedAt: number;
   lastSeen: number;
 }
 
@@ -126,6 +127,7 @@ const server = http.createServer(async (req, res) => {
         maxPlayers: body.maxPlayers ?? 16,
         avatars: [],
         monsterAvatars: body.monsterAvatars ?? [],
+        startedAt: ((body as Record<string, unknown>).startedAt as number) ?? Date.now(),
         lastSeen: Date.now(),
       });
       console.log(`[lobby] registered ${body.wsUrl} (${body.mapName})`);
@@ -149,6 +151,8 @@ const server = http.createServer(async (req, res) => {
         entry.players = body.players;
         entry.avatars = body.avatars ?? [];
         if (body.monsterAvatars) entry.monsterAvatars = body.monsterAvatars;
+        const startedAt = (body as Record<string, unknown>).startedAt;
+        if (typeof startedAt === 'number') entry.startedAt = startedAt;
         entry.lastSeen = Date.now();
         broadcast();
       }
@@ -173,6 +177,67 @@ const server = http.createServer(async (req, res) => {
       send(200, { ok: true });
     } catch {
       send(400, { error: 'Bad request' });
+    }
+    return;
+  }
+
+  if (method === 'POST' && url === '/reset') {
+    try {
+      const body = await readBody(req);
+      if (!isUnregisterBody(body)) {
+        // reuse wsUrl validation
+        send(400, { error: 'Bad body' });
+        return;
+      }
+      const entry = games.get(body.wsUrl);
+      if (!entry) {
+        send(404, { error: 'Game not found' });
+        return;
+      }
+      // Derive HTTP URL from wsUrl: ws://host:port/ws → http://host:port/reset
+      const gameHttpUrl = body.wsUrl.replace(/^ws/, 'http').replace(/\/ws$/, '/reset');
+      const result = await new Promise<{ ok: boolean; reason?: string; startedAt: number }>(
+        (resolve, reject) => {
+          const data = JSON.stringify({});
+          const parsed = new URL(gameHttpUrl);
+          const fwd = http.request(
+            {
+              hostname: parsed.hostname,
+              port: parsed.port,
+              path: parsed.pathname,
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data),
+              },
+            },
+            (fwdRes) => {
+              let raw = '';
+              fwdRes.on('data', (chunk) => {
+                raw += chunk;
+              });
+              fwdRes.on('end', () => {
+                try {
+                  resolve(JSON.parse(raw));
+                } catch {
+                  reject(new Error('Bad response from game server'));
+                }
+              });
+            },
+          );
+          fwd.on('error', reject);
+          fwd.write(data);
+          fwd.end();
+        },
+      );
+      if (result.ok) {
+        entry.startedAt = result.startedAt;
+        broadcast();
+        console.log(`[lobby] reset ${entry.mapName} (${body.wsUrl})`);
+      }
+      send(200, result);
+    } catch {
+      send(500, { error: 'Failed to contact game server' });
     }
     return;
   }

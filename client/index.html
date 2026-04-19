@@ -210,6 +210,36 @@
     #lobby-status { margin-left: auto; color: #585858; text-transform: none; letter-spacing: normal; font-size: 13px; }
     .server-header .server-join-hdr { width: auto; flex: 1; text-align: right; }
     .lobby-panel-games .lobby-panel-hdr { border-bottom: none; }
+    .server-uptime { display: block; font-size: 11px; color: #666; margin-top: 6px; line-height: 16px; }
+    .reset-btn {
+      display: inline-block; background: none; border: 1px solid #52380e; color: #b8842a; cursor: pointer;
+      font-size: 10px; width: 16px; height: 16px; line-height: 14px; text-align: center;
+      padding: 0; margin-left: 5px; vertical-align: middle;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .reset-btn:hover { background: #272212; border-color: #7a5220; color: #d4a040; }
+    .reset-modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .reset-modal {
+      background: #1e1e1e; border: 1px solid #383838; padding: 24px 28px;
+      max-width: 400px; width: 90%; font-family: monospace; color: #bbb;
+    }
+    .reset-modal h3 { margin: 0 0 12px; color: #d4a040; font-size: 16px; }
+    .reset-modal p { margin: 0 0 20px; font-size: 13px; line-height: 1.5; }
+    .reset-modal-buttons { display: flex; gap: 12px; justify-content: flex-end; }
+    .reset-modal-cancel {
+      background: #2a2a2a; border: 1px solid #383838; color: #888;
+      padding: 6px 16px; cursor: pointer; font-family: monospace; font-size: 13px;
+    }
+    .reset-modal-cancel:hover { background: #333; color: #bbb; }
+    .reset-modal-confirm {
+      background: #1e1910; border: 1px solid #52380e; color: #b8842a;
+      padding: 6px 16px; cursor: pointer; font-family: monospace; font-size: 13px;
+    }
+    .reset-modal-confirm:hover:not(:disabled) { background: #272212; border-color: #7a5220; color: #d4a040; }
+    .reset-modal-confirm:disabled { color: #505050; background: #1a1a1a; border-color: #2e2e2e; cursor: default; }
 
     /* ── Game ── */
     #game-screen { display: none; flex-direction: column; align-items: center; gap: 12px; }
