@@ -64,6 +64,8 @@ export interface ObjDef {
   alternate?: number;
   health?: number; // negative = restores HP on use
   lost?: boolean; // consumed on use
+  lookmsg?: string;
+  examinemsg?: string;
 }
 
 export interface InventoryItem {
