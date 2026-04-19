@@ -7,6 +7,7 @@ interface GameEntry {
   teams: number;
   rooms: number;
   wsUrl: string;
+  httpUrl: string;
   players: number;
   maxPlayers: number;
   avatars: Array<{ avatar: string; name: string; team: number }>;
@@ -19,9 +20,24 @@ const TTL_MS = 15_000;
 const games = new Map<string, GameEntry>();
 const watchers = new Set<WebSocket>();
 
+function publicEntries(): Omit<GameEntry, 'httpUrl' | 'lastSeen'>[] {
+  return [...games.values()].map((e) => ({
+    mapName: e.mapName,
+    title: e.title,
+    teams: e.teams,
+    rooms: e.rooms,
+    wsUrl: e.wsUrl,
+    players: e.players,
+    maxPlayers: e.maxPlayers,
+    avatars: e.avatars,
+    monsterAvatars: e.monsterAvatars,
+    startedAt: e.startedAt,
+  }));
+}
+
 function broadcast(): void {
   purgeStale();
-  const payload = JSON.stringify([...games.values()]);
+  const payload = JSON.stringify(publicEntries());
   for (const ws of watchers) {
     if (ws.readyState === WebSocket.OPEN) ws.send(payload);
   }
@@ -123,6 +139,7 @@ const server = http.createServer(async (req, res) => {
         teams: body.teams ?? 0,
         rooms: body.rooms ?? 0,
         wsUrl: body.wsUrl,
+        httpUrl: ((body as Record<string, unknown>).httpUrl as string) ?? '',
         players: 0,
         maxPlayers: body.maxPlayers ?? 16,
         avatars: [],
@@ -151,6 +168,8 @@ const server = http.createServer(async (req, res) => {
         entry.players = body.players;
         entry.avatars = body.avatars ?? [];
         if (body.monsterAvatars) entry.monsterAvatars = body.monsterAvatars;
+        const httpUrl = (body as Record<string, unknown>).httpUrl;
+        if (typeof httpUrl === 'string') entry.httpUrl = httpUrl;
         const startedAt = (body as Record<string, unknown>).startedAt;
         if (typeof startedAt === 'number') entry.startedAt = startedAt;
         entry.lastSeen = Date.now();
@@ -194,8 +213,11 @@ const server = http.createServer(async (req, res) => {
         send(404, { error: 'Game not found' });
         return;
       }
-      // Derive HTTP URL from wsUrl: ws://host:port/ws → http://host:port/reset
-      const gameHttpUrl = body.wsUrl.replace(/^ws/, 'http').replace(/\/ws$/, '/reset');
+      if (!entry.httpUrl) {
+        send(500, { error: 'Game server has no HTTP URL registered' });
+        return;
+      }
+      const gameHttpUrl = `${entry.httpUrl}/reset`;
       const result = await new Promise<{ ok: boolean; reason?: string; startedAt: number }>(
         (resolve, reject) => {
           const data = JSON.stringify({});
@@ -244,7 +266,7 @@ const server = http.createServer(async (req, res) => {
 
   if (method === 'GET' && url === '/games') {
     purgeStale();
-    send(200, [...games.values()]);
+    send(200, publicEntries());
     return;
   }
 
@@ -257,7 +279,7 @@ wss.on('connection', (ws) => {
   watchers.add(ws);
   // Send current list immediately on connect
   purgeStale();
-  ws.send(JSON.stringify([...games.values()]));
+  ws.send(JSON.stringify(publicEntries()));
   ws.on('close', () => watchers.delete(ws));
   ws.on('error', () => watchers.delete(ws));
 });

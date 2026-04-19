@@ -79,10 +79,12 @@ async function main(): Promise<void> {
   await new Promise<void>((resolve) => server.listen(PORT, resolve));
 
   const wsUrl = process.env.PUBLIC_WS_URL ?? `ws://localhost:${PORT}/ws`;
+  const httpUrl = `http://localhost:${PORT}`;
 
   function sendHeartbeat(): void {
     postJson(`${LOBBY_URL}/heartbeat`, {
       wsUrl,
+      httpUrl,
       players: game.playerCount,
       avatars: game.playerAvatars,
       monsterAvatars: game.monsterAvatars,
@@ -108,6 +110,7 @@ async function main(): Promise<void> {
     teams: world.teams,
     rooms: world.roomCount,
     wsUrl,
+    httpUrl,
     maxPlayers: world.maxPlayers,
     monsterAvatars: game.monsterAvatars,
     startedAt: game.mapStartedAt,
