@@ -1100,6 +1100,7 @@ export class GameSession {
     y1: number,
     range: number,
     piercing: boolean,
+    roomIdx?: number,
   ): Array<{ x: number; y: number }> {
     const path: Array<{ x: number; y: number }> = [];
     const adx = Math.abs(x1 - x0),
@@ -1109,6 +1110,7 @@ export class GameSession {
     let err = adx - ady;
     let cx = x0,
       cy = y0;
+    const droppedItems = roomIdx !== undefined ? this.roomItems.get(roomIdx) : undefined;
     while (path.length < range) {
       const e2 = 2 * err;
       if (e2 > -ady) {
@@ -1127,6 +1129,13 @@ export class GameSession {
         const floorObj = flId > 0 ? this.world.objects[flId] : null;
         if (!piercing && wallObj && !wallObj.permeable) break;
         if (!piercing && floorObj && !floorObj.permeable) break;
+      }
+      if (!piercing && droppedItems) {
+        const item = droppedItems.get(`${cx},${cy}`);
+        if (item) {
+          const itemObj = this.world.objects[item.type];
+          if (itemObj && !itemObj.takeable && !itemObj.permeable) break;
+        }
       }
       path.push({ x: cx, y: cy });
       if (cx === x1 && cy === y1) break;
@@ -1181,7 +1190,16 @@ export class GameSession {
     for (const { offsetX, offsetY, dx, dy } of explosionTargets(spread, radius)) {
       const targetX = Math.max(0, Math.min(GRID - 1, landX + offsetX));
       const targetY = Math.max(0, Math.min(GRID - 1, landY + offsetY));
-      const path = this.calcMissilePath(roomData, landX, landY, targetX, targetY, radius, piercing);
+      const path = this.calcMissilePath(
+        roomData,
+        landX,
+        landY,
+        targetX,
+        targetY,
+        radius,
+        piercing,
+        roomIdx,
+      );
       if (path.length === 0) continue;
 
       // Find first entity hit along this ray (attacker included — self-damage allowed)
@@ -1364,7 +1382,16 @@ export class GameSession {
     dx: number,
     dy: number,
   ): void {
-    const path = this.calcMissilePath(room, player.x, player.y, targetX, targetY, range, false);
+    const path = this.calcMissilePath(
+      room,
+      player.x,
+      player.y,
+      targetX,
+      targetY,
+      range,
+      false,
+      player.room,
+    );
 
     // Find first entity (player or monster) hit along path (excluding the shooter)
     const entityHit = this.findEntityHitOnPath(path, player.room, playerId);
@@ -1431,6 +1458,7 @@ export class GameSession {
                     entryY + dy * (remainingRange - 1),
                     remainingRange - 1,
                     piercingFlag,
+                    nextRoomIdx,
                   )
                 : [];
 
@@ -1486,14 +1514,15 @@ export class GameSession {
         const tile = this.nearbyFreeTile(player.room, landTile.x, landTile.y);
         if (tile) {
           const roomMap = this.roomItems.get(player.room) ?? new Map<string, InventoryItem>();
-          roomMap.set(`${tile.x},${tile.y}`, handItem);
+          const droppedItem: InventoryItem = { type: movingObjType, quantity: 1 };
+          roomMap.set(`${tile.x},${tile.y}`, droppedItem);
           this.roomItems.set(player.room, roomMap);
           this.broadcast({
             type: 'ITEM_ADDED',
             room: player.room,
             x: tile.x,
             y: tile.y,
-            item: handItem,
+            item: droppedItem,
           });
         }
       }
@@ -2060,7 +2089,7 @@ export class GameSession {
       calcMissilePath: (room, x0, y0, x1, y1, range) => {
         const roomData = this.world.rooms[room];
         if (!roomData) return [];
-        return this.calcMissilePath(roomData, x0, y0, x1, y1, range, false);
+        return this.calcMissilePath(roomData, x0, y0, x1, y1, range, false, room);
       },
       dealDamageToPlayer: (playerId, damage, attackerName) => {
         const victim = this.players.get(playerId);

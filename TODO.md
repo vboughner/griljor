@@ -2,7 +2,7 @@
 
 ## Maps
 - [ ] fix initial spawn in locked room without a key in castle map
-- [ ] in the Playtester Paradise map, in room 9, Range's End, the block gun drops a block gun and not a block, and in battle map, the blocks don't drop at end of flight
+- [x] in the Playtester Paradise map, in room 9, Range's End, the block gun drops a block gun and not a block, and in battle map, the blocks don't drop at end of flight
 - [ ] in the Playtester Paradise map is is possible to respawn in room 19 which is completely empty, that room should probably be deleted?
 - [ ] the nuke is Playtester Paradise Radio Shack room (the building), the nuke is too heavy to pick up, even if you are holding nothing else
 - [ ] are you supposed to be able to repair the broken window walls in room 10 of Playtester Paradise? What are the repair kits good for?

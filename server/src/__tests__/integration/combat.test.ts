@@ -406,6 +406,111 @@ describe('combat', () => {
     const drops = alice.ws.messagesOfType('ITEM_ADDED').filter((m) => m.item.type === 5);
     expect(drops.length).toBeGreaterThan(0);
   });
+
+  it('missile stops before a dropped non-permeable item on the floor', () => {
+    // Add a sword-like weapon (8) and a non-permeable dropped wall (9)
+    const world = buildTestWorld();
+    world.objects.push(
+      {
+        _index: 8,
+        name: 'block gun',
+        takeable: true,
+        weight: 5,
+        weapon: true,
+        damage: 5,
+        range: 10,
+        lost: true,
+        stop: true,
+        movingobj: 9,
+        speed: 5,
+        transparent: true,
+      },
+      // thrown block: NOT permeable, NOT takeable → should block missiles
+      { _index: 9, name: 'thrown block', weight: 3 },
+    );
+    // Two block guns for two shots
+    world.rooms[0].recorded_objects.push(
+      { x: 4, y: 4, type: 8, detail: 0 },
+      { x: 4, y: 5, type: 8, detail: 0 },
+    );
+    const s = new GameSession(world);
+
+    const alice = joinPlayer(s, 'Alice');
+    // Pick up first block gun, fire east from (1,1) — range 10, block lands at (11,1)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 4, y: 4 });
+    alice.ws.receive({ type: 'PICKUP', x: 4, y: 4 });
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 19, targetY: 1 });
+    vi.advanceTimersByTime(3000);
+
+    const firstDrop = alice.ws.messagesOfType('ITEM_ADDED').find((m) => m.item.type === 9);
+    expect(firstDrop).toBeDefined();
+    const blockX = firstDrop!.x;
+
+    // Pick up second block gun, fire east along same row
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 4, y: 5 });
+    alice.ws.receive({ type: 'PICKUP', x: 4, y: 5 });
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+    vi.advanceTimersByTime(1000);
+
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 19, targetY: 1 });
+    vi.advanceTimersByTime(3000);
+
+    // The second missile's path should NOT include the tile with the dropped block
+    const missileStarts = alice.ws.messagesOfType('MISSILE_START');
+    const secondMissile = missileStarts[missileStarts.length - 1];
+    const pathXs = secondMissile.path.map((p: { x: number }) => p.x);
+    expect(pathXs).not.toContain(blockX);
+
+    // Second block should land before the first
+    const secondDrop = alice.ws
+      .messagesOfType('ITEM_ADDED')
+      .filter((m) => m.item.type === 9)
+      .at(-1);
+    expect(secondDrop).toBeDefined();
+    expect(secondDrop!.x).toBeLessThan(blockX);
+  });
+
+  it('block gun (lost+stop, movingobj differs) drops movingobj, not the gun itself', () => {
+    // Add block gun (8) and thrown block (9) to a fresh test world
+    const world = buildTestWorld();
+    world.objects.push(
+      {
+        _index: 8,
+        name: 'block gun',
+        takeable: true,
+        weight: 5,
+        weapon: true,
+        damage: 5,
+        range: 5,
+        lost: true,
+        stop: true,
+        movingobj: 9,
+        speed: 5,
+        transparent: true,
+      },
+      { _index: 9, name: 'thrown block', weight: 3 },
+    );
+    world.rooms[0].recorded_objects.push({ x: 4, y: 4, type: 8, detail: 0 });
+    const s = new GameSession(world);
+
+    const alice = joinPlayer(s, 'Alice');
+    // Pick up block gun from (4,4)
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 4, y: 4 });
+    alice.ws.receive({ type: 'PICKUP', x: 4, y: 4 });
+    // Move to (1,1) and fire right — range:5 → lands at end of path
+    alice.ws.receive({ type: 'MY_LOCATION', room: 0, x: 1, y: 1 });
+    alice.ws.flush();
+
+    alice.ws.receive({ type: 'FIRE_WEAPON', targetX: 10, targetY: 1 });
+    vi.advanceTimersByTime(2000);
+
+    const drops = alice.ws.messagesOfType('ITEM_ADDED');
+    // Should drop the thrown block (type 9), NOT the block gun (type 8)
+    expect(drops.some((m) => m.item.type === 9)).toBe(true);
+    expect(drops.some((m) => m.item.type === 8)).toBe(false);
+  });
 });
 
 describe('ammo reload', () => {
