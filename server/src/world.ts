@@ -32,6 +32,7 @@ export interface ObjDef {
   arc?: number; // firing arc in degrees (0 = single shot; 22 = narrow cone; 180 = hemisphere)
   directional?: boolean; // true: sprite direction matches missile travel direction
   transparent?: boolean; // if absent/false, tile blocks line of sight
+  exit?: boolean; // true: tile acts as a room exit (stairs, ladders, trap doors, etc.)
 }
 
 export interface RecObj {

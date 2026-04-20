@@ -21,7 +21,7 @@ function buildMultiTeamWorld(): World {
     spot,
     exitNorth: -1,
     exitEast: -1,
-    exitSouth: -1,
+    exitSouth: 1,
     exitWest: -1,
   };
   const room2: RoomData = {
@@ -30,7 +30,7 @@ function buildMultiTeamWorld(): World {
     team: 2,
     recorded_objects: [],
     spot,
-    exitNorth: -1,
+    exitNorth: 0,
     exitEast: -1,
     exitSouth: -1,
     exitWest: -1,

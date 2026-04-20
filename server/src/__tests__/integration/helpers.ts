@@ -135,7 +135,7 @@ export function buildTestWorld(): World {
     spot,
     exitNorth: -1,
     exitEast: -1,
-    exitSouth: -1,
+    exitSouth: 0, // self-link so the room counts as connected for spawn logic
     exitWest: -1,
   };
 
