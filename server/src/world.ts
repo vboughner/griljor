@@ -33,6 +33,10 @@ export interface ObjDef {
   directional?: boolean; // true: sprite direction matches missile travel direction
   transparent?: boolean; // if absent/false, tile blocks line of sight
   exit?: boolean; // true: tile acts as a room exit (stairs, ladders, trap doors, etc.)
+  flammable?: number; // >0: secondary explosion radius = flammable-1, uses object's boombit
+  vulnerable?: boolean; // can be destroyed by explosions with destroys > 0
+  destroyed?: number; // object type this becomes when destroyed
+  destroys?: number; // >0: this explosion can destroy vulnerable objects
 }
 
 export interface RecObj {

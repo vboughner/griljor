@@ -245,6 +245,22 @@ function resolveExplosionParams(
   return { boomObjType, radius, piercing, spread };
 }
 
+/** Extract flammable chain-reaction params from a vulnerable object, if applicable. */
+function collectFlammableParams(
+  obj: ObjDef,
+): { boombit: number; radius: number; spread: number } | null {
+  if (!obj.flammable || obj.boombit === undefined) return null;
+  return {
+    boombit: obj.boombit,
+    radius: Math.max(1, obj.flammable - 1),
+    spread: obj.spread ?? DEFAULT_SPREAD,
+  };
+}
+
+function cloneSpot(spot: number[][][]): number[][][] {
+  return spot.map((col) => col.map((cell) => [...cell]));
+}
+
 interface Player {
   id: number;
   name: string;
@@ -290,6 +306,8 @@ export class GameSession {
 
   // snapshot of original recorded_objects for reset (deep copy taken at construction)
   private originalRecordedObjects: RecObj[][] = [];
+  // snapshot of original spot arrays for reset and late-join diff
+  private originalSpots: Array<number[][][] | undefined> = [];
 
   // pending reset timer (cancelled if a player joins before it fires)
   private resetTimer: ReturnType<typeof setTimeout> | null = null;
@@ -316,6 +334,7 @@ export class GameSession {
     this.originalRecordedObjects = world.rooms.map((r) =>
       r.recorded_objects.map((ro) => ({ ...ro })),
     );
+    this.originalSpots = world.rooms.map((r) => (r.spot ? cloneSpot(r.spot) : undefined));
     this.initRoomItems();
     this.monsterManager = new MonsterManager(this.buildMonsterSessionInterface());
     this.monsterManager.init();
@@ -435,6 +454,10 @@ export class GameSession {
       this.world.rooms[i].recorded_objects = this.originalRecordedObjects[i].map((ro) => ({
         ...ro,
       }));
+      const origSpot = this.originalSpots[i];
+      if (origSpot) {
+        this.world.rooms[i].spot = cloneSpot(origSpot);
+      }
     }
     this.roomItems.clear();
     this.initRoomItems();
@@ -703,6 +726,29 @@ export class GameSession {
             y: current[i].y,
             newType: current[i].type,
           });
+        }
+      }
+    }
+
+    // Sync any spot tiles that have been destroyed from their original state
+    for (let roomIdx = 0; roomIdx < this.world.rooms.length; roomIdx++) {
+      const currentSpot = this.world.rooms[roomIdx].spot;
+      const origSpot = this.originalSpots[roomIdx];
+      if (!currentSpot || !origSpot) continue;
+      for (let x = 0; x < currentSpot.length; x++) {
+        for (let y = 0; y < (currentSpot[x]?.length ?? 0); y++) {
+          for (let layer = 0; layer < 2; layer++) {
+            if (currentSpot[x][y][layer] !== origSpot[x]?.[y]?.[layer]) {
+              this.send(ws, {
+                type: 'ROOM_OBJECT_CHANGED',
+                room: roomIdx,
+                x,
+                y,
+                newType: currentSpot[x][y][layer],
+                layer: layer === 0 ? 'floor' : 'wall',
+              });
+            }
+          }
         }
       }
     }
@@ -1153,6 +1199,105 @@ export class GameSession {
     return -1; // diagonals and zero-vector: no cross-room
   }
 
+  /**
+   * Destroy vulnerable objects on a tile and trigger flammable chain reactions.
+   * Called for each tile along an explosion ray when the boombit has destroys > 0.
+   */
+  private destroyTile(
+    attacker: Player,
+    roomIdx: number,
+    x: number,
+    y: number,
+    depth: number,
+    visited: Set<string>,
+  ): void {
+    const key = `${roomIdx},${x},${y}`;
+    if (visited.has(key)) return;
+    visited.add(key);
+
+    const roomData = this.world.rooms[roomIdx];
+    if (!roomData) return;
+
+    const flammableQueue: Array<{ boombit: number; radius: number; spread: number }> = [];
+
+    // Check spot array (floor layer [0], wall layer [1])
+    const cell = roomData.spot?.[x]?.[y];
+    if (cell) {
+      for (let layer = 0; layer < 2; layer++) {
+        const objId = cell[layer];
+        if (objId <= 0) continue;
+        const obj = this.world.objects[objId];
+        if (!obj?.vulnerable) continue;
+
+        const fp = collectFlammableParams(obj);
+        if (fp) flammableQueue.push(fp);
+
+        cell[layer] = obj.destroyed ?? 0;
+        this.broadcastToRoom(roomIdx, {
+          type: 'ROOM_OBJECT_CHANGED',
+          room: roomIdx,
+          x,
+          y,
+          newType: cell[layer],
+          layer: layer === 0 ? 'floor' : 'wall',
+        });
+      }
+    }
+
+    // Check recorded_objects at this tile
+    for (const ro of roomData.recorded_objects) {
+      if (ro.x !== x || ro.y !== y) continue;
+      const obj = this.world.objects[ro.type];
+      if (!obj?.vulnerable) continue;
+
+      const fp = collectFlammableParams(obj);
+      if (fp) flammableQueue.push(fp);
+
+      ro.type = obj.destroyed ?? 0;
+      this.broadcastToRoom(roomIdx, {
+        type: 'ROOM_OBJECT_CHANGED',
+        room: roomIdx,
+        x,
+        y,
+        newType: ro.type,
+      });
+    }
+
+    // Check dropped items
+    const itemMap = this.roomItems.get(roomIdx);
+    const itemKey = `${x},${y}`;
+    const item = itemMap?.get(itemKey);
+    if (item && itemMap) {
+      const obj = this.world.objects[item.type];
+      if (obj?.vulnerable) {
+        const fp = collectFlammableParams(obj);
+        if (fp) flammableQueue.push(fp);
+        itemMap.delete(itemKey);
+        this.broadcastToRoom(roomIdx, { type: 'ITEM_REMOVED', room: roomIdx, x, y });
+      }
+    }
+
+    // Trigger flammable secondary explosions
+    if (depth < MAX_EXPLOSION_DEPTH) {
+      for (const f of flammableQueue) {
+        const boomObj = this.world.objects[f.boombit];
+        const piercing = (boomObj?.piercing ?? 0) > 0;
+        this.triggerExplosion(
+          attacker,
+          roomIdx,
+          x,
+          y,
+          f.boombit,
+          f.radius,
+          piercing,
+          f.spread,
+          depth + 1,
+          visited,
+        );
+      }
+    }
+  }
+
   private triggerExplosion(
     attacker: Player,
     roomIdx: number,
@@ -1163,6 +1308,7 @@ export class GameSession {
     piercing: boolean,
     spread: number = DEFAULT_SPREAD,
     depth: number = 0,
+    visited: Set<string> = new Set(),
   ): void {
     const boomObj = this.world.objects[boomObjType];
     if (!boomObj) return;
@@ -1179,6 +1325,11 @@ export class GameSession {
       if (p) this.dealDamage(p, damage, attacker);
     } else if (centerHit?.monsterId !== undefined) {
       this.monsterManager.damageMonster(centerHit.monsterId, damage, attacker.id);
+    }
+
+    // Destroy center tile if this explosion destroys objects
+    if (boomObj.destroys) {
+      this.destroyTile(attacker, roomIdx, landX, landY, depth, visited);
     }
 
     // Pre-compute chain-reaction params (invariant across all rays)
@@ -1200,7 +1351,28 @@ export class GameSession {
         piercing,
         roomIdx,
       );
-      if (path.length === 0) continue;
+
+      // Even if the path is empty (wall immediately blocks), we may need to
+      // destroy the blocking tile. Compute it: one step from center in ray direction.
+      let blockedTile: { x: number; y: number } | null = null;
+      if (boomObj.destroys && path.length < radius) {
+        // The ray was cut short by a wall. Find the tile that blocked it.
+        const lastX = path.length > 0 ? path[path.length - 1].x : landX;
+        const lastY = path.length > 0 ? path[path.length - 1].y : landY;
+        const nextX = lastX + (dx || Math.sign(offsetX));
+        const nextY = lastY + (dy || Math.sign(offsetY));
+        if (nextX >= 0 && nextX < GRID && nextY >= 0 && nextY < GRID) {
+          blockedTile = { x: nextX, y: nextY };
+        }
+      }
+
+      if (path.length === 0) {
+        // No visible ray, but still try to destroy the blocking tile
+        if (blockedTile) {
+          this.destroyTile(attacker, roomIdx, blockedTile.x, blockedTile.y, depth, visited);
+        }
+        continue;
+      }
 
       // Find first entity hit along this ray (attacker included — self-damage allowed)
       const hit = this.findEntityHitOnPath(path, roomIdx);
@@ -1227,6 +1399,16 @@ export class GameSession {
           this.monsterManager.damageMonster(hit.monsterId, damage, attacker.id);
         }
 
+        // Destroy tiles along the ray, including the blocking tile
+        if (boomObj.destroys) {
+          for (const tile of finalPath) {
+            this.destroyTile(attacker, roomIdx, tile.x, tile.y, depth, visited);
+          }
+          if (blockedTile) {
+            this.destroyTile(attacker, roomIdx, blockedTile.x, blockedTile.y, depth, visited);
+          }
+        }
+
         if (chainParams && finalPath.length > 0) {
           const endTile = finalPath[finalPath.length - 1];
           this.triggerExplosion(
@@ -1239,6 +1421,7 @@ export class GameSession {
             chainParams.piercing,
             chainParams.spread,
             depth + 1,
+            visited,
           );
         }
       }, finalPath.length * msPerStep);
