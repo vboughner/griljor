@@ -4,6 +4,36 @@ import { buildTestWorld, joinPlayer } from './helpers';
 import type { RoomData, RecObj } from '../../world';
 
 describe('spawn / respawn', () => {
+  it('never spawns a player in a disconnected room (no exits)', () => {
+    const world = buildTestWorld();
+
+    // Add a disconnected void room (no exits, all tiles [0,0], floor=0)
+    const voidSpot: number[][][] = Array.from({ length: 20 }, () =>
+      Array.from({ length: 20 }, () => [0, 0]),
+    );
+    const disconnectedRoom: RoomData = {
+      name: 'disconnected',
+      floor: 0,
+      team: 0,
+      recorded_objects: [],
+      spot: voidSpot,
+      exitNorth: -1,
+      exitEast: -1,
+      exitSouth: -1,
+      exitWest: -1,
+    };
+    world.rooms.push(disconnectedRoom);
+    world.roomCount = world.rooms.length;
+
+    const session = new GameSession(world);
+
+    // Join many players — none should land in room 1 (the disconnected room)
+    for (let i = 0; i < 30; i++) {
+      const p = joinPlayer(session, `Player${i}`);
+      expect(p.room, `Player${i} spawned in disconnected room 1`).toBe(0);
+    }
+  });
+
   it('does not spawn a player on a tile blocked by a recorded_object', () => {
     // Build a world where every tile except (10,10) has a blocking recorded_object
     const world = buildTestWorld();

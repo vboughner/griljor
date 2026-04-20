@@ -1770,10 +1770,29 @@ export class GameSession {
   // Falls back to any room if no team room found.
   private randomSpawnForTeam(team: number): { room: number; x: number; y: number } | null {
     // Collect candidate room indices for this team, then fall back to all rooms
+    const hasExit = (r: RoomData) => {
+      if (r.exitNorth !== -1 || r.exitEast !== -1 || r.exitSouth !== -1 || r.exitWest !== -1) {
+        return true;
+      }
+      // Check for exit-flagged objects (stairs, ladders, etc.) in the tile grid
+      if (r.spot) {
+        for (let x = 0; x < GRID; x++) {
+          for (let y = 0; y < GRID; y++) {
+            const [flId, wlId] = r.spot[x]?.[y] ?? [0, 0];
+            if (
+              (flId && this.world.objects[flId]?.exit) ||
+              (wlId && this.world.objects[wlId]?.exit)
+            )
+              return true;
+          }
+        }
+      }
+      return false;
+    };
     const pickRooms = (t: number) =>
       this.world.rooms
         .map((r, i) => ({ r, i }))
-        .filter(({ r }) => t === -1 || r.team === t)
+        .filter(({ r }) => (t === -1 || r.team === t) && hasExit(r))
         .map(({ i }) => i);
 
     let candidates = pickRooms(team);

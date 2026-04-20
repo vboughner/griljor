@@ -43,6 +43,7 @@ npm run test:client    # client only
 | `pickup-proximity.test.ts` | Out-of-range rejection, boundary pickup, same-tile pickup, LOS-blocked rejection, transparent-but-unwalkable (window) rejection, unwalkable destination rejection |
 | `placement.test.ts` | Interval timing, player-count scaling, team/room targeting, quantity, non-takeable/invalid object skipping, timer cleanup, loadWorld rule validation against object file |
 | `map-reset.test.ts` | `mapStartedAt` getter, `tryReset` success/failure, `startedAt` reset, item restoration after reset, auto-reset timer cancellation |
+| `spawn.test.ts` | Disconnected room spawn exclusion, recorded-object tile blocking |
 
 **`helpers.ts`** exports:
 - `MockWebSocket` — captures S→C messages; `receive(msg)` to inject C→S; `flush()`, `close()`
@@ -2526,5 +2527,20 @@ Not all object sets have flavor text. Coverage by object file:
 | `trevor.json` | 3 | 1 | *(no maps reference this)* |
 | `ring.json` | 0 | 0 | ring |
 | `trek.json` | 0 | 0 | trek |
+
+---
+
+## Bug Fix — Disconnected Room Spawn Exclusion
+
+Players could respawn in completely disconnected rooms (no cardinal exits, no exit-flagged tile objects like stairs or ladders). In the Playtester Paradise map, rooms 17, 18, 19, and 41 are unused void rooms with `floor: 0` and all exits set to `-1`. Because `randomWalkableTile` treats void tiles `[0,0]` as walkable when `room.floor === 0`, these rooms each had 400 "valid" spawn tiles — trapping players with no way out.
+
+### Fix
+
+`randomSpawnForTeam()` now filters candidate rooms through a `hasExit()` check that requires at least one of:
+
+- A cardinal exit (`exitNorth/East/South/West !== -1`), or
+- An `exit`-flagged object in the room's tile grid (stairs, ladders, trap doors, cave mouths, conveyor belts, etc.)
+
+The `exit` field was added to the `ObjDef` interface in `world.ts` to type the property that already existed in the pipeline JSON data.
 
 The `flames` object set has the richest flavor text — 16 examine messages covering the potted plant growth stages, the dead rat flag, and the flame thrower. The `standard`/`main`/`trevor` sets share the same sludge gun examinemsg and a few lookmsg entries for tokens and torn items.
