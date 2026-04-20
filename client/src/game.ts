@@ -480,15 +480,25 @@ export class Game {
     net.onRoomObjectChanged = async (msg) => {
       const room = this.mapData.rooms[msg.room];
       if (!room) return;
-      // Update the type of the matching recorded object
-      for (const ro of room.recorded_objects ?? []) {
-        if (ro.x === msg.x && ro.y === msg.y && this.objects[ro.type]?.swings) {
-          ro.type = msg.newType;
-          break;
+
+      if (msg.layer && room.spot) {
+        // Spot-layer change (destruction / flammable chain reaction)
+        const layerIdx = msg.layer === 'floor' ? 0 : 1;
+        if (room.spot[msg.x]?.[msg.y]) {
+          room.spot[msg.x][msg.y][layerIdx] = msg.newType;
+        }
+      } else {
+        // Existing behavior: recorded_objects change (door toggles, destruction)
+        for (const ro of room.recorded_objects ?? []) {
+          if (ro.x === msg.x && ro.y === msg.y) {
+            ro.type = msg.newType;
+            break;
+          }
         }
       }
+
       if (msg.room === this.currentRoom) {
-        this.roomBg = null; // door appearance changed — rebuild background
+        this.roomBg = null; // rebuild background
         this.computeVisibility();
         await this.render();
       }
