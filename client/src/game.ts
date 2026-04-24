@@ -18,6 +18,10 @@ import { tileIsVisible, tileViewBlocked } from './los';
 const GRID = 20;
 const TOMBSTONE_BIT = '/sprites/bitmaps/tombbit.png';
 const TOMBSTONE_MASK = '/sprites/bitmaps/tombmask.png';
+const WINNER_BIT = '/sprites/bit/winner.png';
+const WINNER_MASK = '/sprites/bit/wmask.png';
+const LOSER_BIT = '/sprites/bit/loser.png';
+const LOSER_MASK = '/sprites/bit/lmask.png';
 
 interface MissileAnim {
   x: number;
@@ -76,6 +80,21 @@ export class Game {
   private playerSprite: ImageData | null = null;
   private tombstoneSprite: ImageData | null = null;
   private isDead = false;
+  private gameOver = false;
+  private winningTeam = 0;
+  private winnerName = '';
+  private gameOverEndTime = 0;
+  private winnerSprite: ImageData | null = null;
+  private loserSprite: ImageData | null = null;
+  private gameOverTimer: ReturnType<typeof setInterval> | null = null;
+  private flagStatus: Array<{
+    objType: number;
+    room: number;
+    x: number;
+    y: number;
+    heldBy: number;
+    teamHolding: number;
+  }> = [];
   private avatarName: string = 'crom';
   private canvas: HTMLCanvasElement;
   private roomInfo: HTMLElement;
@@ -202,6 +221,7 @@ export class Game {
       const d = keyDirs[e.key] ?? codeDirs[e.code];
       if (d) {
         e.preventDefault();
+        if (this.gameOver) return;
         this.stopMoving();
         if (Date.now() < this.moveReadyAt) return;
         this.moveReadyAt = Infinity; // lock until move resolves
@@ -250,12 +270,12 @@ export class Game {
       // Item actions
       if (e.key === 'f') {
         e.preventDefault();
-        if (!this.isDead) this.network?.sendPickup(this.px, this.py);
+        if (!this.isDead && !this.gameOver) this.network?.sendPickup(this.px, this.py);
         return;
       }
       if (e.key === 'g') {
         e.preventDefault();
-        if (!this.isDead) this.network?.sendDrop('active');
+        if (!this.isDead && !this.gameOver) this.network?.sendDrop('active');
         return;
       }
     };
@@ -271,7 +291,7 @@ export class Game {
 
       // Border click: right-click walks toward exit; left fires into next room
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
-        if (this.isDead) return;
+        if (this.isDead || this.gameOver) return;
         if (e.button === 2) {
           this.startMovingTo(tx, ty);
         } else if (e.button === 0) {
@@ -282,7 +302,7 @@ export class Game {
 
       if (e.button === 0) {
         // Left-click: pick up, use opener, or fire weapon
-        if (this.isDead) return;
+        if (this.isDead || this.gameOver) return;
         const handObj = this.leftHand ? this.objects[this.leftHand.type] : null;
         const key = `${tx},${ty}`;
         const tileOccupied = [...this.otherPlayers.values()].some(
@@ -314,7 +334,7 @@ export class Game {
 
       // Right-click: walk toward clicked tile
       if (e.button === 2) {
-        if (this.isDead) return;
+        if (this.isDead || this.gameOver) return;
         this.startMovingTo(tx, ty);
       }
     });
@@ -555,6 +575,22 @@ export class Game {
       this.monsters.delete(msg.id);
       await this.render();
     };
+
+    net.onFlagStatus = (msg) => {
+      this.flagStatus = msg.flags;
+      void this.render();
+    };
+
+    net.onGameOver = (msg) => {
+      this.gameOver = true;
+      this.winningTeam = msg.winningTeam;
+      this.winnerName = msg.winnerName;
+      this.gameOverEndTime = Date.now() + msg.endsInMs;
+      this.stopMoving();
+      void this.render();
+      // Start a periodic re-render to update the countdown timer
+      this.gameOverTimer = setInterval(() => void this.render(), 1000);
+    };
   }
 
   /** Sync active hand for click routing (opens, health, weapon checks). */
@@ -589,6 +625,7 @@ export class Game {
   destroy(): void {
     this.destroyed = true;
     if (this.fogAnimFrame !== null) cancelAnimationFrame(this.fogAnimFrame);
+    if (this.gameOverTimer !== null) clearInterval(this.gameOverTimer);
     window.removeEventListener('keydown', this.onKeyDown);
     this.stopMoving();
     for (const anim of this.missiles.values()) {
@@ -660,6 +697,12 @@ export class Game {
     this.exitMap = buildExitMap(this.mapData.rooms[index], this.objects);
     this.exitKeys = new Set(this.exitMap.keys());
     this.tombstoneSprite = await loadMaskedSprite(TOMBSTONE_BIT, TOMBSTONE_MASK);
+    if (!this.winnerSprite) {
+      this.winnerSprite = await loadMaskedSprite(WINNER_BIT, WINNER_MASK);
+    }
+    if (!this.loserSprite) {
+      this.loserSprite = await loadMaskedSprite(LOSER_BIT, LOSER_MASK);
+    }
     this.network?.sendLocation(this.currentRoom, this.px, this.py);
     await this.render();
   }
@@ -1041,10 +1084,16 @@ export class Game {
 
     const floorItems = this.floorItems.get(this.currentRoom) ?? new Map<string, InventoryItem>();
 
+    // During game-over, replace local player sprite with winner/loser
+    let localSprite = this.isDead ? this.tombstoneSprite : this.playerSprite;
+    if (this.gameOver && this.winnerSprite && this.loserSprite) {
+      localSprite = this.myTeam === this.winningTeam ? this.winnerSprite : this.loserSprite;
+    }
+
     await renderFrame(
       this.canvas,
       this.roomBg,
-      this.isDead ? this.tombstoneSprite : this.playerSprite,
+      localSprite,
       this.px,
       this.py,
       others,
@@ -1061,6 +1110,10 @@ export class Game {
       this.currentWeight,
       this.maxWeight,
       this.invFull,
+      this.gameOver,
+      this.winningTeam,
+      this.winnerSprite,
+      this.loserSprite,
     );
     if (this.fogEnabled) this.drawFogOverlay();
     this.drawBorderIndicators(room);
@@ -1068,6 +1121,8 @@ export class Game {
     this.drawHitMarkers();
     await this.drawPunchMarkers();
     this.drawScreenFlash();
+    if (this.gameOver) this.drawGameOverOverlay();
+    else if (this.flagStatus.length > 0 && this.mapData.map.teams_supported > 1) this.drawFlagHud();
     this.roomInfo.textContent = room.name && room.name !== 'no name' ? room.name : '';
   }
 
@@ -1144,6 +1199,78 @@ export class Game {
       ctx.drawImage(bm, -TILE / 2, -TILE / 2);
       ctx.restore();
     }
+  }
+
+  private drawGameOverOverlay(): void {
+    const ctx = this.canvas.getContext('2d')!;
+    const w = this.canvas.width;
+    ctx.save();
+
+    // Semi-transparent dark banner at top
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.fillRect(0, 0, w, 60);
+
+    // "Team N Wins!" text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px monospace';
+    ctx.textAlign = 'center';
+    const won = this.myTeam === this.winningTeam;
+    const headline = won ? `Your Team Wins!` : `Team ${this.winningTeam} Wins!`;
+    ctx.fillText(headline, w / 2, 25);
+
+    // Countdown
+    const remaining = Math.max(0, Math.ceil((this.gameOverEndTime - Date.now()) / 1000));
+    ctx.font = '14px monospace';
+    ctx.fillStyle = '#cccccc';
+    ctx.fillText(`${this.winnerName} captured the flag. Game ends in ${remaining}s`, w / 2, 48);
+
+    ctx.restore();
+  }
+
+  private drawFlagHud(): void {
+    const ctx = this.canvas.getContext('2d')!;
+    const w = this.canvas.width;
+    ctx.save();
+
+    // Build per-team status from flag data
+    const teamFlags = new Map<number, { held: boolean; holder: string }>();
+    for (const f of this.flagStatus) {
+      const holderName =
+        f.heldBy > 0
+          ? ([...this.otherPlayers.values()].find((p) => p.id === f.heldBy)?.name ?? '???')
+          : '';
+      teamFlags.set(f.teamHolding, { held: f.heldBy > 0, holder: holderName });
+    }
+
+    if (teamFlags.size === 0) {
+      ctx.restore();
+      return;
+    }
+
+    // Small indicator in the top-right corner
+    const lineHeight = 16;
+    const lines: string[] = [];
+    for (const [team, info] of teamFlags) {
+      const status = info.held ? `carried by ${info.holder}` : 'at base';
+      lines.push(`Team ${team} flag: ${status}`);
+    }
+
+    const boxW = 240;
+    const boxH = lines.length * lineHeight + 10;
+    const boxX = w - boxW - 4;
+    const boxY = 4;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    ctx.fillRect(boxX, boxY, boxW, boxH);
+
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#dddddd';
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], boxX + 6, boxY + 14 + i * lineHeight);
+    }
+
+    ctx.restore();
   }
 
   private drawScreenFlash(): void {

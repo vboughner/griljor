@@ -215,6 +215,10 @@ export async function renderFrame(
   currentWeight: number = 0,
   maxWeight: number = 150,
   invFull: boolean = false,
+  gameOver: boolean = false,
+  winningTeam: number = 0,
+  winnerSprite: ImageData | null = null,
+  loserSprite: ImageData | null = null,
 ): Promise<void> {
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bg, 0, 0);
@@ -262,7 +266,14 @@ export async function renderFrame(
 
   // Draw other players first (behind local player)
   for (const other of others) {
-    const effectiveSprite = other.dead && tombstoneSprite ? tombstoneSprite : other.sprite;
+    let effectiveSprite: ImageData | null;
+    if (gameOver && winnerSprite && loserSprite) {
+      effectiveSprite = other.team === winningTeam ? winnerSprite : loserSprite;
+    } else if (other.dead && tombstoneSprite) {
+      effectiveSprite = tombstoneSprite;
+    } else {
+      effectiveSprite = other.sprite;
+    }
     if (effectiveSprite) {
       const bm = await getBitmap(effectiveSprite);
       ctx.drawImage(bm, BORDER + other.px * TILE, BORDER + other.py * TILE, TILE, TILE);
