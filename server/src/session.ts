@@ -518,6 +518,7 @@ export class GameSession {
   }
 
   private teamHasWon(team: number): boolean {
+    let hasRequiredFlags = false;
     for (const flagType of this.flagObjTypes) {
       const flagDef = this.world.objects[flagType];
       if (!flagDef) continue;
@@ -526,6 +527,7 @@ export class GameSession {
       const teamNeeds =
         flagDef.flagteams === undefined || (flagDef.flagteams & (1 << (team - 1))) !== 0;
       if (!teamNeeds) continue;
+      hasRequiredFlags = true;
 
       // Check if at least one instance is on the floor in a team-owned room
       let found = false;
@@ -541,7 +543,7 @@ export class GameSession {
       }
       if (!found) return false;
     }
-    return true;
+    return hasRequiredFlags;
   }
 
   private checkFlagWin(dropperName: string): void {

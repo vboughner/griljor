@@ -221,7 +221,6 @@ export class Game {
       const d = keyDirs[e.key] ?? codeDirs[e.code];
       if (d) {
         e.preventDefault();
-        if (this.gameOver) return;
         this.stopMoving();
         if (Date.now() < this.moveReadyAt) return;
         this.moveReadyAt = Infinity; // lock until move resolves
@@ -291,10 +290,10 @@ export class Game {
 
       // Border click: right-click walks toward exit; left fires into next room
       if (tx < 0 || tx >= GRID || ty < 0 || ty >= GRID) {
-        if (this.isDead || this.gameOver) return;
+        if (this.isDead) return;
         if (e.button === 2) {
           this.startMovingTo(tx, ty);
-        } else if (e.button === 0) {
+        } else if (e.button === 0 && !this.gameOver) {
           this.network?.sendFireWeapon(tx, ty);
         }
         return;
@@ -334,7 +333,7 @@ export class Game {
 
       // Right-click: walk toward clicked tile
       if (e.button === 2) {
-        if (this.isDead || this.gameOver) return;
+        if (this.isDead) return;
         this.startMovingTo(tx, ty);
       }
     });

@@ -435,10 +435,9 @@ describe('capture-the-flag', () => {
 
   // ── flagteams bitmask ────────────────────────────────────────────────
 
-  it('flagteams bitmask: team with no required flags wins vacuously on any drop', () => {
+  it('flagteams bitmask: team with no required flags cannot win', () => {
     // flagteams:1 means only team 1 (bit 0) needs the flag.
-    // Team 2 has zero required flags, so teamHasWon(2) returns true
-    // as soon as checkFlagWin runs (any flag drop).
+    // Team 2 has zero required flags, so dropping in team 2 room should NOT win.
     session = new GameSession(buildTeam1OnlyFlagWorld());
     const bob = joinPlayer(session, 'Bob', 'b', 2);
 
@@ -448,8 +447,7 @@ describe('capture-the-flag', () => {
     dropActive(bob);
 
     const gameOver = bob.ws.messagesOfType('GAME_OVER');
-    expect(gameOver.length).toBe(1);
-    expect(gameOver[0].winningTeam).toBe(2);
+    expect(gameOver.length).toBe(0);
   });
 
   it('flagteams bitmask: team 1 dropping team-1-only flag in team 1 room wins', () => {
