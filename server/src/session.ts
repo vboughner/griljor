@@ -328,6 +328,12 @@ export class GameSession {
 
   private startedAt = Date.now();
 
+  // Capture-the-flag state
+  private ctfEnabled = false;
+  private gameOver = false;
+  private gameOverTimer: ReturnType<typeof setTimeout> | null = null;
+  private flagObjTypes: number[] = [];
+
   constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
     this.onPlayerCountChange = opts?.onPlayerCountChange;
     this.world = world;
@@ -336,6 +342,7 @@ export class GameSession {
     );
     this.originalSpots = world.rooms.map((r) => (r.spot ? cloneSpot(r.spot) : undefined));
     this.initRoomItems();
+    this.initCtf();
     this.monsterManager = new MonsterManager(this.buildMonsterSessionInterface());
     this.monsterManager.init();
   }
@@ -345,6 +352,10 @@ export class GameSession {
       this.clearAfkTimers(player);
     }
     this.stopTickIntervals();
+    if (this.gameOverTimer !== null) {
+      clearTimeout(this.gameOverTimer);
+      this.gameOverTimer = null;
+    }
   }
 
   private startTickIntervals(): void {
@@ -449,6 +460,122 @@ export class GameSession {
     }
   }
 
+  private initCtf(): void {
+    if (this.world.teams < 2) return;
+    this.flagObjTypes = this.world.objects
+      .filter((o): o is ObjDef => o !== null && !!o.flag)
+      .map((o) => o._index);
+    this.ctfEnabled = this.flagObjTypes.length > 0;
+  }
+
+  private buildFlagStatus(): Extract<S2CMessage, { type: 'FLAG_STATUS' }> {
+    const flags: Array<{
+      objType: number;
+      room: number;
+      x: number;
+      y: number;
+      heldBy: number;
+      teamHolding: number;
+    }> = [];
+
+    // Floor flags
+    for (const [roomIdx, itemMap] of this.roomItems) {
+      for (const [key, item] of itemMap) {
+        if (!this.world.objects[item.type]?.flag) continue;
+        const [sx, sy] = key.split(',').map(Number);
+        flags.push({
+          objType: item.type,
+          room: roomIdx,
+          x: sx,
+          y: sy,
+          heldBy: 0,
+          teamHolding: this.world.rooms[roomIdx].team,
+        });
+      }
+    }
+
+    // Carried flags
+    for (const player of this.players.values()) {
+      const allItems = [player.leftHand, ...player.inventory];
+      for (const item of allItems) {
+        if (!item || !this.world.objects[item.type]?.flag) continue;
+        flags.push({
+          objType: item.type,
+          room: -1,
+          x: 0,
+          y: 0,
+          heldBy: player.id,
+          teamHolding: 0,
+        });
+      }
+    }
+
+    return { type: 'FLAG_STATUS', flags };
+  }
+
+  private broadcastFlagStatus(): void {
+    this.broadcast(this.buildFlagStatus());
+  }
+
+  private teamHasWon(team: number): boolean {
+    for (const flagType of this.flagObjTypes) {
+      const flagDef = this.world.objects[flagType];
+      if (!flagDef) continue;
+
+      // Check if this team needs this flag
+      const teamNeeds =
+        flagDef.flagteams === undefined || (flagDef.flagteams & (1 << (team - 1))) !== 0;
+      if (!teamNeeds) continue;
+
+      // Check if at least one instance is on the floor in a team-owned room
+      let found = false;
+      for (const [roomIdx, itemMap] of this.roomItems) {
+        if (this.world.rooms[roomIdx].team !== team) continue;
+        for (const item of itemMap.values()) {
+          if (item.type === flagType) {
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+      if (!found) return false;
+    }
+    return true;
+  }
+
+  private checkFlagWin(dropperName: string): void {
+    if (!this.ctfEnabled || this.gameOver) return;
+    for (let team = 1; team <= this.world.teams; team++) {
+      if (this.teamHasWon(team)) {
+        this.triggerGameOver(team, dropperName);
+        return;
+      }
+    }
+  }
+
+  private triggerGameOver(winningTeam: number, winnerName: string): void {
+    this.gameOver = true;
+
+    // Cancel all respawn timers
+    for (const player of this.players.values()) {
+      if (player.respawnTimer !== null) {
+        clearTimeout(player.respawnTimer);
+        player.respawnTimer = null;
+      }
+    }
+
+    this.broadcastGM(`Team ${winningTeam} wins! Game ends in 30 seconds.`);
+    this.broadcast({ type: 'GAME_OVER', winningTeam, winnerName, endsInMs: 30000 });
+    this.gameOverTimer = setTimeout(() => this.disconnectAllPlayers(), 30000);
+  }
+
+  private disconnectAllPlayers(): void {
+    for (const player of this.players.values()) {
+      player.ws.close();
+    }
+  }
+
   private resetWorldState(): void {
     for (let i = 0; i < this.world.rooms.length; i++) {
       this.world.rooms[i].recorded_objects = this.originalRecordedObjects[i].map((ro) => ({
@@ -465,6 +592,11 @@ export class GameSession {
     this.monsterManager.reset();
     this.lastPlacementTime = Math.floor(Date.now() / 1000);
     this.startedAt = Date.now();
+    this.gameOver = false;
+    if (this.gameOverTimer !== null) {
+      clearTimeout(this.gameOverTimer);
+      this.gameOverTimer = null;
+    }
   }
 
   get playerCount(): number {
@@ -712,6 +844,10 @@ export class GameSession {
     }
     this.send(ws, { type: 'ITEMS_SYNC', items: syncItems });
 
+    if (this.ctfEnabled) {
+      this.send(ws, this.buildFlagStatus());
+    }
+
     // Sync any recorded_objects that have been toggled from their original state
     // (e.g. doors opened by another player before this player joined)
     for (let roomIdx = 0; roomIdx < this.world.rooms.length; roomIdx++) {
@@ -921,6 +1057,7 @@ export class GameSession {
     const player = this.players.get(playerId);
     if (!player) return;
     if (player.dead) return;
+    if (this.gameOver) return;
 
     const roomMap = this.roomItems.get(player.room);
     const key = `${msg.x},${msg.y}`;
@@ -1006,12 +1143,17 @@ export class GameSession {
 
     this.broadcast({ type: 'ITEM_REMOVED', room: player.room, x: msg.x, y: msg.y });
     this.sendInventory(player);
+
+    if (this.ctfEnabled && this.world.objects[item.type]?.flag) {
+      this.broadcastFlagStatus();
+    }
   }
 
   private onDrop(playerId: number, msg: Extract<C2SMessage, { type: 'DROP' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
     if (player.dead) return;
+    if (this.gameOver) return;
 
     let item: InventoryItem | null = null;
     if (msg.source === 'active') {
@@ -1041,6 +1183,11 @@ export class GameSession {
     }
 
     this.sendInventory(player);
+
+    if (this.ctfEnabled && this.world.objects[item.type]?.flag) {
+      this.broadcastFlagStatus();
+      this.checkFlagWin(player.name);
+    }
   }
 
   private onInvSwap(playerId: number, msg: Extract<C2SMessage, { type: 'INV_SWAP' }>): void {
@@ -1442,6 +1589,7 @@ export class GameSession {
   private onFireWeapon(playerId: number, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
     const player = this.players.get(playerId);
     if (!player) return;
+    if (this.gameOver) return;
     if (player.dead) return;
 
     const handItem = player.leftHand;
@@ -1707,6 +1855,10 @@ export class GameSession {
             y: tile.y,
             item: droppedItem,
           });
+          if (this.ctfEnabled && this.world.objects[movingObjType]?.flag) {
+            this.broadcastFlagStatus();
+            this.checkFlagWin(player.name);
+          }
         }
       }
     }, travelMs);
@@ -1714,6 +1866,7 @@ export class GameSession {
   }
 
   private onPunch(player: Player, msg: Extract<C2SMessage, { type: 'FIRE_WEAPON' }>): void {
+    if (this.gameOver) return;
     if (Date.now() - player.lastPunchedAt < PUNCH_COOLDOWN_MS) return;
 
     const dx = Math.sign(msg.targetX - player.x);
@@ -1945,6 +2098,12 @@ export class GameSession {
         this.roomItems.set(player.room, roomMap);
         this.broadcast({ type: 'ITEM_ADDED', room: player.room, x: tile.x, y: tile.y, item });
       }
+    }
+
+    const droppedFlag = items.some((item) => item && this.world.objects[item.type]?.flag);
+    if (this.ctfEnabled && droppedFlag) {
+      this.broadcastFlagStatus();
+      this.checkFlagWin(player.name);
     }
   }
 
