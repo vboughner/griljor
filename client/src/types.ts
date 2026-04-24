@@ -66,6 +66,8 @@ export interface ObjDef {
   lost?: boolean; // consumed on use
   lookmsg?: string;
   examinemsg?: string;
+  flag?: boolean; // true = this object is a game flag
+  flagteams?: number; // bitmask: which teams need this flag (absent = all teams)
 }
 
 export interface InventoryItem {

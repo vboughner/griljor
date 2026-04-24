@@ -111,7 +111,24 @@ type S2CMessage =
       monsterId: string;
     }
   | { type: 'MONSTER_LOCATION'; id: number; room: number; x: number; y: number }
-  | { type: 'MONSTER_HIDDEN'; id: number };
+  | { type: 'MONSTER_HIDDEN'; id: number }
+  | {
+      type: 'FLAG_STATUS';
+      flags: Array<{
+        objType: number;
+        room: number;
+        x: number;
+        y: number;
+        heldBy: number;
+        teamHolding: number;
+      }>;
+    }
+  | {
+      type: 'GAME_OVER';
+      winningTeam: number;
+      winnerName: string;
+      endsInMs: number;
+    };
 
 export class GameNetwork {
   private ws: WebSocket;
@@ -145,6 +162,8 @@ export class GameNetwork {
   onMonsterInfo: (msg: Extract<S2CMessage, { type: 'MONSTER_INFO' }>) => void = () => {};
   onMonsterLocation: (msg: Extract<S2CMessage, { type: 'MONSTER_LOCATION' }>) => void = () => {};
   onMonsterHidden: (msg: Extract<S2CMessage, { type: 'MONSTER_HIDDEN' }>) => void = () => {};
+  onFlagStatus: (msg: Extract<S2CMessage, { type: 'FLAG_STATUS' }>) => void = () => {};
+  onGameOver: (msg: Extract<S2CMessage, { type: 'GAME_OVER' }>) => void = () => {};
   onClose: () => void = () => {};
 
   constructor(url: string) {
@@ -253,6 +272,12 @@ export class GameNetwork {
           break;
         case 'MONSTER_HIDDEN':
           this.onMonsterHidden(msg);
+          break;
+        case 'FLAG_STATUS':
+          this.onFlagStatus(msg);
+          break;
+        case 'GAME_OVER':
+          this.onGameOver(msg);
           break;
       }
     });

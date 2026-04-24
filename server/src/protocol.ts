@@ -116,4 +116,21 @@ export type S2CMessage =
       monsterId: string; // definition id for client-side rendering hints
     }
   | { type: 'MONSTER_LOCATION'; id: number; room: number; x: number; y: number }
-  | { type: 'MONSTER_HIDDEN'; id: number };
+  | { type: 'MONSTER_HIDDEN'; id: number }
+  | {
+      type: 'FLAG_STATUS';
+      flags: Array<{
+        objType: number;
+        room: number; // -1 if carried
+        x: number;
+        y: number;
+        heldBy: number; // player id, or 0
+        teamHolding: number; // team of room it's in, 0 if carried/neutral
+      }>;
+    }
+  | {
+      type: 'GAME_OVER';
+      winningTeam: number;
+      winnerName: string;
+      endsInMs: number; // 30000
+    };

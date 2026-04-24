@@ -37,6 +37,8 @@ export interface ObjDef {
   vulnerable?: boolean; // can be destroyed by explosions with destroys > 0
   destroyed?: number; // object type this becomes when destroyed
   destroys?: number; // >0: this explosion can destroy vulnerable objects
+  flag?: boolean; // true = this object is a game flag
+  flagteams?: number; // bitmask: which teams need this flag (absent = all teams)
 }
 
 export interface RecObj {
