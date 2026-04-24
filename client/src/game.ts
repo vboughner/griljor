@@ -109,6 +109,8 @@ export class Game {
 
   // hand items (kept in sync via setHands, used for click routing)
   private leftHand: InventoryItem | null = null;
+  // full inventory for light radius calculation in dark rooms
+  private inventory: Array<InventoryItem | null> = [];
 
   // local player HP for speed penalty
   private myHp = 100;
@@ -562,6 +564,17 @@ export class Game {
     this.leftHand = item;
   }
 
+  /** Sync full inventory for dark room light radius calculation. */
+  setInventory(inv: Array<InventoryItem | null>): void {
+    if (!this.isRoomDark()) {
+      this.inventory = inv;
+      return;
+    }
+    const prev = this.getEffectiveLightRadius();
+    this.inventory = inv;
+    if (this.getEffectiveLightRadius() !== prev) this.computeVisibility();
+  }
+
   /** Update local player HP for movement speed penalty calculation. */
   setMyHp(hp: number, maxHp: number): void {
     this.myHp = hp;
@@ -655,6 +668,13 @@ export class Game {
     }
     this.px = px;
     this.py = py;
+    // Reset fog: fully black for dark rooms, light dim for lit rooms
+    const fogInit = this.isRoomDark() ? 1.0 : 0.2;
+    for (let x = 0; x < GRID; x++) {
+      for (let y = 0; y < GRID; y++) {
+        this.fogAlpha[x][y] = fogInit;
+      }
+    }
     this.computeVisibility();
     this.roomBg = null;
     this.exitMap = buildExitMap(this.mapData.rooms[index], this.objects);
@@ -899,6 +919,33 @@ export class Game {
     return rows.join('');
   }
 
+  // ── Dark room helpers ────────────────────────────────────────────────────
+
+  /** Is the current room dark? */
+  private isRoomDark(): boolean {
+    const room = this.mapData.rooms[this.currentRoom];
+    return (room?.dark ?? 0) === 1;
+  }
+
+  /** Effective light radius from best flashlight in hand + inventory. */
+  private getEffectiveLightRadius(): number {
+    const BASE_DARK_RADIUS = 2;
+    if (!this.isRoomDark()) return Infinity;
+    let best = 0;
+    // Check hand
+    if (this.leftHand) {
+      const fl = this.objects[this.leftHand.type]?.flashlight ?? 0;
+      if (fl > best) best = fl;
+    }
+    // Check all inventory slots
+    for (const item of this.inventory) {
+      if (!item) continue;
+      const fl = this.objects[item.type]?.flashlight ?? 0;
+      if (fl > best) best = fl;
+    }
+    return best > 0 ? best : BASE_DARK_RADIUS;
+  }
+
   // ── Rendering ──────────────────────────────────────────────────────────────
 
   private computeVisibility(): void {
@@ -908,11 +955,53 @@ export class Game {
       this.visibilityGrid = [];
       return;
     }
+    const isDark = this.isRoomDark();
+    const lightRadius = isDark ? this.getEffectiveLightRadius() : Infinity;
+
+    // Pre-build glow lookup set for dark rooms (avoids O(recorded_objects) per tile)
+    let glowSet: Set<string> | null = null;
+    if (isDark) {
+      glowSet = new Set<string>();
+      // Check spot array for glowing floor/wall tiles
+      if (room.spot) {
+        for (let x = 0; x < GRID; x++) {
+          for (let y = 0; y < GRID; y++) {
+            const cell = room.spot[x]?.[y];
+            if (!cell) continue;
+            if (
+              (cell[0] > 0 && this.objects[cell[0]]?.glows) ||
+              (cell[1] > 0 && this.objects[cell[1]]?.glows)
+            ) {
+              glowSet.add(`${x},${y}`);
+            }
+          }
+        }
+      }
+      for (const ro of room.recorded_objects ?? []) {
+        if (this.objects[ro.type]?.glows) glowSet.add(`${ro.x},${ro.y}`);
+      }
+      const items = this.floorItems.get(this.currentRoom);
+      if (items) {
+        for (const [key, item] of items) {
+          if (this.objects[item.type]?.glows) glowSet.add(key);
+        }
+      }
+    }
+
     const grid: boolean[][] = [];
     for (let x = 0; x < GRID; x++) {
       grid[x] = [];
       for (let y = 0; y < GRID; y++) {
-        grid[x][y] = tileIsVisible(room, this.objects, this.px, this.py, x, y);
+        const hasLos = tileIsVisible(room, this.objects, this.px, this.py, x, y);
+        if (!hasLos) {
+          grid[x][y] = false;
+        } else if (!isDark) {
+          grid[x][y] = true;
+        } else {
+          // Dark room: visible if within light radius or tile glows
+          const dist = Math.max(Math.abs(x - this.px), Math.abs(y - this.py));
+          grid[x][y] = dist <= lightRadius || glowSet!.has(`${x},${y}`);
+        }
       }
     }
     // Second pass: reveal blocking tiles (walls) adjacent to visible open tiles.
@@ -954,12 +1043,14 @@ export class Game {
   private tickFogAnimation(): void {
     this.fogAnimFrame = null;
     if (!this.fogEnabled) return;
-    // ~300ms transition: 0.2 target alpha / 18 frames at 60fps
-    const STEP = 0.2 / 18;
+    const isDark = this.isRoomDark();
+    const fogMax = isDark ? 1.0 : 0.2; // full black in dark rooms, dim in lit rooms
+    // ~300ms transition: fogMax target alpha / 18 frames at 60fps
+    const STEP = fogMax / 18;
     let anyChanging = false;
     for (let x = 0; x < GRID; x++) {
       for (let y = 0; y < GRID; y++) {
-        const target = this.visibilityGrid[x]?.[y] ? 0 : 0.2;
+        const target = this.visibilityGrid[x]?.[y] ? 0 : fogMax;
         const current = this.fogAlpha[x][y];
         if (Math.abs(current - target) <= STEP) {
           this.fogAlpha[x][y] = target;
@@ -981,7 +1072,7 @@ export class Game {
     ctx.fillStyle = '#000';
     for (let x = 0; x < GRID; x++) {
       for (let y = 0; y < GRID; y++) {
-        const alpha = this.fogAlpha[x]?.[y] ?? 0.2;
+        const alpha = this.fogAlpha[x][y];
         if (alpha > 0) {
           ctx.globalAlpha = alpha;
           ctx.fillRect(BORDER + x * TILE, BORDER + y * TILE, TILE, TILE);

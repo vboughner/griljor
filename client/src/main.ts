@@ -1135,6 +1135,7 @@ async function main(): Promise<void> {
       network.onInventory = (msg) => {
         void updateInventoryPanel(msg);
         game.setActiveHand(msg.leftHand);
+        game.setInventory(msg.inventory);
         const handFull = msg.leftHand !== null;
         const noFreeSlot = msg.inventory.every((s) => s !== null);
         game.setWeight(msg.currentWeight, msg.maxWeight, handFull && noFreeSlot);
