@@ -2544,3 +2544,59 @@ Players could respawn in completely disconnected rooms (no cardinal exits, no ex
 The `exit` field was added to the `ObjDef` interface in `world.ts` to type the property that already existed in the pipeline JSON data.
 
 The `flames` object set has the richest flavor text — 16 examine messages covering the potted plant growth stages, the dead rat flag, and the flame thrower. The `standard`/`main`/`trevor` sets share the same sludge gun examinemsg and a few lookmsg entries for tokens and torn items.
+
+## Repair Kits — Mechanics and Map Placement
+
+Repair kits use the same `opens`/`swings` mechanism as keys (see Phase 6).
+A repair kit has `opens: 128`, `numbered: true`, `lost: true`. Using one
+on an adjacent broken object (`type: 128`, `swings: true`) toggles it to
+its `alternate` (the repaired form) and consumes one charge.
+
+### Object Definitions by Object File
+
+Three object files define repair kits and broken objects (`flames.json`
+and `ring.json` have neither):
+
+| Object File | Repair Kit | Broken Objects | Repaired Form |
+|---|---|---|---|
+| **default.json** | 224 | 205 broken window wall, 225 broken door (vert), 226 broken door (horiz) | 221 defenders wall, 110 open door, 200 open door |
+| **main.json** | 95 | 55 broken door (horiz), 73 broken door (vert) | 47 open door, 72 open door |
+| **trek.json** | 95 | 55 broken door (horiz), 73 broken door (vert) | 47 open door, 72 open door |
+
+### Destructible → Broken Pipeline
+
+Some objects have a `destroyed` field pointing to their broken form.
+When a player destroys one of these with a weapon, it becomes the broken
+version, which can then be repaired:
+
+| Object File | Destructible Object | Broken Form |
+|---|---|---|
+| default.json | 109/110 closed/open door → | 225 broken door (vert) |
+| default.json | 199/200 closed/open door → | 226 broken door (horiz) |
+| default.json | 221 horizontal defenders wall → | 205 broken window wall |
+| main.json / trek.json | 47/63 open/closed door → | 55 broken door (horiz) |
+| main.json / trek.json | 72/74 open/closed door → | 73 broken door (vert) |
+
+### Map Placement Audit
+
+**paradise2** is the only map with pre-placed broken objects (46 broken
+window walls across 10 rooms + 2 broken doors in room 42). It also has
+13 repair kit stacks scattered across rooms 2, 5, 10, 23, 25, 29, 35,
+and 42. Room 10 has both repair kits and broken windows side by side.
+
+All other maps that include repair kits place them for repairing doors
+that players break during gameplay:
+
+| Map | Repair Kit Stacks | Rooms |
+|---|---|---|
+| castle | 9 | 0, 3, 4, 6, 8, 12, 13 |
+| trek | 12 | 1 |
+| battle | 4 | 0, 7, 8 |
+| paradise | 3 | 14 |
+| paradise3 | 3 | 14 |
+| main | 3 | 0 |
+| two | 2 | 0, 1 |
+
+Maps with no repair kits or broken objects: battle (has kits but no
+pre-placed broken objects), flames, flash, hack1, ivarr, outdoor, ring,
+shelter, shooter, sword, three, title, twoperson.
