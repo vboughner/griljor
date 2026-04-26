@@ -559,20 +559,14 @@ export class Game {
     };
   }
 
-  /** Sync active hand for click routing (opens, health, weapon checks). */
-  setActiveHand(item: InventoryItem | null): void {
-    this.leftHand = item;
-  }
-
-  /** Sync full inventory for dark room light radius calculation. */
-  setInventory(inv: Array<InventoryItem | null>): void {
-    if (!this.isRoomDark()) {
-      this.inventory = inv;
-      return;
-    }
-    const prev = this.getEffectiveLightRadius();
+  /** Sync active hand and full inventory; recomputes dark room visibility if light radius changes. */
+  setHandAndInventory(hand: InventoryItem | null, inv: Array<InventoryItem | null>): void {
+    const prevRadius = this.isRoomDark() ? this.getEffectiveLightRadius() : -1;
+    this.leftHand = hand;
     this.inventory = inv;
-    if (this.getEffectiveLightRadius() !== prev) this.computeVisibility();
+    if (prevRadius >= 0 && this.getEffectiveLightRadius() !== prevRadius) {
+      this.computeVisibility();
+    }
   }
 
   /** Update local player HP for movement speed penalty calculation. */
