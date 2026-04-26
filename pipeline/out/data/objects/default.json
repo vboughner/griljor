@@ -929,7 +929,7 @@
       "permeable": true,
       "transparent": true,
       "glows": true,
-      "flashlight": 3,
+      "flashlight": 4,
       "weapon": true,
       "range": 20,
       "refire": 255,
