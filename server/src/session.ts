@@ -823,7 +823,7 @@ export class GameSession {
     if (!spotIsVisible(room, this.world.objects, viewer.x, viewer.y, targetX, targetY)) {
       return false;
     }
-    if (room.dark === 1) {
+    if (room.dark === 0) {
       const dist = Math.max(Math.abs(targetX - viewer.x), Math.abs(targetY - viewer.y));
       const radius =
         viewerRadius ?? effectiveLightRadius(viewer.leftHand, viewer.inventory, this.world.objects);
@@ -841,7 +841,7 @@ export class GameSession {
     // Pre-compute mover's light radius once (avoids scanning inventory per peer)
     const room = this.world.rooms[mover.room];
     const moverRadius =
-      room?.dark === 1
+      room?.dark === 0
         ? effectiveLightRadius(mover.leftHand, mover.inventory, this.world.objects)
         : Infinity;
 

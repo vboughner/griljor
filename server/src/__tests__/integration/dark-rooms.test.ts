@@ -49,7 +49,7 @@ function buildDarkWorld(): World {
     exitEast: -1,
     exitSouth: 0,
     exitWest: -1,
-    dark: 1, // dark room!
+    dark: 0, // dark room! (legacy: 0=DARK, 1=DAYLIT, 2=LIT)
   };
 
   return {

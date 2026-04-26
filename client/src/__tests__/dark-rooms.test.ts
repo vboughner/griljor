@@ -29,7 +29,7 @@ function openRoom(): RoomData {
     exit_south: -1,
     exit_west: -1,
     appearance: 0,
-    dark: 1,
+    dark: 0, // legacy: 0=DARK, 1=DAYLIT, 2=LIT
     spot,
     recorded_objects: [],
   };

@@ -137,7 +137,7 @@ export function buildTestWorld(): World {
     exitEast: -1,
     exitSouth: 0, // self-link so the room counts as connected for spawn logic
     exitWest: -1,
-    dark: 0,
+    dark: 2,
   };
 
   return {
@@ -178,7 +178,7 @@ export function buildTwoRoomWorld(): World {
     exitEast: -1,
     exitSouth: 1,
     exitWest: -1,
-    dark: 0,
+    dark: 2,
   };
 
   const roomSouth: RoomData = {
@@ -191,7 +191,7 @@ export function buildTwoRoomWorld(): World {
     exitEast: -1,
     exitSouth: -1,
     exitWest: -1,
-    dark: 0,
+    dark: 2,
   };
 
   return {

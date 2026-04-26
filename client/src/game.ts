@@ -921,10 +921,10 @@ export class Game {
 
   // ── Dark room helpers ────────────────────────────────────────────────────
 
-  /** Is the current room dark? */
+  /** Is the current room dark? Legacy: 0=DARK, 1=DAYLIT, 2=LIT. */
   private isRoomDark(): boolean {
     const room = this.mapData.rooms[this.currentRoom];
-    return (room?.dark ?? 0) === 1;
+    return (room?.dark ?? 2) === 0;
   }
 
   /** Effective light radius from best flashlight in hand + inventory. */
