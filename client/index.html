@@ -397,6 +397,28 @@
       gap: 6px;
       padding-top: 112px;
     }
+    #flag-hud {
+      font: 12px monospace;
+      color: #ccc;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    #flag-hud.hidden { display: none; }
+    .flag-line {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .flag-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .flag-dot.at-base { background: #5a5; }
+    .flag-dot.carried  { background: #da3; }
+
     #player-list {
       flex: 1;
       min-height: 214px;
@@ -691,6 +713,7 @@
           </div>
           <div id="inv-grid"></div>
         </div>
+        <div id="flag-hud" class="hidden"></div>
         <div id="player-list"></div>
         <div id="chat-panel">
           <div id="chat-log"></div>

@@ -577,7 +577,7 @@ export class Game {
 
     net.onFlagStatus = (msg) => {
       this.flagStatus = msg.flags;
-      void this.render();
+      this.updateFlagHud();
     };
 
     net.onGameOver = (msg) => {
@@ -1121,7 +1121,6 @@ export class Game {
     await this.drawPunchMarkers();
     this.drawScreenFlash();
     if (this.gameOver) this.drawGameOverOverlay();
-    else if (this.flagStatus.length > 0 && this.mapData.map.teams_supported > 1) this.drawFlagHud();
     this.roomInfo.textContent = room.name && room.name !== 'no name' ? room.name : '';
   }
 
@@ -1226,50 +1225,40 @@ export class Game {
     ctx.restore();
   }
 
-  private drawFlagHud(): void {
-    const ctx = this.canvas.getContext('2d')!;
-    const w = this.canvas.width;
-    ctx.save();
+  private updateFlagHud(): void {
+    const el = document.getElementById('flag-hud');
+    if (!el) return;
+
+    if (this.flagStatus.length === 0 || this.mapData.map.teams_supported < 2) {
+      el.classList.add('hidden');
+      return;
+    }
 
     // Build per-team status from flag data
     const teamFlags = new Map<number, { held: boolean; holder: string }>();
     for (const f of this.flagStatus) {
-      const holderName =
-        f.heldBy > 0
-          ? ([...this.otherPlayers.values()].find((p) => p.id === f.heldBy)?.name ?? '???')
-          : '';
-      teamFlags.set(f.teamHolding, { held: f.heldBy > 0, holder: holderName });
+      if (f.heldBy > 0) {
+        const holderName =
+          [...this.otherPlayers.values()].find((p) => p.id === f.heldBy)?.name ?? '???';
+        teamFlags.set(f.objType, { held: true, holder: holderName });
+      } else {
+        teamFlags.set(f.objType, { held: false, holder: '' });
+      }
     }
 
-    if (teamFlags.size === 0) {
-      ctx.restore();
-      return;
+    el.classList.remove('hidden');
+    el.innerHTML = '';
+    for (const [, info] of teamFlags) {
+      const line = document.createElement('div');
+      line.className = 'flag-line';
+      const dot = document.createElement('span');
+      dot.className = `flag-dot ${info.held ? 'carried' : 'at-base'}`;
+      line.appendChild(dot);
+      const text = document.createElement('span');
+      text.textContent = info.held ? `carried by ${info.holder}` : 'at base';
+      line.appendChild(text);
+      el.appendChild(line);
     }
-
-    // Small indicator in the top-right corner
-    const lineHeight = 16;
-    const lines: string[] = [];
-    for (const [team, info] of teamFlags) {
-      const status = info.held ? `carried by ${info.holder}` : 'at base';
-      lines.push(`Team ${team} flag: ${status}`);
-    }
-
-    const boxW = 240;
-    const boxH = lines.length * lineHeight + 10;
-    const boxX = w - boxW - 4;
-    const boxY = 4;
-
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-    ctx.fillRect(boxX, boxY, boxW, boxH);
-
-    ctx.font = '12px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#dddddd';
-    for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], boxX + 6, boxY + 14 + i * lineHeight);
-    }
-
-    ctx.restore();
   }
 
   private drawScreenFlash(): void {
