@@ -410,7 +410,10 @@ export class Game {
       const roomMap = this.floorItems.get(msg.room);
       if (roomMap) {
         roomMap.delete(`${msg.x},${msg.y}`);
-        if (msg.room === this.currentRoom) await this.render();
+        if (msg.room === this.currentRoom) {
+          if (this.isRoomDark()) this.computeVisibility();
+          await this.render();
+        }
       }
     };
 
@@ -421,7 +424,10 @@ export class Game {
         this.floorItems.set(msg.room, roomMap);
       }
       roomMap.set(`${msg.x},${msg.y}`, msg.item);
-      if (msg.room === this.currentRoom) await this.render();
+      if (msg.room === this.currentRoom) {
+        if (this.isRoomDark()) this.computeVisibility();
+        await this.render();
+      }
     };
 
     net.onMissileStart = (msg) => {
