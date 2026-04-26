@@ -978,7 +978,10 @@ export class Game {
         }
       }
       for (const ro of room.recorded_objects ?? []) {
-        if (this.objects[ro.type]?.glows) glowSet.add(`${ro.x},${ro.y}`);
+        const obj = this.objects[ro.type];
+        // Skip takeable recorded objects — they become floor items at load time
+        // and are tracked dynamically via floorItems (checked below)
+        if (obj?.glows && !obj?.takeable) glowSet.add(`${ro.x},${ro.y}`);
       }
       const items = this.floorItems.get(this.currentRoom);
       if (items) {
