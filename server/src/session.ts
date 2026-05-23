@@ -682,8 +682,8 @@ export class GameSession {
       } else {
         // Same room: check directional LOS + dark room light radius
         if (this.world.rooms[player.room]) {
-          const newCanSeeOther = this.canSeePlayer(player, other.x, other.y);
-          const otherCanSeeNew = this.canSeePlayer(other, player.x, player.y);
+          const newCanSeeOther = this.canSeePlayer(player, other.x, other.y, undefined, other);
+          const otherCanSeeNew = this.canSeePlayer(other, player.x, player.y, undefined, player);
           if (newCanSeeOther) {
             this.visibility.get(id)!.add(other.id);
             this.send(ws, this.makePlayerInfo(other));
@@ -811,12 +811,14 @@ export class GameSession {
   }
 
   /** Can viewer see target? Combines LOS with dark room light radius.
-   *  Pass viewerRadius to avoid recomputing it on repeated calls for the same viewer. */
+   *  Pass viewerRadius to avoid recomputing it on repeated calls for the same viewer.
+   *  If target is provided, a target carrying a flashlight "glows" and is visible at any LOS distance. */
   private canSeePlayer(
     viewer: Player,
     targetX: number,
     targetY: number,
     viewerRadius?: number,
+    target?: Player,
   ): boolean {
     const room = this.world.rooms[viewer.room];
     if (!room) return false;
@@ -824,6 +826,14 @@ export class GameSession {
       return false;
     }
     if (room.dark === 0) {
+      // Target carrying a flashlight glows — visible at any LOS distance
+      if (
+        target &&
+        effectiveLightRadius(target.leftHand, target.inventory, this.world.objects) >
+          BASE_DARK_RADIUS
+      ) {
+        return true;
+      }
       const dist = Math.max(Math.abs(targetX - viewer.x), Math.abs(targetY - viewer.y));
       const radius =
         viewerRadius ?? effectiveLightRadius(viewer.leftHand, viewer.inventory, this.world.objects);
@@ -859,9 +869,9 @@ export class GameSession {
       const wasOtherSeeMover = otherVisSet?.has(moverId) ?? false;
 
       // Can mover see other?
-      const nowMoverSeeOther = this.canSeePlayer(mover, other.x, other.y, moverRadius);
+      const nowMoverSeeOther = this.canSeePlayer(mover, other.x, other.y, moverRadius, other);
       // Can other see mover?
-      const nowOtherSeeMover = this.canSeePlayer(other, mover.x, mover.y);
+      const nowOtherSeeMover = this.canSeePlayer(other, mover.x, mover.y, undefined, mover);
 
       // Update visibility sets
       if (nowMoverSeeOther) moverVisSet.add(other.id);
@@ -2433,8 +2443,8 @@ export class GameSession {
       // Same room: check directional LOS + dark room light radius
       if (!this.world.rooms[player.room]) continue;
 
-      const playerCanSeeOther = this.canSeePlayer(player, other.x, other.y);
-      const otherCanSeePlayer = this.canSeePlayer(other, player.x, player.y);
+      const playerCanSeeOther = this.canSeePlayer(player, other.x, other.y, undefined, other);
+      const otherCanSeePlayer = this.canSeePlayer(other, player.x, player.y, undefined, player);
 
       if (playerCanSeeOther) {
         newVisSet.add(other.id);

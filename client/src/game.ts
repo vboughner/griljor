@@ -372,6 +372,7 @@ export class Game {
         dead: msg.dead,
         team: msg.team,
       });
+      if (this.isRoomDark() && msg.room === this.currentRoom) this.computeVisibility();
       await this.render();
     };
 
@@ -382,6 +383,7 @@ export class Game {
         p.room = msg.room;
         p.x = msg.x;
         p.y = msg.y;
+        if (this.isRoomDark() && msg.room === this.currentRoom) this.computeVisibility();
         await this.render();
       }
     };
@@ -514,6 +516,7 @@ export class Game {
 
     net.onPlayerHidden = async (msg) => {
       this.otherPlayers.delete(msg.id);
+      if (this.isRoomDark()) this.computeVisibility();
       await this.render();
     };
 
@@ -958,8 +961,9 @@ export class Game {
     const isDark = this.isRoomDark();
     const lightRadius = isDark ? this.getEffectiveLightRadius() : Infinity;
 
-    // Pre-build glow lookup set for dark rooms (avoids O(recorded_objects) per tile)
+    // Pre-build glow and player lookup sets for dark rooms
     let glowSet: Set<string> | null = null;
+    let playerSet: Set<string> | null = null;
     if (isDark) {
       glowSet = new Set<string>();
       // Check spot array for glowing floor/wall tiles
@@ -989,6 +993,14 @@ export class Game {
           if (this.objects[item.type]?.glows) glowSet.add(key);
         }
       }
+      // Other players revealed by the server are visible (they glow if carrying flashlights)
+      playerSet = new Set<string>();
+      for (const p of this.otherPlayers.values()) {
+        if (p.room === this.currentRoom) playerSet.add(`${p.x},${p.y}`);
+      }
+      for (const m of this.monsters.values()) {
+        if (m.room === this.currentRoom) playerSet.add(`${m.x},${m.y}`);
+      }
     }
 
     const grid: boolean[][] = [];
@@ -1001,9 +1013,10 @@ export class Game {
         } else if (!isDark) {
           grid[x][y] = true;
         } else {
-          // Dark room: visible if within light radius or tile glows
+          // Dark room: visible if within light radius, tile glows, or a visible player is there
           const dist = Math.max(Math.abs(x - this.px), Math.abs(y - this.py));
-          grid[x][y] = dist <= lightRadius || glowSet!.has(`${x},${y}`);
+          grid[x][y] =
+            dist <= lightRadius || glowSet!.has(`${x},${y}`) || playerSet!.has(`${x},${y}`);
         }
       }
     }
