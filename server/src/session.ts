@@ -10,6 +10,7 @@ const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
 const MAX_EXPLOSION_DEPTH = 2;
 export const PICKUP_RANGE = 4; // max Chebyshev distance to pick up an item
+const BASE_DARK_RADIUS = 2; // default light radius in dark rooms (no flashlight)
 
 // AFK idle detection
 const AFK_IDLE_MS = 5 * 60 * 1000; // idle time before first warning (5 min)
@@ -210,6 +211,25 @@ export function spotIsVisible(
     if (tileViewBlocked(room, objects, x, y)) return false;
   }
   return true;
+}
+
+/** Compute effective light radius for a player from hand + inventory flashlight items. */
+export function effectiveLightRadius(
+  leftHand: InventoryItem | null,
+  inventory: Array<InventoryItem | null>,
+  objects: Array<ObjDef | null>,
+): number {
+  let best = 0;
+  if (leftHand) {
+    const fl = objects[leftHand.type]?.flashlight ?? 0;
+    if (fl > best) best = fl;
+  }
+  for (const item of inventory) {
+    if (!item) continue;
+    const fl = objects[item.type]?.flashlight ?? 0;
+    if (fl > best) best = fl;
+  }
+  return best > 0 ? best : BASE_DARK_RADIUS;
 }
 
 export function calcItemWeight(obj: ObjDef | null | undefined, item: InventoryItem): number {
@@ -660,25 +680,10 @@ export class GameSession {
         // Different room: no position reveal — players only learn about each other via LOS
         continue;
       } else {
-        // Same room: check directional LOS independently for each perspective
-        const room = this.world.rooms[player.room];
-        if (room) {
-          const newCanSeeOther = spotIsVisible(
-            room,
-            this.world.objects,
-            player.x,
-            player.y,
-            other.x,
-            other.y,
-          );
-          const otherCanSeeNew = spotIsVisible(
-            room,
-            this.world.objects,
-            other.x,
-            other.y,
-            player.x,
-            player.y,
-          );
+        // Same room: check directional LOS + dark room light radius
+        if (this.world.rooms[player.room]) {
+          const newCanSeeOther = this.canSeePlayer(player, other.x, other.y, undefined, other);
+          const otherCanSeeNew = this.canSeePlayer(other, player.x, player.y, undefined, player);
           if (newCanSeeOther) {
             this.visibility.get(id)!.add(other.id);
             this.send(ws, this.makePlayerInfo(other));
@@ -805,11 +810,50 @@ export class GameSession {
     this.monsterManager.updatePlayerVisibility(playerId, player.room, player.x, player.y);
   }
 
+  /** Can viewer see target? Combines LOS with dark room light radius.
+   *  Pass viewerRadius to avoid recomputing it on repeated calls for the same viewer.
+   *  If target is provided, a target carrying a flashlight "glows" and is visible at any LOS distance. */
+  private canSeePlayer(
+    viewer: Player,
+    targetX: number,
+    targetY: number,
+    viewerRadius?: number,
+    target?: Player,
+  ): boolean {
+    const room = this.world.rooms[viewer.room];
+    if (!room) return false;
+    if (!spotIsVisible(room, this.world.objects, viewer.x, viewer.y, targetX, targetY)) {
+      return false;
+    }
+    if (room.dark === 0) {
+      // Target carrying a flashlight glows — visible at any LOS distance
+      if (
+        target &&
+        effectiveLightRadius(target.leftHand, target.inventory, this.world.objects) >
+          BASE_DARK_RADIUS
+      ) {
+        return true;
+      }
+      const dist = Math.max(Math.abs(targetX - viewer.x), Math.abs(targetY - viewer.y));
+      const radius =
+        viewerRadius ?? effectiveLightRadius(viewer.leftHand, viewer.inventory, this.world.objects);
+      if (dist > radius) return false;
+    }
+    return true;
+  }
+
   private updateVisibilityOnMove(moverId: number): void {
     const mover = this.players.get(moverId);
     if (!mover) return;
     const moverVisSet = this.visibility.get(moverId);
     if (!moverVisSet) return;
+
+    // Pre-compute mover's light radius once (avoids scanning inventory per peer)
+    const room = this.world.rooms[mover.room];
+    const moverRadius =
+      room?.dark === 0
+        ? effectiveLightRadius(mover.leftHand, mover.inventory, this.world.objects)
+        : Infinity;
 
     for (const other of this.players.values()) {
       if (other.id === moverId) continue;
@@ -819,32 +863,15 @@ export class GameSession {
         continue;
       }
 
-      // Same room: check directional LOS independently for each perspective
-      const room = this.world.rooms[mover.room];
-      if (!room) continue;
-
+      // Same room: check directional LOS + dark room light radius
       const otherVisSet = this.visibility.get(other.id);
       const wasMoverSeeOther = moverVisSet.has(other.id);
       const wasOtherSeeMover = otherVisSet?.has(moverId) ?? false;
 
-      // Can mover see other? (mover's tile excluded, other's tile included)
-      const nowMoverSeeOther = spotIsVisible(
-        room,
-        this.world.objects,
-        mover.x,
-        mover.y,
-        other.x,
-        other.y,
-      );
-      // Can other see mover? (other's tile excluded, mover's tile included)
-      const nowOtherSeeMover = spotIsVisible(
-        room,
-        this.world.objects,
-        other.x,
-        other.y,
-        mover.x,
-        mover.y,
-      );
+      // Can mover see other?
+      const nowMoverSeeOther = this.canSeePlayer(mover, other.x, other.y, moverRadius, other);
+      // Can other see mover?
+      const nowOtherSeeMover = this.canSeePlayer(other, mover.x, mover.y, undefined, mover);
 
       // Update visibility sets
       if (nowMoverSeeOther) moverVisSet.add(other.id);
@@ -2413,26 +2440,11 @@ export class GameSession {
         continue;
       }
 
-      // Same room: check directional LOS independently for each perspective
-      const room = this.world.rooms[player.room];
-      if (!room) continue;
+      // Same room: check directional LOS + dark room light radius
+      if (!this.world.rooms[player.room]) continue;
 
-      const playerCanSeeOther = spotIsVisible(
-        room,
-        this.world.objects,
-        player.x,
-        player.y,
-        other.x,
-        other.y,
-      );
-      const otherCanSeePlayer = spotIsVisible(
-        room,
-        this.world.objects,
-        other.x,
-        other.y,
-        player.x,
-        player.y,
-      );
+      const playerCanSeeOther = this.canSeePlayer(player, other.x, other.y, undefined, other);
+      const otherCanSeePlayer = this.canSeePlayer(other, player.x, player.y, undefined, player);
 
       if (playerCanSeeOther) {
         newVisSet.add(other.id);

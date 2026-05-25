@@ -66,6 +66,8 @@ export interface ObjDef {
   lost?: boolean; // consumed on use
   lookmsg?: string;
   examinemsg?: string;
+  glows?: boolean;
+  flashlight?: number;
 }
 
 export interface InventoryItem {
