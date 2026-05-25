@@ -2545,6 +2545,62 @@ The `exit` field was added to the `ObjDef` interface in `world.ts` to type the p
 
 The `flames` object set has the richest flavor text — 16 examine messages covering the potted plant growth stages, the dead rat flag, and the flame thrower. The `standard`/`main`/`trevor` sets share the same sludge gun examinemsg and a few lookmsg entries for tokens and torn items.
 
+## Repair Kits — Mechanics and Map Placement
+
+Repair kits use the same `opens`/`swings` mechanism as keys (see Phase 6).
+A repair kit has `opens: 128`, `numbered: true`, `lost: true`. Using one
+on an adjacent broken object (`type: 128`, `swings: true`) toggles it to
+its `alternate` (the repaired form) and consumes one charge.
+
+### Object Definitions by Object File
+
+Three object files define repair kits and broken objects (`flames.json`
+and `ring.json` have neither):
+
+| Object File | Repair Kit | Broken Objects | Repaired Form |
+|---|---|---|---|
+| **default.json** | 224 | 205 broken window wall, 225 broken door (vert), 226 broken door (horiz) | 221 defenders wall, 110 open door, 200 open door |
+| **main.json** | 95 | 55 broken door (horiz), 73 broken door (vert) | 47 open door, 72 open door |
+| **trek.json** | 95 | 55 broken door (horiz), 73 broken door (vert) | 47 open door, 72 open door |
+
+### Destructible → Broken Pipeline
+
+Some objects have a `destroyed` field pointing to their broken form.
+When a player destroys one of these with a weapon, it becomes the broken
+version, which can then be repaired:
+
+| Object File | Destructible Object | Broken Form |
+|---|---|---|
+| default.json | 109/110 closed/open door → | 225 broken door (vert) |
+| default.json | 199/200 closed/open door → | 226 broken door (horiz) |
+| default.json | 221 horizontal defenders wall → | 205 broken window wall |
+| main.json / trek.json | 47/63 open/closed door → | 55 broken door (horiz) |
+| main.json / trek.json | 72/74 open/closed door → | 73 broken door (vert) |
+
+### Map Placement Audit
+
+**paradise2** is the only map with pre-placed broken objects (46 broken
+window walls across 10 rooms + 2 broken doors in room 42). It also has
+13 repair kit stacks scattered across rooms 2, 5, 10, 23, 25, 29, 35,
+and 42. Room 10 has both repair kits and broken windows side by side.
+
+All other maps that include repair kits place them for repairing doors
+that players break during gameplay:
+
+| Map | Repair Kit Stacks | Rooms |
+|---|---|---|
+| castle | 9 | 0, 3, 4, 6, 8, 12, 13 |
+| trek | 12 | 1 |
+| battle | 4 | 0, 7, 8 |
+| paradise | 3 | 14 |
+| paradise3 | 3 | 14 |
+| main | 3 | 0 |
+| two | 2 | 0, 1 |
+
+Maps with no repair kits or broken objects: battle (has kits but no
+pre-placed broken objects), flames, flash, hack1, ivarr, outdoor, ring,
+shelter, shooter, sword, three, title, twoperson.
+
 ---
 
 ## Phase 20 — Dark Rooms and Flashlight System
@@ -2598,24 +2654,28 @@ Dark room rendering extends the existing fog-of-war system (Phase 17).
 
 **`computeVisibility()` changes** — In dark rooms, a tile is visible only if it has line of sight AND meets one of:
 - Within the effective light radius (Chebyshev distance from player), or
-- The tile contains a glowing object
+- The tile contains a glowing object, or
+- The tile is occupied by another player the server has revealed (flashlight-carrying players glow)
 
 The glow set is pre-built once per visibility computation as a `Set<string>` of `"x,y"` keys, covering:
 1. Floor/wall tile objects with `glows: true`
 2. Non-takeable recorded objects with `glows: true` (takeable ones are tracked as floor items)
 3. Floor items with `glows: true`
 
-**Fog alpha** — In dark rooms, non-visible tiles use full-black fog (alpha `1.0`) instead of the dim overlay (alpha `0.2`) used in lit rooms. The `fogAlpha` grid is reset to `1.0` when entering a dark room via `goToRoom()`.
+A separate player set tracks tiles occupied by other players revealed by the server — these are visible through the fog so flashlight-carrying players can be seen at any LOS distance.
+
+**Fog alpha** — In dark rooms, non-visible tiles use full-black fog (alpha `1.0`) instead of the dim overlay (alpha `0.2`) used in lit rooms. The `fogAlpha` grid is reset to `1.0` when entering a dark room via `goToRoom()`. The `v` key cannot toggle fog off in dark rooms; entering a dark room forces fog back on.
 
 **Visibility recomputation triggers** — Beyond the standard triggers (player move, room change, door open), dark rooms also recompute visibility when:
 - Inventory changes and the effective light radius changes (`setHandAndInventory`)
 - A floor item is added or removed (`onItemAdded`, `onItemRemoved`)
+- Another player appears, moves, or disappears (`onPlayerInfo`, `onLocation`, `onPlayerHidden`)
 
 ### Server implementation
 
 **`effectiveLightRadius(leftHand, inventory, objects)`** — Exported pure function in `session.ts`. Same algorithm as the client: scans hand + inventory for best flashlight value, falls back to `BASE_DARK_RADIUS` (2).
 
-**`canSeePlayer(viewer, targetX, targetY, viewerRadius?)`** — Private method on `GameSession`. Combines `spotIsVisible()` (line-of-sight) with a dark room distance check. If the room is dark (`dark === 0`), the target must be within the viewer's light radius. An optional pre-computed `viewerRadius` parameter avoids redundant inventory scans when checking multiple targets.
+**`canSeePlayer(viewer, targetX, targetY, viewerRadius?, target?)`** — Private method on `GameSession`. Combines `spotIsVisible()` (line-of-sight) with a dark room distance check. If the room is dark (`dark === 0`), the target must be within the viewer's light radius — unless the target carries a flashlight (radius > BASE_DARK_RADIUS), in which case they "glow" and are visible at any LOS distance. An optional pre-computed `viewerRadius` parameter avoids redundant inventory scans when checking multiple targets.
 
 **Usage** — `canSeePlayer` replaces direct `spotIsVisible` calls in three places:
 1. Player join visibility (who sees the new player)
