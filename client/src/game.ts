@@ -214,8 +214,8 @@ export class Game {
         return;
       }
 
-      // Toggle fog-of-war visibility overlay
-      if (e.key === 'v') {
+      // Toggle fog-of-war visibility overlay (disabled in dark rooms)
+      if (e.key === 'v' && !this.isRoomDark()) {
         e.preventDefault();
         this.fogEnabled = !this.fogEnabled;
         if (this.fogEnabled) this.computeVisibility();
@@ -671,6 +671,8 @@ export class Game {
     }
     this.px = px;
     this.py = py;
+    // Force fog on in dark rooms (can't toggle it off there)
+    if (this.isRoomDark()) this.fogEnabled = true;
     // Reset fog: fully black for dark rooms, light dim for lit rooms
     const fogInit = this.isRoomDark() ? 1.0 : 0.2;
     for (let x = 0; x < GRID; x++) {
