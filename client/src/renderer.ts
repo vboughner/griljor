@@ -149,6 +149,33 @@ export const INDICATOR_ENEMY = '#ff4444';
 export const INDICATOR_MONSTER = '#ddaa00';
 const CORNER_LEN = 8; // px per corner arm
 
+export type SpriteKind = 'tombstone' | 'winner' | 'loser' | 'own';
+
+/**
+ * Which sprite a character should be drawn with. Shared by the local player and
+ * every other character so the precedence rules stay in one place.
+ *
+ * Dead characters stay tombstones even during the game-over grace period —
+ * respawn timers are cancelled at game over, so they remain dead for its whole
+ * duration. Monsters never take winner/loser sprites; their team field is not a
+ * player team.
+ */
+export function chooseSpriteKind(c: {
+  dead?: boolean;
+  isMonster?: boolean;
+  team: number;
+  gameOver: boolean;
+  winningTeam: number;
+  hasTombstone: boolean;
+  hasWinnerLoser: boolean;
+}): SpriteKind {
+  if (c.dead && c.hasTombstone) return 'tombstone';
+  if (c.gameOver && !c.isMonster && c.hasWinnerLoser) {
+    return c.team === c.winningTeam ? 'winner' : 'loser';
+  }
+  return 'own';
+}
+
 export function playerIndicatorStyle(
   teamsEnabled: boolean,
   localTeam: number,
@@ -266,14 +293,23 @@ export async function renderFrame(
 
   // Draw other players first (behind local player)
   for (const other of others) {
-    let effectiveSprite: ImageData | null;
-    if (gameOver && winnerSprite && loserSprite) {
-      effectiveSprite = other.team === winningTeam ? winnerSprite : loserSprite;
-    } else if (other.dead && tombstoneSprite) {
-      effectiveSprite = tombstoneSprite;
-    } else {
-      effectiveSprite = other.sprite;
-    }
+    const kind = chooseSpriteKind({
+      dead: other.dead,
+      isMonster: other.isMonster,
+      team: other.team,
+      gameOver,
+      winningTeam,
+      hasTombstone: tombstoneSprite !== null,
+      hasWinnerLoser: winnerSprite !== null && loserSprite !== null,
+    });
+    const effectiveSprite =
+      kind === 'tombstone'
+        ? tombstoneSprite
+        : kind === 'winner'
+          ? winnerSprite
+          : kind === 'loser'
+            ? loserSprite
+            : other.sprite;
     if (effectiveSprite) {
       const bm = await getBitmap(effectiveSprite);
       ctx.drawImage(bm, BORDER + other.px * TILE, BORDER + other.py * TILE, TILE, TILE);

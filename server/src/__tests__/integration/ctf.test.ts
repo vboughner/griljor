@@ -138,6 +138,37 @@ function buildTeam1OnlyFlagWorld(): World {
   return world;
 }
 
+// Adds a 4th room (index 3, neutral) that is solid wall except for the single
+// tile (5,5). A player standing there has no free reachable tile to drop onto,
+// which is the only way nearbyFreeTile returns null.
+function buildSealedRoomWorld(): World {
+  const world = buildCtfWorld();
+  world.objects[4] = {
+    _index: 4,
+    name: 'wall',
+    movement: 0,
+  };
+
+  const spot: number[][][] = Array.from({ length: 20 }, () =>
+    Array.from({ length: 20 }, () => [0, 4]),
+  );
+  spot[5][5] = [1, 0]; // the lone walkable tile
+
+  world.rooms.push({
+    name: 'Sealed Vault',
+    floor: 0,
+    team: 0,
+    recorded_objects: [],
+    spot,
+    exitNorth: -1,
+    exitEast: -1,
+    exitSouth: -1,
+    exitWest: -1,
+  });
+  world.roomCount = 4;
+  return world;
+}
+
 // ── helpers ────────────────────────────────────────────────────────────────
 
 /** Move a player to (room, x, y) by sending MY_LOCATION */
@@ -233,6 +264,7 @@ describe('capture-the-flag', () => {
       x: 5,
       y: 5,
       heldBy: 0,
+      heldByName: '',
       teamHolding: 0, // neutral room
     });
   });
@@ -510,5 +542,101 @@ describe('capture-the-flag', () => {
     const gameOverMsgs = bob.ws.messagesOfType('GAME_OVER');
     expect(gameOverMsgs.length).toBe(1);
     expect(gameOverMsgs[0].winningTeam).toBe(1);
+  });
+
+  // ── Regressions ──────────────────────────────────────────────────────
+
+  it('carried flag is not destroyed when no free tile is available', () => {
+    // Regression: dropPlayerItems used to skip the drop entirely when
+    // nearbyFreeTile returned null, deleting the flag and making the match
+    // permanently unwinnable.
+    session = new GameSession(buildSealedRoomWorld());
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+    const bob = joinPlayer(session, 'Bob', 'b', 2);
+
+    moveTo(alice, 2, 5, 5);
+    pickup(alice);
+    expect(bob.ws.lastOfType('FLAG_STATUS')!.flags.some((f) => f.heldBy === alice.id)).toBe(true);
+
+    // Sealed vault: the only reachable tile is the one Alice stands on
+    moveTo(alice, 3, 5, 5);
+    bob.ws.flush();
+    alice.ws.close();
+
+    const flags = bob.ws.lastOfType('FLAG_STATUS')!.flags;
+    expect(flags.length).toBe(1);
+    expect(flags[0]).toMatchObject({ objType: 8, room: 3, x: 5, y: 5, heldBy: 0 });
+  });
+
+  it('flags are dropped before ordinary items so they claim free tiles first', () => {
+    // A sword occupying the one free tile must not push the flag out of the world.
+    const world = buildSealedRoomWorld();
+    world.rooms[3].recorded_objects.push({ x: 5, y: 5, type: 2, detail: 0 });
+    session = new GameSession(world);
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+    const bob = joinPlayer(session, 'Bob', 'b', 2);
+
+    moveTo(alice, 2, 5, 5);
+    pickup(alice); // flag into left hand
+    moveTo(alice, 3, 5, 5);
+    pickup(alice); // sword too
+
+    bob.ws.flush();
+    alice.ws.close();
+
+    const flags = bob.ws.lastOfType('FLAG_STATUS')!.flags;
+    expect(flags.length).toBe(1);
+    expect(flags[0]).toMatchObject({ objType: 8, heldBy: 0 });
+  });
+
+  it('player joining during the grace period receives GAME_OVER', () => {
+    // Regression: the join path sent FLAG_STATUS but never replayed GAME_OVER,
+    // leaving the new client in normal mode until it was abruptly disconnected.
+    session = new GameSession(buildCtfWorld());
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+
+    moveTo(alice, 2, 5, 5);
+    pickup(alice);
+    moveTo(alice, 0, 10, 10);
+    dropActive(alice);
+    expect(alice.ws.messagesOfType('GAME_OVER').length).toBe(1);
+
+    vi.advanceTimersByTime(10_000);
+
+    const bob = joinPlayer(session, 'Bob', 'b', 2);
+    const gameOver = bob.ws.messagesOfType('GAME_OVER');
+    expect(gameOver.length).toBe(1);
+    expect(gameOver[0].winningTeam).toBe(1);
+    expect(gameOver[0].winnerName).toBe('Alice');
+    // Countdown reflects time already elapsed, not a fresh 30s
+    expect(gameOver[0].endsInMs).toBeLessThanOrEqual(20_000);
+    expect(gameOver[0].endsInMs).toBeGreaterThan(19_000);
+  });
+
+  it('player joining a normal CTF game receives no GAME_OVER', () => {
+    session = new GameSession(buildCtfWorld());
+    joinPlayer(session, 'Alice', 'a', 1);
+    const bob = joinPlayer(session, 'Bob', 'b', 2);
+    expect(bob.ws.messagesOfType('GAME_OVER').length).toBe(0);
+    expect(bob.ws.messagesOfType('FLAG_STATUS').length).toBe(1);
+  });
+
+  it('FLAG_STATUS carries the carrier name so clients need not resolve it', () => {
+    // Regression: the client resolved the carrier from its otherPlayers map,
+    // which excludes the local player and players in other rooms, so the HUD
+    // showed "carried by ???".
+    session = new GameSession(buildCtfWorld());
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+
+    moveTo(alice, 2, 5, 5);
+    pickup(alice);
+
+    const carried = alice.ws.lastOfType('FLAG_STATUS')!.flags.find((f) => f.heldBy === alice.id);
+    expect(carried?.heldByName).toBe('Alice');
+
+    dropActive(alice);
+    const onFloor = alice.ws.lastOfType('FLAG_STATUS')!.flags[0];
+    expect(onFloor.heldBy).toBe(0);
+    expect(onFloor.heldByName).toBe('');
   });
 });

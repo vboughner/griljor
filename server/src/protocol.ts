@@ -125,6 +125,7 @@ export type S2CMessage =
         x: number;
         y: number;
         heldBy: number; // player id, or 0
+        heldByName: string; // carrier's name, '' if on the floor
         teamHolding: number; // team of room it's in, 0 if carried/neutral
       }>;
     }

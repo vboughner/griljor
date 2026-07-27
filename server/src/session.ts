@@ -8,6 +8,7 @@ const INV_SIZE = 21;
 const MAX_WEIGHT = 200;
 const GRID = 20;
 const RESPAWN_DELAY_MS = 5000;
+const GAME_OVER_GRACE_MS = 30_000;
 const MAX_EXPLOSION_DEPTH = 2;
 export const PICKUP_RANGE = 4; // max Chebyshev distance to pick up an item
 
@@ -332,6 +333,10 @@ export class GameSession {
   private ctfEnabled = false;
   private gameOver = false;
   private gameOverTimer: ReturnType<typeof setTimeout> | null = null;
+  // Retained so players joining during the grace period can be caught up
+  private gameOverWinningTeam = 0;
+  private gameOverWinnerName = '';
+  private gameOverEndsAt = 0;
   private flagObjTypes: number[] = [];
 
   constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
@@ -475,6 +480,7 @@ export class GameSession {
       x: number;
       y: number;
       heldBy: number;
+      heldByName: string;
       teamHolding: number;
     }> = [];
 
@@ -489,6 +495,7 @@ export class GameSession {
           x: sx,
           y: sy,
           heldBy: 0,
+          heldByName: '',
           teamHolding: this.world.rooms[roomIdx].team,
         });
       }
@@ -505,6 +512,7 @@ export class GameSession {
           x: 0,
           y: 0,
           heldBy: player.id,
+          heldByName: player.name,
           teamHolding: 0,
         });
       }
@@ -558,6 +566,9 @@ export class GameSession {
 
   private triggerGameOver(winningTeam: number, winnerName: string): void {
     this.gameOver = true;
+    this.gameOverWinningTeam = winningTeam;
+    this.gameOverWinnerName = winnerName;
+    this.gameOverEndsAt = Date.now() + GAME_OVER_GRACE_MS;
 
     // Cancel all respawn timers
     for (const player of this.players.values()) {
@@ -567,9 +578,16 @@ export class GameSession {
       }
     }
 
-    this.broadcastGM(`Team ${winningTeam} wins! Game ends in 30 seconds.`);
-    this.broadcast({ type: 'GAME_OVER', winningTeam, winnerName, endsInMs: 30000 });
-    this.gameOverTimer = setTimeout(() => this.disconnectAllPlayers(), 30000);
+    this.broadcastGM(
+      `Team ${winningTeam} wins! Game ends in ${GAME_OVER_GRACE_MS / 1000} seconds.`,
+    );
+    this.broadcast({
+      type: 'GAME_OVER',
+      winningTeam,
+      winnerName,
+      endsInMs: GAME_OVER_GRACE_MS,
+    });
+    this.gameOverTimer = setTimeout(() => this.disconnectAllPlayers(), GAME_OVER_GRACE_MS);
   }
 
   private disconnectAllPlayers(): void {
@@ -595,6 +613,9 @@ export class GameSession {
     this.lastPlacementTime = Math.floor(Date.now() / 1000);
     this.startedAt = Date.now();
     this.gameOver = false;
+    this.gameOverWinningTeam = 0;
+    this.gameOverWinnerName = '';
+    this.gameOverEndsAt = 0;
     if (this.gameOverTimer !== null) {
       clearTimeout(this.gameOverTimer);
       this.gameOverTimer = null;
@@ -848,6 +869,16 @@ export class GameSession {
 
     if (this.ctfEnabled) {
       this.send(ws, this.buildFlagStatus());
+      if (this.gameOver) {
+        // Catch up a player who joined during the game-over grace period,
+        // otherwise their client stays in normal mode until it is disconnected.
+        this.send(ws, {
+          type: 'GAME_OVER',
+          winningTeam: this.gameOverWinningTeam,
+          winnerName: this.gameOverWinnerName,
+          endsInMs: Math.max(0, this.gameOverEndsAt - Date.now()),
+        });
+      }
     }
 
     // Sync any recorded_objects that have been toggled from their original state
@@ -2091,9 +2122,19 @@ export class GameSession {
       if (p.room === player.room) playerOccupied.add(`${p.x},${p.y}`);
     }
 
-    for (const item of items) {
-      if (!item) continue;
-      const tile = this.nearbyFreeTile(player.room, player.x, player.y, playerOccupied);
+    // Drop flags first so they get first claim on the free tiles: a flag that
+    // fails to land would be destroyed, making the CTF match unwinnable.
+    const isFlag = (item: InventoryItem): boolean => this.world.objects[item.type]?.flag ?? false;
+    const toDrop = items.filter((item): item is InventoryItem => item !== null);
+    toDrop.sort((a, b) => Number(isFlag(b)) - Number(isFlag(a)));
+
+    for (const item of toDrop) {
+      let tile = this.nearbyFreeTile(player.room, player.x, player.y, playerOccupied);
+      if (!tile && isFlag(item)) {
+        // Every reachable tile is taken. A flag must stay in the world, so fall
+        // back to the player's own tile, which is always reachable.
+        tile = { x: player.x, y: player.y };
+      }
       if (tile) {
         const roomMap = this.roomItems.get(player.room) ?? new Map<string, InventoryItem>();
         roomMap.set(`${tile.x},${tile.y}`, item);
@@ -2102,8 +2143,7 @@ export class GameSession {
       }
     }
 
-    const droppedFlag = items.some((item) => item && this.world.objects[item.type]?.flag);
-    if (this.ctfEnabled && droppedFlag) {
+    if (this.ctfEnabled && toDrop.some(isFlag)) {
       this.broadcastFlagStatus();
       this.checkFlagWin(player.name);
     }

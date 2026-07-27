@@ -120,6 +120,7 @@ type S2CMessage =
         x: number;
         y: number;
         heldBy: number;
+        heldByName: string;
         teamHolding: number;
       }>;
     }

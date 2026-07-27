@@ -8,6 +8,7 @@ import {
   OtherPlayer,
   TILE,
   BORDER,
+  chooseSpriteKind,
 } from './renderer';
 import { GameNetwork } from './network';
 import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
@@ -93,6 +94,7 @@ export class Game {
     x: number;
     y: number;
     heldBy: number;
+    heldByName: string;
     teamHolding: number;
   }> = [];
   private avatarName: string = 'crom';
@@ -300,8 +302,10 @@ export class Game {
       }
 
       if (e.button === 0) {
-        // Left-click: pick up, use opener, or fire weapon
-        if (this.isDead || this.gameOver) return;
+        // Left-click: pick up, use opener, or fire weapon.
+        // During game-over, movement is still allowed, so openers and
+        // consumables stay usable — only pickup and combat are blocked.
+        if (this.isDead) return;
         const handObj = this.leftHand ? this.objects[this.leftHand.type] : null;
         const key = `${tx},${ty}`;
         const tileOccupied = [...this.otherPlayers.values()].some(
@@ -318,14 +322,14 @@ export class Game {
           // Key in hand, adjacent door — use key even if a floor item is also on this tile
           this.network?.sendUseItem(tx, ty);
         } else if (!tileOccupied && this.floorItems.get(this.currentRoom)?.has(key)) {
-          this.network?.sendPickup(tx, ty);
+          if (!this.gameOver) this.network?.sendPickup(tx, ty);
         } else if ((handObj?.health ?? 0) < 0) {
           // Consumable: use on self regardless of where the player clicked
           this.network?.sendUseItem(this.px, this.py);
         } else if (handObj?.opens && dist === 1) {
           // Holding an opener adjacent to target tile — use it (open/close door)
           this.network?.sendUseItem(tx, ty);
-        } else if (tx !== this.px || ty !== this.py) {
+        } else if ((tx !== this.px || ty !== this.py) && !this.gameOver) {
           this.network?.sendFireWeapon(tx, ty);
         }
         return;
@@ -1083,11 +1087,22 @@ export class Game {
 
     const floorItems = this.floorItems.get(this.currentRoom) ?? new Map<string, InventoryItem>();
 
-    // During game-over, replace local player sprite with winner/loser
-    let localSprite = this.isDead ? this.tombstoneSprite : this.playerSprite;
-    if (this.gameOver && this.winnerSprite && this.loserSprite) {
-      localSprite = this.myTeam === this.winningTeam ? this.winnerSprite : this.loserSprite;
-    }
+    const localKind = chooseSpriteKind({
+      dead: this.isDead,
+      team: this.myTeam,
+      gameOver: this.gameOver,
+      winningTeam: this.winningTeam,
+      hasTombstone: this.tombstoneSprite !== null,
+      hasWinnerLoser: this.winnerSprite !== null && this.loserSprite !== null,
+    });
+    const localSprite =
+      localKind === 'tombstone'
+        ? this.tombstoneSprite
+        : localKind === 'winner'
+          ? this.winnerSprite
+          : localKind === 'loser'
+            ? this.loserSprite
+            : this.playerSprite;
 
     await renderFrame(
       this.canvas,
@@ -1234,28 +1249,21 @@ export class Game {
       return;
     }
 
-    // Build per-team status from flag data
-    const teamFlags = new Map<number, { held: boolean; holder: string }>();
-    for (const f of this.flagStatus) {
-      if (f.heldBy > 0) {
-        const holderName =
-          [...this.otherPlayers.values()].find((p) => p.id === f.heldBy)?.name ?? '???';
-        teamFlags.set(f.objType, { held: true, holder: holderName });
-      } else {
-        teamFlags.set(f.objType, { held: false, holder: '' });
-      }
-    }
-
     el.classList.remove('hidden');
     el.innerHTML = '';
-    for (const [, info] of teamFlags) {
+    // One line per flag instance — a map may contain several flags of the same
+    // objType, and each has its own carried/at-base state.
+    for (const f of this.flagStatus) {
+      const held = f.heldBy > 0;
       const line = document.createElement('div');
       line.className = 'flag-line';
       const dot = document.createElement('span');
-      dot.className = `flag-dot ${info.held ? 'carried' : 'at-base'}`;
+      dot.className = `flag-dot ${held ? 'carried' : 'at-base'}`;
       line.appendChild(dot);
       const text = document.createElement('span');
-      text.textContent = info.held ? `carried by ${info.holder}` : 'at base';
+      const label = this.objects[f.objType]?.name;
+      const state = held ? `carried by ${f.heldByName || '???'}` : 'at base';
+      text.textContent = label ? `${label}: ${state}` : state;
       line.appendChild(text);
       el.appendChild(line);
     }
