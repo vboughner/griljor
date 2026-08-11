@@ -66,6 +66,8 @@ export interface ObjDef {
   lost?: boolean; // consumed on use
   lookmsg?: string;
   examinemsg?: string;
+  glows?: boolean;
+  flashlight?: number;
   flag?: boolean; // true = this object is a game flag
   flagteams?: number; // bitmask: which teams need this flag (absent = all teams)
 }

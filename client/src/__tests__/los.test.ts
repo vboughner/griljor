@@ -23,7 +23,7 @@ function emptyRoom(): RoomData {
     exit_south: -1,
     exit_west: -1,
     appearance: 0,
-    dark: 0,
+    dark: 2,
     recorded_objects: [],
   };
 }

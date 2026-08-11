@@ -37,6 +37,8 @@ export interface ObjDef {
   vulnerable?: boolean; // can be destroyed by explosions with destroys > 0
   destroyed?: number; // object type this becomes when destroyed
   destroys?: number; // >0: this explosion can destroy vulnerable objects
+  glows?: boolean; // visible in dark rooms regardless of light radius
+  flashlight?: number; // when in inventory, provides this light radius in dark rooms
   flag?: boolean; // true = this object is a game flag
   flagteams?: number; // bitmask: which teams need this flag (absent = all teams)
 }
@@ -58,6 +60,7 @@ export interface RoomData {
   exitEast: number;
   exitSouth: number;
   exitWest: number;
+  dark?: number; // 0 = lit (default), 1 = dark (starts dark)
   monsterSpawns?: RoomMonsterSpawn[];
 }
 
@@ -111,6 +114,7 @@ export async function loadWorld(mapName: string): Promise<World> {
       exit_east?: number;
       exit_south?: number;
       exit_west?: number;
+      dark?: number;
       monster_spawns?: RoomMonsterSpawn[];
     }>;
     placement?: {
@@ -162,6 +166,7 @@ export async function loadWorld(mapName: string): Promise<World> {
     exitEast: r.exit_east ?? -1,
     exitSouth: r.exit_south ?? -1,
     exitWest: r.exit_west ?? -1,
+    dark: r.dark ?? 0,
     monsterSpawns: r.monster_spawns,
   }));
 

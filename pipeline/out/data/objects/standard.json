@@ -1931,6 +1931,7 @@
       "boombit": 199,
       "vulnerable": true,
       "flammable": 1,
+      "flashlight": 6,
       "set0": true,
       "def0": 20,
       "_index": 197
@@ -2225,6 +2226,7 @@
       "boombit": 214,
       "vulnerable": true,
       "flammable": 5,
+      "flashlight": 5,
       "set0": true,
       "def0": 15,
       "_index": 213
@@ -2624,6 +2626,7 @@
       "permeable": true,
       "transparent": true,
       "glows": true,
+      "flashlight": 4,
       "weapon": true,
       "range": 2,
       "refire": 1,

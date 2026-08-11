@@ -26,7 +26,7 @@
       "exit_south": 1,
       "exit_west": -1,
       "appearance": 1,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -1695,7 +1695,7 @@
       "exit_south": 2,
       "exit_west": -1,
       "appearance": 1,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -3364,7 +3364,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 1,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -5103,7 +5103,7 @@
       "exit_south": 0,
       "exit_west": -1,
       "appearance": 1,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -6772,7 +6772,7 @@
       "exit_south": 3,
       "exit_west": -1,
       "appearance": 1,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [

@@ -26,7 +26,7 @@
       "exit_south": 1,
       "exit_west": 31,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -1765,7 +1765,7 @@
       "exit_south": 24,
       "exit_west": 28,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -3448,7 +3448,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -6741,7 +6741,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -8395,7 +8395,7 @@
       "exit_south": 2,
       "exit_west": -1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -11156,7 +11156,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -13357,7 +13357,7 @@
       "exit_south": -1,
       "exit_west": 22,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -15600,7 +15600,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -17423,7 +17423,7 @@
       "exit_south": -1,
       "exit_west": 6,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -19246,7 +19246,7 @@
       "exit_south": 8,
       "exit_west": 13,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -21013,7 +21013,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -23592,7 +23592,7 @@
       "exit_south": 22,
       "exit_west": 0,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -25331,7 +25331,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -28022,7 +28022,7 @@
       "exit_south": 6,
       "exit_west": 11,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -29719,7 +29719,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -31402,7 +31402,7 @@
       "exit_south": 15,
       "exit_west": 15,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -33631,7 +33631,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -35285,7 +35285,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -36939,7 +36939,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -38593,7 +38593,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -40247,7 +40247,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -51030,7 +51030,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -53469,7 +53469,7 @@
       "exit_south": -1,
       "exit_west": 1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -55194,7 +55194,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -58753,7 +58753,7 @@
       "exit_south": -1,
       "exit_west": 27,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -60464,7 +60464,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 1,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -62175,7 +62175,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -64096,7 +64096,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 1,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -65835,7 +65835,7 @@
       "exit_south": 27,
       "exit_west": 37,
       "appearance": 1,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -67616,7 +67616,7 @@
       "exit_south": -1,
       "exit_west": 25,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -69453,7 +69453,7 @@
       "exit_south": -1,
       "exit_west": 9,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -71276,7 +71276,7 @@
       "exit_south": 28,
       "exit_west": -1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -73057,7 +73057,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -75580,7 +75580,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -79657,7 +79657,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -82740,7 +82740,7 @@
       "exit_south": 29,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -85417,7 +85417,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -87324,7 +87324,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 2,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -89567,7 +89567,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -91250,7 +91250,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -93227,7 +93227,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -95918,7 +95918,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -97572,7 +97572,7 @@
       "exit_south": 23,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
@@ -99871,7 +99871,7 @@
       "exit_south": -1,
       "exit_west": -1,
       "appearance": 0,
-      "dark": 0,
+      "dark": 2,
       "spot": [
         [
           [
