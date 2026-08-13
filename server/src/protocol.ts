@@ -128,6 +128,7 @@ export type S2CMessage =
         heldByName: string; // carrier's name, '' if on the floor
         teamHolding: number; // team of room it's in, 0 if carried/neutral
       }>;
+      flagsToGet: number[]; // index = team-1; instances that team must gather to win
     }
   | {
       type: 'GAME_OVER';

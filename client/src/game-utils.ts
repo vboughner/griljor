@@ -221,3 +221,76 @@ export function buildExitMap(room: RoomData, objects: ObjDef[]): Map<string, Exi
   }
   return map;
 }
+
+/** One entry of a FLAG_STATUS message: a single flag instance. */
+export interface FlagStatusEntry {
+  objType: number;
+  room: number;
+  x: number;
+  y: number;
+  heldBy: number;
+  heldByName: string;
+  teamHolding: number;
+}
+
+export interface FlagSummary {
+  objType: number;
+  carriers: string[]; // names of players carrying an instance
+  yours: number; // instances on the floor of a room your team owns
+  enemy: number; // instances on the floor of a room another team owns
+  loose: number; // instances on the floor of a neutral room
+}
+
+/** Carrier names listed in full before collapsing into "+N more". */
+const MAX_CARRIERS_SHOWN = 3;
+
+/**
+ * Collapse raw FLAG_STATUS entries into one summary per flag type.
+ *
+ * Maps routinely place many instances of one flag (battle.json has 12 Quaso
+ * flags), which listed individually would be a dozen identical HUD lines.
+ * Counts are split by who currently holds the ground, since winning means
+ * gathering every needed instance into your own rooms.
+ */
+export function summarizeFlags(flags: FlagStatusEntry[], myTeam: number): FlagSummary[] {
+  const byType = new Map<number, FlagSummary>();
+  for (const f of flags) {
+    let s = byType.get(f.objType);
+    if (!s) {
+      s = { objType: f.objType, carriers: [], yours: 0, enemy: 0, loose: 0 };
+      byType.set(f.objType, s);
+    }
+    if (f.heldBy > 0) s.carriers.push(f.heldByName || '???');
+    else if (f.teamHolding === 0) s.loose++;
+    else if (f.teamHolding === myTeam) s.yours++;
+    else s.enemy++;
+  }
+  return [...byType.values()].sort((a, b) => a.objType - b.objType);
+}
+
+/** Human-readable state for one flag type, e.g. "carried by Alice, 3 in your rooms". */
+export function describeFlagSummary(s: FlagSummary): string {
+  const parts: string[] = [];
+  if (s.carriers.length > 0) {
+    const shown = s.carriers.slice(0, MAX_CARRIERS_SHOWN);
+    const extra = s.carriers.length - shown.length;
+    parts.push(`carried by ${shown.join(', ')}${extra > 0 ? ` +${extra} more` : ''}`);
+  }
+  if (s.yours > 0) parts.push(`${s.yours} in your rooms`);
+  if (s.enemy > 0) parts.push(`${s.enemy} in enemy rooms`);
+  if (s.loose > 0) parts.push(`${s.loose} loose`);
+  return parts.length > 0 ? parts.join(', ') : 'none';
+}
+
+/**
+ * Flag instances your team still needs that already sit in rooms it owns —
+ * the numerator of the win condition, which the server tallies the same way.
+ */
+export function countAcquiredFlags(
+  flags: FlagStatusEntry[],
+  myTeam: number,
+  teamNeedsFlag: (objType: number) => boolean,
+): number {
+  return flags.filter((f) => f.heldBy === 0 && f.teamHolding === myTeam && teamNeedsFlag(f.objType))
+    .length;
+}

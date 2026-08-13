@@ -138,6 +138,34 @@ function buildTeam1OnlyFlagWorld(): World {
   return world;
 }
 
+// Library defines a second flag type (9) that the map never places — the shape
+// of every real map, whose shared object library marks more objects as flags
+// than the map actually uses.
+function buildUnplacedFlagWorld(): World {
+  const world = buildCtfWorld();
+  world.objects.push({
+    _index: 9,
+    name: 'sack of money',
+    flag: true,
+    takeable: true,
+    weight: 5,
+    movement: 9,
+    transparent: true,
+    permeable: true,
+  });
+  return world;
+}
+
+// Every real team map ships with a flag already sitting in each team's base
+// (flag.json 4/4, castle.json 20/20, battle.json 2/12), plus loose ones to
+// fight over. Three flag instances total, all needed by both teams.
+function buildStockedBaseWorld(): World {
+  const world = buildCtfWorld();
+  world.rooms[0].recorded_objects.push({ x: 2, y: 2, type: 8, detail: 1 }); // team 1 base
+  world.rooms[1].recorded_objects.push({ x: 3, y: 3, type: 8, detail: 1 }); // team 2 base
+  return world; // room 2 (neutral) already holds one at (5,5)
+}
+
 // Adds a 4th room (index 3, neutral) that is solid wall except for the single
 // tile (5,5). A player standing there has no free reachable tile to drop onto,
 // which is the only way nearbyFreeTile returns null.
@@ -638,5 +666,95 @@ describe('capture-the-flag', () => {
     const onFloor = alice.ws.lastOfType('FLAG_STATUS')!.flags[0];
     expect(onFloor.heldBy).toBe(0);
     expect(onFloor.heldByName).toBe('');
+  });
+
+  it('a flag type the map never places does not block the win', () => {
+    // Regression: the required set was read from the whole object library, so a
+    // shared library like default.obj (which marks money and two banners as
+    // flags) demanded flags the map never places, making every match unwinnable.
+    session = new GameSession(buildUnplacedFlagWorld());
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+
+    moveTo(alice, 2, 5, 5);
+    pickup(alice);
+    moveTo(alice, 0, 10, 10);
+    dropActive(alice);
+
+    expect(alice.ws.messagesOfType('GAME_OVER').length).toBe(1);
+  });
+
+  it('a team does not win just because its base started with a flag in it', () => {
+    // Regression: the rule was "one instance of each flag type in a room you
+    // own", which every stock map satisfies before anyone moves — so the first
+    // drop anywhere ended the match instantly.
+    session = new GameSession(buildStockedBaseWorld());
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+
+    // Bring the neutral flag home: 2 of the map's 3 flags are now in team 1 rooms.
+    moveTo(alice, 2, 5, 5);
+    pickup(alice);
+    moveTo(alice, 0, 10, 10);
+    dropActive(alice);
+
+    expect(alice.ws.messagesOfType('GAME_OVER').length).toBe(0);
+  });
+
+  it('a team wins once every flag on the map is in its own rooms', () => {
+    session = new GameSession(buildStockedBaseWorld());
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+
+    moveTo(alice, 2, 5, 5);
+    pickup(alice);
+    moveTo(alice, 0, 10, 10);
+    dropActive(alice);
+    expect(alice.ws.messagesOfType('GAME_OVER').length).toBe(0);
+
+    // Steal the last one out of the enemy base.
+    moveTo(alice, 1, 3, 3);
+    pickup(alice);
+    moveTo(alice, 0, 12, 12);
+    dropActive(alice);
+
+    const gameOver = alice.ws.messagesOfType('GAME_OVER');
+    expect(gameOver.length).toBe(1);
+    expect(gameOver[0].winningTeam).toBe(1);
+  });
+
+  it('carrying a flag does not count toward the win until it is dropped', () => {
+    session = new GameSession(buildStockedBaseWorld());
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+
+    moveTo(alice, 2, 5, 5);
+    pickup(alice);
+    moveTo(alice, 1, 3, 3);
+    pickup(alice);
+    // Both loose flags are in hand and Alice is standing in her own base.
+    moveTo(alice, 0, 10, 10);
+
+    expect(alice.ws.messagesOfType('GAME_OVER').length).toBe(0);
+  });
+
+  it('reports how many flags each team must gather', () => {
+    session = new GameSession(buildStockedBaseWorld());
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+
+    // 3 instances, flagteams:3 — both teams need all of them.
+    expect(alice.ws.lastOfType('FLAG_STATUS')!.flagsToGet).toEqual([3, 3]);
+  });
+
+  it('only counts flags toward the teams whose bitmask names them', () => {
+    session = new GameSession(buildTeam1OnlyFlagWorld());
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+
+    expect(alice.ws.lastOfType('FLAG_STATUS')!.flagsToGet).toEqual([1, 0]);
+  });
+
+  it('CTF stays disabled when the library defines flags but the map places none', () => {
+    const world = buildCtfWorld();
+    world.rooms[2].recorded_objects = []; // remove the only flag instance
+    session = new GameSession(world);
+    const alice = joinPlayer(session, 'Alice', 'a', 1);
+
+    expect(alice.ws.messagesOfType('FLAG_STATUS').length).toBe(0);
   });
 });

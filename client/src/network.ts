@@ -123,6 +123,7 @@ type S2CMessage =
         heldByName: string;
         teamHolding: number;
       }>;
+      flagsToGet: number[]; // index = team-1
     }
   | {
       type: 'GAME_OVER';

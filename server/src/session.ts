@@ -357,7 +357,8 @@ export class GameSession {
   private gameOverWinningTeam = 0;
   private gameOverWinnerName = '';
   private gameOverEndsAt = 0;
-  private flagObjTypes: number[] = [];
+  private flagObjTypeSet = new Set<number>();
+  private flagsToGet: number[] = []; // index = team-1; instances that team must gather to win
 
   constructor(world: World, opts?: { onPlayerCountChange?: () => void }) {
     this.onPlayerCountChange = opts?.onPlayerCountChange;
@@ -485,12 +486,50 @@ export class GameSession {
     }
   }
 
+  /** Must run after initRoomItems — the required flag set is read from placed items. */
   private initCtf(): void {
     if (this.world.teams < 2) return;
-    this.flagObjTypes = this.world.objects
-      .filter((o): o is ObjDef => o !== null && !!o.flag)
-      .map((o) => o._index);
-    this.ctfEnabled = this.flagObjTypes.length > 0;
+
+    // Only flags actually placed on the map can be captured. Object libraries are
+    // shared across maps and mark several objects as flags (default.obj marks
+    // money and both banners), so a library-wide set would demand flags the map
+    // never places and make every match unwinnable.
+    const placed = new Set<number>();
+    for (const itemMap of this.roomItems.values()) {
+      for (const item of itemMap.values()) {
+        if (this.world.objects[item.type]?.flag) placed.add(item.type);
+      }
+    }
+
+    this.flagObjTypeSet = placed;
+    this.ctfEnabled = placed.size > 0;
+    if (!this.ctfEnabled) return;
+
+    // Tally how many flag instances each team must gather. Counting at load time
+    // is what makes the mode playable: maps start with a flag already sitting in
+    // each team's base, so a "one of each type" rule is satisfied before anyone
+    // moves and the first drop ends the match. Mirrors legacy flags_to_get
+    // (legacy/src/flag.c:186).
+    this.flagsToGet = new Array<number>(this.world.teams).fill(0);
+    for (const itemMap of this.roomItems.values()) {
+      for (const item of itemMap.values()) {
+        if (!this.isFlagType(item.type)) continue;
+        for (let team = 1; team <= this.world.teams; team++) {
+          if (this.teamNeedsFlag(team, item.type)) this.flagsToGet[team - 1]++;
+        }
+      }
+    }
+  }
+
+  /** True for object types that are capture objectives in this match. */
+  private isFlagType(objType: number): boolean {
+    return this.flagObjTypeSet.has(objType);
+  }
+
+  /** Does `team` need this flag type? An absent flagteams bitmask means every team does. */
+  private teamNeedsFlag(team: number, objType: number): boolean {
+    const flagteams = this.world.objects[objType]?.flagteams;
+    return flagteams === undefined || (flagteams & (1 << (team - 1))) !== 0;
   }
 
   private buildFlagStatus(): Extract<S2CMessage, { type: 'FLAG_STATUS' }> {
@@ -507,7 +546,7 @@ export class GameSession {
     // Floor flags
     for (const [roomIdx, itemMap] of this.roomItems) {
       for (const [key, item] of itemMap) {
-        if (!this.world.objects[item.type]?.flag) continue;
+        if (!this.isFlagType(item.type)) continue;
         const [sx, sy] = key.split(',').map(Number);
         flags.push({
           objType: item.type,
@@ -525,7 +564,7 @@ export class GameSession {
     for (const player of this.players.values()) {
       const allItems = [player.leftHand, ...player.inventory];
       for (const item of allItems) {
-        if (!item || !this.world.objects[item.type]?.flag) continue;
+        if (!item || !this.isFlagType(item.type)) continue;
         flags.push({
           objType: item.type,
           room: -1,
@@ -538,40 +577,30 @@ export class GameSession {
       }
     }
 
-    return { type: 'FLAG_STATUS', flags };
+    return { type: 'FLAG_STATUS', flags, flagsToGet: [...this.flagsToGet] };
   }
 
   private broadcastFlagStatus(): void {
     this.broadcast(this.buildFlagStatus());
   }
 
-  private teamHasWon(team: number): boolean {
-    let hasRequiredFlags = false;
-    for (const flagType of this.flagObjTypes) {
-      const flagDef = this.world.objects[flagType];
-      if (!flagDef) continue;
-
-      // Check if this team needs this flag
-      const teamNeeds =
-        flagDef.flagteams === undefined || (flagDef.flagteams & (1 << (team - 1))) !== 0;
-      if (!teamNeeds) continue;
-      hasRequiredFlags = true;
-
-      // Check if at least one instance is on the floor in a team-owned room
-      let found = false;
-      for (const [roomIdx, itemMap] of this.roomItems) {
-        if (this.world.rooms[roomIdx].team !== team) continue;
-        for (const item of itemMap.values()) {
-          if (item.type === flagType) {
-            found = true;
-            break;
-          }
-        }
-        if (found) break;
+  /** Flag instances the team needs that are currently on the floor of a room it owns. */
+  private countAcquiredFlags(team: number): number {
+    let acquired = 0;
+    for (const [roomIdx, itemMap] of this.roomItems) {
+      if (this.world.rooms[roomIdx].team !== team) continue;
+      for (const item of itemMap.values()) {
+        if (this.isFlagType(item.type) && this.teamNeedsFlag(team, item.type)) acquired++;
       }
-      if (!found) return false;
     }
-    return hasRequiredFlags;
+    return acquired;
+  }
+
+  private teamHasWon(team: number): boolean {
+    const required = this.flagsToGet[team - 1] ?? 0;
+    // A team no flag is assigned to has nothing to gather and cannot win.
+    if (required === 0) return false;
+    return this.countAcquiredFlags(team) >= required;
   }
 
   private checkFlagWin(dropperName: string): void {
@@ -1204,7 +1233,7 @@ export class GameSession {
     this.broadcast({ type: 'ITEM_REMOVED', room: player.room, x: msg.x, y: msg.y });
     this.sendInventory(player);
 
-    if (this.ctfEnabled && this.world.objects[item.type]?.flag) {
+    if (this.ctfEnabled && this.isFlagType(item.type)) {
       this.broadcastFlagStatus();
     }
   }
@@ -1244,7 +1273,7 @@ export class GameSession {
 
     this.sendInventory(player);
 
-    if (this.ctfEnabled && this.world.objects[item.type]?.flag) {
+    if (this.ctfEnabled && this.isFlagType(item.type)) {
       this.broadcastFlagStatus();
       this.checkFlagWin(player.name);
     }
@@ -1915,7 +1944,7 @@ export class GameSession {
             y: tile.y,
             item: droppedItem,
           });
-          if (this.ctfEnabled && this.world.objects[movingObjType]?.flag) {
+          if (this.ctfEnabled && this.isFlagType(movingObjType)) {
             this.broadcastFlagStatus();
             this.checkFlagWin(player.name);
           }
@@ -2151,7 +2180,7 @@ export class GameSession {
 
     // Drop flags first so they get first claim on the free tiles: a flag that
     // fails to land would be destroyed, making the CTF match unwinnable.
-    const isFlag = (item: InventoryItem): boolean => this.world.objects[item.type]?.flag ?? false;
+    const isFlag = (item: InventoryItem): boolean => this.isFlagType(item.type);
     const toDrop = items.filter((item): item is InventoryItem => item !== null);
     toDrop.sort((a, b) => Number(isFlag(b)) - Number(isFlag(a)));
 

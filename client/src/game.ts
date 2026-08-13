@@ -13,7 +13,16 @@ import {
 import { GameNetwork } from './network';
 import { showTooltip, hideTooltip, moveTooltip } from './tooltip';
 import { stepDelay, applyHpPenalty } from './utils';
-import { isTileBlocked, computeBfsPathToNearest, buildExitMap, ExitTile } from './game-utils';
+import {
+  isTileBlocked,
+  computeBfsPathToNearest,
+  buildExitMap,
+  ExitTile,
+  summarizeFlags,
+  describeFlagSummary,
+  countAcquiredFlags,
+  FlagStatusEntry,
+} from './game-utils';
 import { tileIsVisible, tileViewBlocked } from './los';
 
 const GRID = 20;
@@ -88,15 +97,8 @@ export class Game {
   private winnerSprite: ImageData | null = null;
   private loserSprite: ImageData | null = null;
   private gameOverTimer: ReturnType<typeof setInterval> | null = null;
-  private flagStatus: Array<{
-    objType: number;
-    room: number;
-    x: number;
-    y: number;
-    heldBy: number;
-    heldByName: string;
-    teamHolding: number;
-  }> = [];
+  private flagStatus: FlagStatusEntry[] = [];
+  private flagsToGet: number[] = []; // index = team-1
   private avatarName: string = 'crom';
   private canvas: HTMLCanvasElement;
   private roomInfo: HTMLElement;
@@ -592,6 +594,7 @@ export class Game {
 
     net.onFlagStatus = (msg) => {
       this.flagStatus = msg.flags;
+      this.flagsToGet = msg.flagsToGet;
       this.updateFlagHud();
     };
 
@@ -1360,22 +1363,40 @@ export class Game {
 
     el.classList.remove('hidden');
     el.innerHTML = '';
-    // One line per flag instance — a map may contain several flags of the same
-    // objType, and each has its own carried/at-base state.
-    for (const f of this.flagStatus) {
-      const held = f.heldBy > 0;
+
+    // Progress toward the win: every needed flag instance gathered into your rooms.
+    const required = this.flagsToGet[this.myTeam - 1] ?? 0;
+    if (required > 0) {
+      const acquired = countAcquiredFlags(this.flagStatus, this.myTeam, (t) =>
+        this.teamNeedsFlag(t),
+      );
+      const progress = document.createElement('div');
+      progress.className = 'flag-progress';
+      progress.textContent = `Flags: ${acquired} / ${required}`;
+      el.appendChild(progress);
+    }
+
+    // One line per flag *type*, not per instance — maps place many instances of
+    // the same flag and each would otherwise get an identical line.
+    for (const s of summarizeFlags(this.flagStatus, this.myTeam)) {
       const line = document.createElement('div');
       line.className = 'flag-line';
       const dot = document.createElement('span');
-      dot.className = `flag-dot ${held ? 'carried' : 'at-base'}`;
+      dot.className = `flag-dot ${s.carriers.length > 0 ? 'carried' : 'at-base'}`;
       line.appendChild(dot);
       const text = document.createElement('span');
-      const label = this.objects[f.objType]?.name;
-      const state = held ? `carried by ${f.heldByName || '???'}` : 'at base';
+      const label = this.objects[s.objType]?.name;
+      const state = describeFlagSummary(s);
       text.textContent = label ? `${label}: ${state}` : state;
       line.appendChild(text);
       el.appendChild(line);
     }
+  }
+
+  /** Does my team need this flag type? An absent flagteams bitmask means every team does. */
+  private teamNeedsFlag(objType: number): boolean {
+    const flagteams = this.objects[objType]?.flagteams;
+    return flagteams === undefined || (flagteams & (1 << (this.myTeam - 1))) !== 0;
   }
 
   private drawScreenFlash(): void {
