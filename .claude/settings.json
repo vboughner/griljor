@@ -5,5 +5,10 @@
     "code-review@claude-plugins-official": true,
     "github@claude-plugins-official": false,
     "typescript-lsp@claude-plugins-official": true
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/statusline.js",
+    "padding": 1
   }
 }
