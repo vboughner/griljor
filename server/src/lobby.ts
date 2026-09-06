@@ -285,6 +285,8 @@ wss.on('connection', (ws) => {
 });
 
 const PORT = parseInt(process.env.PORT ?? '3000', 10);
-server.listen(PORT, () => {
+// Loopback only — nginx proxies /games, /reset and /watch to localhost:3000.
+// Binding all interfaces would expose /register and /unregister, which nginx does not proxy.
+server.listen(PORT, '127.0.0.1', () => {
   console.log(`Griljor lobby on :${PORT}`);
 });

@@ -6,6 +6,8 @@ import { GameSession } from './session';
 
 const mapName = process.env.MAP ?? process.argv[2] ?? 'battle';
 const LOBBY_URL = process.env.LOBBY_URL ?? 'http://localhost:3000';
+// Loopback only — nginx proxies /ws/<mapname> to 127.0.0.1:<port>. See server/nginx-example.conf.
+const BIND_HOST = '127.0.0.1';
 
 function postJson(url: string, body: unknown): void {
   const data = JSON.stringify(body);
@@ -32,7 +34,7 @@ function findFreePort(startPort: number): Promise<number> {
         reject(err);
       }
     });
-    probe.listen(startPort, () => {
+    probe.listen(startPort, BIND_HOST, () => {
       probe.close(() => resolve(startPort));
     });
   });
@@ -76,7 +78,7 @@ async function main(): Promise<void> {
 
   const startPort = parseInt(process.env.PORT ?? process.argv[3] ?? '3001', 10);
   const PORT = await findFreePort(startPort);
-  await new Promise<void>((resolve) => server.listen(PORT, resolve));
+  await new Promise<void>((resolve) => server.listen(PORT, BIND_HOST, resolve));
 
   const wsUrl = process.env.PUBLIC_WS_URL ?? `ws://localhost:${PORT}/ws`;
   const httpUrl = `http://localhost:${PORT}`;

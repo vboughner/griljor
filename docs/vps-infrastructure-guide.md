@@ -170,6 +170,41 @@ sudo apt-get install -y nodejs nginx certbot python3-certbot-nginx git rsync
 sudo npm install -g pm2
 ```
 
+### 3b. Lock down the firewall
+
+Only 22, 80 and 443 should ever be reachable from the internet. The Node
+processes bind `127.0.0.1` (see `server/src/main.ts`), so nginx is the only
+public entry point — this is the backstop for when something forgets to.
+
+Preferred: a **Hetzner Cloud Firewall** (Cloud Console → Firewalls → Apply to
+Server). It filters before traffic reaches the VM, so it still holds if a
+process on the box binds the wrong interface.
+
+| Direction | Protocol | Port | Source |
+|---|---|---|---|
+| Inbound | TCP | 22 | your IP, or `0.0.0.0/0` |
+| Inbound | TCP | 80 | `0.0.0.0/0` |
+| Inbound | TCP | 443 | `0.0.0.0/0` |
+
+Everything else inbound: drop. Leave outbound unrestricted (certbot, apt, git).
+
+Belt and braces, on the VM itself:
+
+```sh
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status verbose
+```
+
+Do not open 3000-3007. Those are the lobby and per-map game servers, and the
+browser never contacts them directly — the client only ever talks to
+`https://griljor.com`, and nginx proxies `/games`, `/reset`, `/watch` and
+`/ws/<mapname>` to loopback.
+
 ### 4. Deploy the game (griljor.com)
 
 Follow [`deployment-plan.md`](deployment-plan.md) sections "Clone and build", "Configure nginx", "HTTPS via Let's Encrypt", and "Start everything with PM2".
@@ -284,6 +319,16 @@ For each domain served by the VPS (griljor.com, vanboughner.com, hovercloud.com)
 # Game
 pm2 status
 curl https://griljor.com/games
+
+# Game/lobby ports must NOT be reachable from outside — every one should fail
+for p in 3000 3001 3002 3003 3004 3005 3006 3007; do
+  printf "%s: " "$p"; curl -s -o /dev/null -m 5 -w "%{http_code}\n" "http://<IP>:$p/"
+done
+# Expected: 000 for all eight (connection refused / filtered)
+
+# And loopback should still work, from on the VM
+sudo ss -lntp | grep -E ':300[0-7]'
+# Expected: every line shows 127.0.0.1:300x, never 0.0.0.0:300x or *:300x
 
 # Blog
 curl -I https://vanboughner.com
